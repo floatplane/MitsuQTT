@@ -1,0 +1,4 @@
+{
+    "C_Cpp.clang_format_fallbackStyle": "none",
+    "C_Cpp.formatting": "clangFormat"
+}
