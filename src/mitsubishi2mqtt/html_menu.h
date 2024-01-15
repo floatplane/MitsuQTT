@@ -55,7 +55,6 @@ const char html_menu_root[] PROGMEM = R"====(
 </script>
 )====";
 
-
 const char html_menu_setup[] PROGMEM = R"====(
 <p>
     <form action='/mqtt' method='get'>

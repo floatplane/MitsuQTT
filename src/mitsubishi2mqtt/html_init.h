@@ -13,7 +13,7 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
- 
+
 const char html_init_setup[] PROGMEM = R"====(
 <div id='l1' name='l1'></div>
 <fieldset>
@@ -45,10 +45,10 @@ const char html_init_setup[] PROGMEM = R"====(
 </fieldset>
 )====";
 
-const char html_init_save[] PROGMEM =  R"====(
+const char html_init_save[] PROGMEM = R"====(
 <p> _TXT_INIT_REBOOT_MESS_ </p>
 )====";
 
-const char html_init_reboot[] PROGMEM =  R"====(
+const char html_init_reboot[] PROGMEM = R"====(
 <p> _TXT_INIT_REBOOT_ </p>
 )====";

@@ -14,21 +14,14 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+const char html_page_reboot[] PROGMEM = "<p>_TXT_M_REBOOT_ <span id='count'>10s</span>...</p>";
 
-const char html_page_reboot[] PROGMEM =
-"<p>_TXT_M_REBOOT_ <span id='count'>10s</span>...</p>"
-;
+const char html_page_reset[] PROGMEM = "<p>_TXT_M_RESET_ _SSID_...</p>";
 
-const char html_page_reset[] PROGMEM =
-"<p>_TXT_M_RESET_ _SSID_...</p>"
-;
-
-
-const char html_page_save_reboot[] PROGMEM =
-"<p>_TXT_M_SAVE_ <span id='count'>10s</span>...</p>"
-;
+const char html_page_save_reboot[] PROGMEM = "<p>_TXT_M_SAVE_ <span id='count'>10s</span>...</p>";
 
 const char html_page_mqtt[] PROGMEM =
+    // clang-format off
 "<div id='l1' name='l1'>"
     "<fieldset>"
         "<legend><b>&nbsp; _TXT_MQTT_TITLE_ &nbsp;</b></legend>"
@@ -74,8 +67,10 @@ const char html_page_mqtt[] PROGMEM =
     "</p>"
 "</div>"
 ;
+// clang-format on
 
 const char html_page_others[] PROGMEM =
+    // clang-format off
 "<div id='l1' name='l1'>"
     "<fieldset>"
         "<legend><b>&nbsp; _TXT_OTHERS_TITLE_ &nbsp;</b></legend>"
@@ -113,8 +108,10 @@ const char html_page_others[] PROGMEM =
     "</p>"
 "</div>"
 ;
+// clang-format on
 
 const char html_page_status[] PROGMEM =
+    // clang-format off
 "<div id='l1' name='l1'>"
     "<fieldset>"
     "<legend><b>&nbsp; _TXT_STATUS_TITLE_ &nbsp;</b></legend>"
@@ -141,8 +138,10 @@ const char html_page_status[] PROGMEM =
     "</p>"
 "</div>"
 ;
+// clang-format on
 
 const char html_page_wifi[] PROGMEM =
+    // clang-format off
 "<div id='l1' name='l1'>"
     "<fieldset>"
         "<legend><b>&nbsp; _TXT_WIFI_TITLE_ &nbsp;</b></legend>"
@@ -178,9 +177,10 @@ const char html_page_wifi[] PROGMEM =
     "</p>"
 "</div>"
 ;
-
+// clang-format on
 
 const char html_page_control[] PROGMEM =
+    // clang-format off
 "<h2>_TXT_CTRL_CTEMP_ _ROOMTEMP_&#176;</h2>"
 "<div id='l1' name='l1'>"
     "<fieldset>"
@@ -284,8 +284,10 @@ const char html_page_control[] PROGMEM =
 "}"
 "</script>"
 ;
+// clang-format on
 
 const char html_page_unit[] PROGMEM =
+    // clang-format off
 "<div id='l1' name='l1'>"
     "<fieldset>"
         "<legend><b>&nbsp; _TXT_UNIT_TITLE_ &nbsp;</b></legend>"
@@ -329,8 +331,10 @@ const char html_page_unit[] PROGMEM =
     "</p>"
 "</div>"
 ;
+// clang-format on
 
 const char html_page_login[] PROGMEM =
+    // clang-format off
 "<script>"
     "var loginSucess = _LOGIN_SUCCESS_;"
     "document.onreadystatechange = function() {"
@@ -364,8 +368,10 @@ const char html_page_login[] PROGMEM =
     "_LOGIN_MSG_"
 "</div>"
 ;
+// clang-format on
 
 const char html_page_upgrade[] PROGMEM =
+    // clang-format off
 "<script>"
     "function eb(s) {"
         "return document.getElementById(s);"
@@ -389,9 +395,10 @@ const char html_page_upgrade[] PROGMEM =
     "</div>"
     "<div id='f2' style='display:none;text-align:center;'><b>_TXT_UPGRADE_START_ ...</b></div>"
 ;
-
+// clang-format on
 
 const char html_page_upload[] PROGMEM =
+    // clang-format off
 "<div id='l1' name='l1'>"
     "<br>_UPLOAD_MSG_"
     "<p>"
@@ -399,3 +406,4 @@ const char html_page_upload[] PROGMEM =
     "</p>"
 "</div>"
 ;
+// clang-format on
