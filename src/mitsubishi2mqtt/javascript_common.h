@@ -14,6 +14,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+// clang-format off
 const char count_down_script[] PROGMEM = 
 "<script>"
     "var count = 10;"
@@ -30,3 +31,4 @@ const char count_down_script[] PROGMEM =
     "})();"
 "</script>"
 ;
+// clang-format on

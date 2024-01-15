@@ -14,32 +14,34 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-/*#define MY_LANGUAGE fr-FR // define your language*/
-
-const PROGMEM char* m2mqtt_version = "2023.8.0";
-
-//Define global variables for files
-#ifdef ESP32
-const PROGMEM char* wifi_conf = "/wifi.json";
-const PROGMEM char* mqtt_conf = "/mqtt.json";
-const PROGMEM char* unit_conf = "/unit.json";
-const PROGMEM char* console_file = "/console.log";
-const PROGMEM char* others_conf = "/others.json";
-// pinouts
-const PROGMEM  uint8_t blueLedPin = 2;            // The ESP32 has an internal blue LED at D2 (GPIO 02)
-#else
-const PROGMEM char* wifi_conf = "wifi.json";
-const PROGMEM char* mqtt_conf = "mqtt.json";
-const PROGMEM char* unit_conf = "unit.json";
-const PROGMEM char* console_file = "console.log";
-const PROGMEM char* others_conf = "others.json";
-// pinouts
-const PROGMEM  uint8_t blueLedPin = LED_BUILTIN; // Onboard LED = digital pin 2 "D4" (blue LED on WEMOS D1-Mini)
+#ifndef LANG_PATH
+#define LANG_PATH "languages/en-GB.h" // default language English
 #endif
-const PROGMEM  uint8_t redLedPin = 0;
+
+const PROGMEM char *m2mqtt_version = "2023.8.0";
+
+// Define global variables for files
+#ifdef ESP32
+const PROGMEM char *wifi_conf = "/wifi.json";
+const PROGMEM char *mqtt_conf = "/mqtt.json";
+const PROGMEM char *unit_conf = "/unit.json";
+const PROGMEM char *console_file = "/console.log";
+const PROGMEM char *others_conf = "/others.json";
+// pinouts
+const PROGMEM uint8_t blueLedPin = 2; // The ESP32 has an internal blue LED at D2 (GPIO 02)
+#else
+const PROGMEM char *wifi_conf = "wifi.json";
+const PROGMEM char *mqtt_conf = "mqtt.json";
+const PROGMEM char *unit_conf = "unit.json";
+const PROGMEM char *console_file = "console.log";
+const PROGMEM char *others_conf = "others.json";
+// pinouts
+const PROGMEM uint8_t blueLedPin = LED_BUILTIN; // Onboard LED = digital pin 2 "D4" (blue LED on WEMOS D1-Mini)
+#endif
+const PROGMEM uint8_t redLedPin = 0;
 
 // Define global variables for network
-const PROGMEM char* hostnamePrefix = "HVAC_";
+const PROGMEM char *hostnamePrefix = "HVAC_";
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
 unsigned long wifi_timeout;
 bool wifi_config_exists;
@@ -56,10 +58,10 @@ String mqtt_username;
 String mqtt_password;
 String mqtt_topic = "mitsubishi2mqtt";
 String mqtt_client_id;
-const PROGMEM char* mqtt_payload_available = "online";
-const PROGMEM char* mqtt_payload_unavailable = "offline";
+const PROGMEM char *mqtt_payload_available = "online";
+const PROGMEM char *mqtt_payload_unavailable = "offline";
 
-//Define global variables for Others settings
+// Define global variables for Others settings
 bool others_haa;
 String others_haa_topic;
 
@@ -75,7 +77,7 @@ String ha_settings_topic;
 String ha_state_topic;
 String ha_debug_pckts_topic;
 String ha_debug_pckts_set_topic;
-String ha_debug_logs_topic;  
+String ha_debug_logs_topic;
 String ha_debug_logs_set_topic;
 String ha_config_topic;
 String ha_discovery_topic;
@@ -83,7 +85,7 @@ String ha_custom_packet;
 String ha_availability_topic;
 String hvac_name;
 
-//login
+// login
 String login_username = "admin";
 String login_password;
 
@@ -95,17 +97,18 @@ bool _debugModeLogs = false;
 bool _debugModePckts = false;
 
 // Customization
-uint8_t min_temp                    = 16; // Minimum temperature, in your selected unit, check value from heatpump remote control
-uint8_t max_temp                    = 31; // Maximum temperature, in your selected unit, check value from heatpump remote control
-String temp_step                   = "1"; // Temperature setting step, check value from heatpump remote control
+uint8_t min_temp = 16;  // Minimum temperature, in your selected unit, check value from heatpump remote control
+uint8_t max_temp = 31;  // Maximum temperature, in your selected unit, check value from heatpump remote control
+String temp_step = "1"; // Temperature setting step, check value from heatpump remote control
 
 // sketch settings
-const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS = 30000; // 45 seconds (anything less may cause bouncing)
-const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000; //5 minutes
-const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000; // 1 second
-const PROGMEM uint32_t HP_RETRY_INTERVAL_MS = 1000; // 1 second
-const PROGMEM uint32_t HP_MAX_RETRIES = 10; // Double the interval between retries up to this many times, then keep retrying forever at that maximum interval.
-// Default values give a final retry interval of 1000ms * 2^10, which is 1024 seconds, about 17 minutes. 
+const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS = 30000;     // 45 seconds (anything less may cause bouncing)
+const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000; // 5 minutes
+const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;          // 1 second
+const PROGMEM uint32_t HP_RETRY_INTERVAL_MS = 1000;            // 1 second
+const PROGMEM uint32_t HP_MAX_RETRIES = 10; // Double the interval between retries up to this many times, then keep
+                                            // retrying forever at that maximum interval.
+// Default values give a final retry interval of 1000ms * 2^10, which is 1024 seconds, about 17 minutes.
 
 // temp settings
 bool useFahrenheit = false;
