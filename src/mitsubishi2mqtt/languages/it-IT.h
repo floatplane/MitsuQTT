@@ -1,9 +1,9 @@
 /*
   mitsubishi2mqtt - Mitsubishi Heat Pump to MQTT control for Home Assistant.
-  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis, alekslyse.  All right reserved.
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
+  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis,
+  alekslyse.  All right reserved. This library is free software; you can
+  redistribute it and/or modify it under the terms of the GNU Lesser General
+  Public License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -27,7 +27,8 @@ const char txt_WIFI[] PROGMEM = "Wi-Fi";
 const char txt_unit[] PROGMEM = "Unità";
 const char txt_others[] PROGMEM = "Altri parametri";
 const char txt_reset[] PROGMEM = "Reset configurazione";
-const char txt_reset_confirm[] PROGMEM = "Sei sicuro di voler resettare l'unità?";
+const char txt_reset_confirm[] PROGMEM =
+    "Sei sicuro di voler resettare l'unità?";
 
 // Buttons
 const char txt_back[] PROGMEM = "Indietro";
@@ -56,7 +57,8 @@ const char txt_f_noheat[] PROGMEM = "Tutte le modalità escluso riscaldamento";
 // Page Reboot, save & Resseting
 const char txt_m_reboot[] PROGMEM = "Riavvio... Refresh in";
 const char txt_m_reset[] PROGMEM = "Reset in corso... Connettersi all'SSID";
-const char txt_m_save[] PROGMEM = "Salvataggio configurazione e riavvio... Refresh in";
+const char txt_m_save[] PROGMEM =
+    "Salvataggio configurazione e riavvio... Refresh in";
 
 // Page MQTT
 const char txt_mqtt_title[] PROGMEM = "Parametri MQTT";
@@ -112,29 +114,38 @@ const char txt_unit_password[] PROGMEM = "Password Web";
 // Page Login
 const char txt_login_title[] PROGMEM = "Autenticazione";
 const char txt_login_password[] PROGMEM = "Password";
-const char txt_login_sucess[] PROGMEM = "Login avvenuto, verrai reinderizzato tra pochi secondi.";
+const char txt_login_sucess[] PROGMEM =
+    "Login avvenuto, verrai reinderizzato tra pochi secondi.";
 const char txt_login_fail[] PROGMEM = "Username/password errati! Riprova.";
 
 // Page Upgrade
 const char txt_upgrade_title[] PROGMEM = "Upgrade";
-const char txt_upgrade_info[] PROGMEM = "Aggiornamento firmware OTA tramite upload del file bin.";
+const char txt_upgrade_info[] PROGMEM =
+    "Aggiornamento firmware OTA tramite upload del file bin.";
 const char txt_upgrade_start[] PROGMEM = "Caricamento avviato";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "Nessun file selezionato";
-const char txt_upload_filetoolarge[] PROGMEM = "La dimensione del file è maggiore dello spazio disponibile";
-const char txt_upload_fileheader[] PROGMEM = "L'header del file non inizia con 0xE9";
-const char txt_upload_flashsize[] PROGMEM = "La dimensione del file è maggiore della dimensione del dispositivo";
+const char txt_upload_filetoolarge[] PROGMEM =
+    "La dimensione del file è maggiore dello spazio disponibile";
+const char txt_upload_fileheader[] PROGMEM =
+    "L'header del file non inizia con 0xE9";
+const char txt_upload_flashsize[] PROGMEM =
+    "La dimensione del file è maggiore della dimensione del dispositivo";
 const char txt_upload_buffer[] PROGMEM = "Buffer del caricamento file errato";
-const char txt_upload_failed[] PROGMEM = "Caricamento fallito. Abilita l'opzione di log 3 per ulteriori informazioni";
+const char txt_upload_failed[] PROGMEM =
+    "Caricamento fallito. Abilita l'opzione di log 3 per ulteriori "
+    "informazioni";
 const char txt_upload_aborted[] PROGMEM = "Caricamento annullato";
 const char txt_upload_code[] PROGMEM = "Errore di caricamento codice ";
-const char txt_upload_error[] PROGMEM = "Errore di caricamento codice (vedi Updater.cpp) ";
+const char txt_upload_error[] PROGMEM =
+    "Errore di caricamento codice (vedi Updater.cpp) ";
 const char txt_upload_sucess[] PROGMEM = "Successo";
 const char txt_upload_refresh[] PROGMEM = "Refresh in";
 
 // Page Init
 const char txt_init_title[] PROGMEM = "Setup iniziale";
 const char txt_init_reboot_mes[] PROGMEM =
-    "Riavvio e connessione alla tua rete WiFi! Dovresti vederlo nella lista del tuo Access Point.";
+    "Riavvio e connessione alla tua rete WiFi! Dovresti vederlo nella lista "
+    "del tuo Access Point.";
 const char txt_init_reboot[] PROGMEM = "Riavvio...";

@@ -1,9 +1,9 @@
 /*
   mitsubishi2mqtt - Mitsubishi Heat Pump to MQTT control for Home Assistant.
-  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis, alekslyse.  All right reserved.
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
+  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis,
+  alekslyse.  All right reserved. This library is free software; you can
+  redistribute it and/or modify it under the terms of the GNU Lesser General
+  Public License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -135,5 +135,6 @@ const char txt_upload_refresh[] PROGMEM = "刷新";
 
 // Page Init
 const char txt_init_title[] PROGMEM = "初始化设置";
-const char txt_init_reboot_mes[] PROGMEM = "重启并连接至你的WiFi网络! 你将在访问点列表中见到本机.";
+const char txt_init_reboot_mes[] PROGMEM =
+    "重启并连接至你的WiFi网络! 你将在访问点列表中见到本机.";
 const char txt_init_reboot[] PROGMEM = "重启中...";

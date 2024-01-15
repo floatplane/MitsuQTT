@@ -1,9 +1,9 @@
 /*
   mitsubishi2mqtt - Mitsubishi Heat Pump to MQTT control for Home Assistant.
-  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis, alekslyse.  All right reserved.
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
+  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis,
+  alekslyse.  All right reserved. This library is free software; you can
+  redistribute it and/or modify it under the terms of the GNU Lesser General
+  Public License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -27,7 +27,8 @@ const char txt_WIFI[] PROGMEM = "WIFI";
 const char txt_unit[] PROGMEM = "エアコン本体";
 const char txt_others[] PROGMEM = "その他";
 const char txt_reset[] PROGMEM = "初期化";
-const char txt_reset_confirm[] PROGMEM = "Do you really want to reset this unit?";
+const char txt_reset_confirm[] PROGMEM =
+    "Do you really want to reset this unit?";
 
 // Buttons
 const char txt_back[] PROGMEM = "戻る";
@@ -112,29 +113,39 @@ const char txt_unit_password[] PROGMEM = "Webパスワード";
 // Page Login
 const char txt_login_title[] PROGMEM = "ログイン";
 const char txt_login_password[] PROGMEM = "パスワード";
-const char txt_login_sucess[] PROGMEM = "ログイン成功、数秒後にリダイレクトされます";
-const char txt_login_fail[] PROGMEM = "ユーザー名・パスワードが間違っています、もう一度試してください";
+const char txt_login_sucess[] PROGMEM =
+    "ログイン成功、数秒後にリダイレクトされます";
+const char txt_login_fail[] PROGMEM =
+    "ユーザー名・パスワードが間違っています、もう一度試してください";
 
 // Page Upgrade
 const char txt_upgrade_title[] PROGMEM = "ファームウェア更新";
-const char txt_upgrade_info[] PROGMEM = "binファイルをアップロードし、ファームウェアのOTAアップデートを行う";
+const char txt_upgrade_info[] PROGMEM =
+    "binファイルをアップロードし、ファームウェアのOTAアップデートを行う";
 const char txt_upgrade_start[] PROGMEM = "アップロード中";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "ファイルが選択されていません";
-const char txt_upload_filetoolarge[] PROGMEM = "ファイルのサイズが空き容量を超えています";
-const char txt_upload_fileheader[] PROGMEM = "ファイルのマジックナンバーが0xE9から始まっていません";
-const char txt_upload_flashsize[] PROGMEM = "ファイルのフラッシュサイズがデバイスのフラッシュ容量を超えています";
-const char txt_upload_buffer[] PROGMEM = "ファイルアップロードのバッファサイズが一致しません";
-const char txt_upload_failed[] PROGMEM = "アップロード失敗. loggingのオプション3を有効にし、詳細を確認してください";
+const char txt_upload_filetoolarge[] PROGMEM =
+    "ファイルのサイズが空き容量を超えています";
+const char txt_upload_fileheader[] PROGMEM =
+    "ファイルのマジックナンバーが0xE9から始まっていません";
+const char txt_upload_flashsize[] PROGMEM =
+    "ファイルのフラッシュサイズがデバイスのフラッシュ容量を超えています";
+const char txt_upload_buffer[] PROGMEM =
+    "ファイルアップロードのバッファサイズが一致しません";
+const char txt_upload_failed[] PROGMEM =
+    "アップロード失敗. loggingのオプション3を有効にし、詳細を確認してください";
 const char txt_upload_aborted[] PROGMEM = "アップロード中止";
 const char txt_upload_code[] PROGMEM = "アップロードエラーコード ";
-const char txt_upload_error[] PROGMEM = "アップデートエラーコード (Updater.cppを参照してください) ";
+const char txt_upload_error[] PROGMEM =
+    "アップデートエラーコード (Updater.cppを参照してください) ";
 const char txt_upload_sucess[] PROGMEM = "成功";
 const char txt_upload_refresh[] PROGMEM = "再読込中";
 
 // Page Init
 const char txt_init_title[] PROGMEM = "初期設定";
 const char txt_init_reboot_mes[] PROGMEM =
-    "Rebooting and connecting to your WiFi network! You should see it listed in on your access point.";
+    "Rebooting and connecting to your WiFi network! You should see it listed "
+    "in on your access point.";
 const char txt_init_reboot[] PROGMEM = "Rebooting...";
