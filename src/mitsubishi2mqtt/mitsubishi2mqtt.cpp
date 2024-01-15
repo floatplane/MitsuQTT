@@ -85,8 +85,6 @@ StaticJsonDocument<JSON_OBJECT_SIZE(12)> rootInfo;
 //Web OTA
 int uploaderror = 0;
 
-
-
 void setup() {
   // Start serial for debug before HVAC connect to serial
   Serial.begin(115200);
@@ -117,7 +115,6 @@ void setup() {
   loadOthers();
   loadUnit();
   mqtt_client_id = hostname;
-
 #ifdef ESP32
   WiFi.setHostname(hostname.c_str());
 #else
