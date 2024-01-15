@@ -27,8 +27,7 @@ const char txt_WIFI[] PROGMEM = "WIFI";
 const char txt_unit[] PROGMEM = "エアコン本体";
 const char txt_others[] PROGMEM = "その他";
 const char txt_reset[] PROGMEM = "初期化";
-const char txt_reset_confirm[] PROGMEM =
-    "Do you really want to reset this unit?";
+const char txt_reset_confirm[] PROGMEM = "Do you really want to reset this unit?";
 
 // Buttons
 const char txt_back[] PROGMEM = "戻る";
@@ -113,8 +112,7 @@ const char txt_unit_password[] PROGMEM = "Webパスワード";
 // Page Login
 const char txt_login_title[] PROGMEM = "ログイン";
 const char txt_login_password[] PROGMEM = "パスワード";
-const char txt_login_sucess[] PROGMEM =
-    "ログイン成功、数秒後にリダイレクトされます";
+const char txt_login_sucess[] PROGMEM = "ログイン成功、数秒後にリダイレクトされます";
 const char txt_login_fail[] PROGMEM =
     "ユーザー名・パスワードが間違っています、もう一度試してください";
 
@@ -126,20 +124,16 @@ const char txt_upgrade_start[] PROGMEM = "アップロード中";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "ファイルが選択されていません";
-const char txt_upload_filetoolarge[] PROGMEM =
-    "ファイルのサイズが空き容量を超えています";
-const char txt_upload_fileheader[] PROGMEM =
-    "ファイルのマジックナンバーが0xE9から始まっていません";
+const char txt_upload_filetoolarge[] PROGMEM = "ファイルのサイズが空き容量を超えています";
+const char txt_upload_fileheader[] PROGMEM = "ファイルのマジックナンバーが0xE9から始まっていません";
 const char txt_upload_flashsize[] PROGMEM =
     "ファイルのフラッシュサイズがデバイスのフラッシュ容量を超えています";
-const char txt_upload_buffer[] PROGMEM =
-    "ファイルアップロードのバッファサイズが一致しません";
+const char txt_upload_buffer[] PROGMEM = "ファイルアップロードのバッファサイズが一致しません";
 const char txt_upload_failed[] PROGMEM =
     "アップロード失敗. loggingのオプション3を有効にし、詳細を確認してください";
 const char txt_upload_aborted[] PROGMEM = "アップロード中止";
 const char txt_upload_code[] PROGMEM = "アップロードエラーコード ";
-const char txt_upload_error[] PROGMEM =
-    "アップデートエラーコード (Updater.cppを参照してください) ";
+const char txt_upload_error[] PROGMEM = "アップデートエラーコード (Updater.cppを参照してください) ";
 const char txt_upload_sucess[] PROGMEM = "成功";
 const char txt_upload_refresh[] PROGMEM = "再読込中";
 

@@ -27,8 +27,7 @@ const char txt_WIFI[] PROGMEM = "WIFI";
 const char txt_unit[] PROGMEM = "Unit";
 const char txt_others[] PROGMEM = "Others";
 const char txt_reset[] PROGMEM = "Reset configuration";
-const char txt_reset_confirm[] PROGMEM =
-    "Do you really want to reset this unit?";
+const char txt_reset_confirm[] PROGMEM = "Do you really want to reset this unit?";
 
 // Buttons
 const char txt_back[] PROGMEM = "Back";
@@ -57,8 +56,7 @@ const char txt_f_noheat[] PROGMEM = "All modes except heat";
 // Page Reboot, save & Resseting
 const char txt_m_reboot[] PROGMEM = "Rebooting... Refresh in";
 const char txt_m_reset[] PROGMEM = "Resetting... Connect to SSID";
-const char txt_m_save[] PROGMEM =
-    "Saving configuration and rebooting... Refresh in";
+const char txt_m_save[] PROGMEM = "Saving configuration and rebooting... Refresh in";
 
 // Page MQTT
 const char txt_mqtt_title[] PROGMEM = "MQTT Parameters";
@@ -120,18 +118,14 @@ const char txt_login_fail[] PROGMEM = "Wrong username/password! Try again.";
 
 // Page Upgrade
 const char txt_upgrade_title[] PROGMEM = "Upgrade";
-const char txt_upgrade_info[] PROGMEM =
-    "Firmware OTA upgrade by bin file upload";
+const char txt_upgrade_info[] PROGMEM = "Firmware OTA upgrade by bin file upload";
 const char txt_upgrade_start[] PROGMEM = "Upload started";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "No file selected";
-const char txt_upload_filetoolarge[] PROGMEM =
-    "File size is larger than available free space";
-const char txt_upload_fileheader[] PROGMEM =
-    "File magic header does not start with 0xE9";
-const char txt_upload_flashsize[] PROGMEM =
-    "File flash size is larger than device flash size";
+const char txt_upload_filetoolarge[] PROGMEM = "File size is larger than available free space";
+const char txt_upload_fileheader[] PROGMEM = "File magic header does not start with 0xE9";
+const char txt_upload_flashsize[] PROGMEM = "File flash size is larger than device flash size";
 const char txt_upload_buffer[] PROGMEM = "File upload buffer miscompare";
 const char txt_upload_failed[] PROGMEM =
     "Upload failed. Enable logging option 3 for more information";

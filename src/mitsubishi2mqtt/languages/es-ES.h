@@ -27,8 +27,7 @@ const char txt_WIFI[] PROGMEM = "WIFI";
 const char txt_unit[] PROGMEM = "Aparato";
 const char txt_others[] PROGMEM = "Otros";
 const char txt_reset[] PROGMEM = "Restablecer controlador";
-const char txt_reset_confirm[] PROGMEM =
-    "Confirmar restablecimiento de controlador?";
+const char txt_reset_confirm[] PROGMEM = "Confirmar restablecimiento de controlador?";
 
 // Buttons
 const char txt_back[] PROGMEM = "Volver";
@@ -57,8 +56,7 @@ const char txt_f_noheat[] PROGMEM = "Todos los modos excepto calor";
 // Page Reboot, save & Resseting
 const char txt_m_reboot[] PROGMEM = "Reiniciando... Refrescando en";
 const char txt_m_reset[] PROGMEM = "Restableciendo... Sonectando a SSID";
-const char txt_m_save[] PROGMEM =
-    "Guardando configuración and reiniciando... Refrecando en";
+const char txt_m_save[] PROGMEM = "Guardando configuración and reiniciando... Refrecando en";
 
 // Page MQTT
 const char txt_mqtt_title[] PROGMEM = "Parametros MQTT";
@@ -116,31 +114,25 @@ const char txt_login_title[] PROGMEM = "Autentificación";
 const char txt_login_password[] PROGMEM = "Contraseña";
 const char txt_login_sucess[] PROGMEM =
     "Autentificación correcta, en pocos segundos serás redirigido.";
-const char txt_login_fail[] PROGMEM =
-    "¡Usuario contraseña invalidos! Intentalo de nuevo.";
+const char txt_login_fail[] PROGMEM = "¡Usuario contraseña invalidos! Intentalo de nuevo.";
 
 // Page Upgrade
 const char txt_upgrade_title[] PROGMEM = "Actualización";
-const char txt_upgrade_info[] PROGMEM =
-    "Actualizar Firmware OTA mediante subida de fichero bin";
+const char txt_upgrade_info[] PROGMEM = "Actualizar Firmware OTA mediante subida de fichero bin";
 const char txt_upgrade_start[] PROGMEM = "Actualización iniciada";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "Ningun fichero bin selecionado";
-const char txt_upload_filetoolarge[] PROGMEM =
-    "El fichero es mayor que el espacio disponible";
-const char txt_upload_fileheader[] PROGMEM =
-    "La cabecera del fichero no comienza con 0xE9";
+const char txt_upload_filetoolarge[] PROGMEM = "El fichero es mayor que el espacio disponible";
+const char txt_upload_fileheader[] PROGMEM = "La cabecera del fichero no comienza con 0xE9";
 const char txt_upload_flashsize[] PROGMEM =
     "El fichero es mayor que el espacio disponible en memoria flash";
-const char txt_upload_buffer[] PROGMEM =
-    "El bufer de subida de fichero es erroneo";
+const char txt_upload_buffer[] PROGMEM = "El bufer de subida de fichero es erroneo";
 const char txt_upload_failed[] PROGMEM =
     "Subida fallida. Habilita opcion 3 de depuración para mas información";
 const char txt_upload_aborted[] PROGMEM = "Subida abortada";
 const char txt_upload_code[] PROGMEM = "Código de error de subida";
-const char txt_upload_error[] PROGMEM =
-    "Código de error de subida (mirar en Updater.cpp) ";
+const char txt_upload_error[] PROGMEM = "Código de error de subida (mirar en Updater.cpp) ";
 const char txt_upload_sucess[] PROGMEM = "Satisfactorio";
 const char txt_upload_refresh[] PROGMEM = "Refescando en ";
 

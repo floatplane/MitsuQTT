@@ -27,8 +27,7 @@ const char txt_WIFI[] PROGMEM = "WLAN";
 const char txt_unit[] PROGMEM = "Einheiten";
 const char txt_others[] PROGMEM = "weiteres";
 const char txt_reset[] PROGMEM = "Einstellungen zurücksetzen";
-const char txt_reset_confirm[] PROGMEM =
-    "Willst du wirklich alle Einstellungen zurücksetzen?";
+const char txt_reset_confirm[] PROGMEM = "Willst du wirklich alle Einstellungen zurücksetzen?";
 
 // Buttons
 const char txt_back[] PROGMEM = "zurück";
@@ -57,8 +56,7 @@ const char txt_f_noheat[] PROGMEM = "jeder Modus, außer heizen";
 // Page Reboot, save & Resseting
 const char txt_m_reboot[] PROGMEM = "Neustart... Aktualisierung in";
 const char txt_m_reset[] PROGMEM = "Zurücksetzen... Verbinde mit SSID";
-const char txt_m_save[] PROGMEM =
-    "Einstellungen speichern und neustart... Aktualisierung in";
+const char txt_m_save[] PROGMEM = "Einstellungen speichern und neustart... Aktualisierung in";
 
 // Page MQTT
 const char txt_mqtt_title[] PROGMEM = "MQTT Parameter";
@@ -114,27 +112,20 @@ const char txt_unit_password[] PROGMEM = "Web Passwort";
 // Page Login
 const char txt_login_title[] PROGMEM = "Authentifizierung";
 const char txt_login_password[] PROGMEM = "Passwort";
-const char txt_login_sucess[] PROGMEM =
-    "Anmeldung erfolgreich, du wirst gleich weitergeleitet.";
-const char txt_login_fail[] PROGMEM =
-    "Falscher/s Benutzername/Passwort! Erneut versuchen.";
+const char txt_login_sucess[] PROGMEM = "Anmeldung erfolgreich, du wirst gleich weitergeleitet.";
+const char txt_login_fail[] PROGMEM = "Falscher/s Benutzername/Passwort! Erneut versuchen.";
 
 // Page Upgrade
 const char txt_upgrade_title[] PROGMEM = "Upgrade";
-const char txt_upgrade_info[] PROGMEM =
-    "Firmware OTA upgrade, über .bin Datei upload";
+const char txt_upgrade_info[] PROGMEM = "Firmware OTA upgrade, über .bin Datei upload";
 const char txt_upgrade_start[] PROGMEM = "Upload gestartet";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "keine Datei ausgewählt";
-const char txt_upload_filetoolarge[] PROGMEM =
-    "Datei ist größer als der verfügbare Speicher";
-const char txt_upload_fileheader[] PROGMEM =
-    "File magic header fängt nicht mit 0xE9 an";
-const char txt_upload_flashsize[] PROGMEM =
-    "Datei-Flash-Größe ist größer als Geräte-Flash-Größe";
-const char txt_upload_buffer[] PROGMEM =
-    "Datei-Upload-Puffer stimmt nicht überein";
+const char txt_upload_filetoolarge[] PROGMEM = "Datei ist größer als der verfügbare Speicher";
+const char txt_upload_fileheader[] PROGMEM = "File magic header fängt nicht mit 0xE9 an";
+const char txt_upload_flashsize[] PROGMEM = "Datei-Flash-Größe ist größer als Geräte-Flash-Größe";
+const char txt_upload_buffer[] PROGMEM = "Datei-Upload-Puffer stimmt nicht überein";
 const char txt_upload_failed[] PROGMEM =
     "Upload fehlgeschlagen. Aktivieren Sie die Protokollierungsoption 3, um "
     "weitere Informationen zu erhalten";

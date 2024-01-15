@@ -27,8 +27,7 @@ const char txt_WIFI[] PROGMEM = "WIFI";
 const char txt_unit[] PROGMEM = "Enhed";
 const char txt_others[] PROGMEM = "Diverse";
 const char txt_reset[] PROGMEM = "Reset konfiguration";
-const char txt_reset_confirm[] PROGMEM =
-    "Do you really want to reset this unit?";
+const char txt_reset_confirm[] PROGMEM = "Do you really want to reset this unit?";
 
 // Buttons
 const char txt_back[] PROGMEM = "Tilbage";
@@ -57,8 +56,7 @@ const char txt_f_noheat[] PROGMEM = "All modes execept heat";
 // Page Reboot, save & Resseting
 const char txt_m_reboot[] PROGMEM = "Rebooting... Refresh in";
 const char txt_m_reset[] PROGMEM = "Resetting... Connect to SSID";
-const char txt_m_save[] PROGMEM =
-    "Saving configuration and rebooting... Refresh in";
+const char txt_m_save[] PROGMEM = "Saving configuration and rebooting... Refresh in";
 
 // Page MQTT
 const char txt_mqtt_title[] PROGMEM = "MQTT Parameters";
@@ -114,24 +112,19 @@ const char txt_unit_password[] PROGMEM = "Web password";
 // Page Login
 const char txt_login_title[] PROGMEM = "Authentication";
 const char txt_login_password[] PROGMEM = "Password";
-const char txt_login_sucess[] PROGMEM =
-    "Login successful, you will be redirect in few seconds.";
+const char txt_login_sucess[] PROGMEM = "Login successful, you will be redirect in few seconds.";
 const char txt_login_fail[] PROGMEM = "Wrong username/password! try again.";
 
 // Page Upgrade
 const char txt_upgrade_title[] PROGMEM = "Upgrade";
-const char txt_upgrade_info[] PROGMEM =
-    "Firmware OTA upgrade by bin file upload";
+const char txt_upgrade_info[] PROGMEM = "Firmware OTA upgrade by bin file upload";
 const char txt_upgrade_start[] PROGMEM = "Upload started";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "No file selected";
-const char txt_upload_filetoolarge[] PROGMEM =
-    "File size is larger than available free space";
-const char txt_upload_fileheader[] PROGMEM =
-    "File magic header does not start with 0xE9";
-const char txt_upload_flashsize[] PROGMEM =
-    "File flash size is larger than device flash size";
+const char txt_upload_filetoolarge[] PROGMEM = "File size is larger than available free space";
+const char txt_upload_fileheader[] PROGMEM = "File magic header does not start with 0xE9";
+const char txt_upload_flashsize[] PROGMEM = "File flash size is larger than device flash size";
 const char txt_upload_buffer[] PROGMEM = "File upload buffer miscompare";
 const char txt_upload_failed[] PROGMEM =
     "Upload failed. Enable logging option 3 for more information";

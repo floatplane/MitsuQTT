@@ -135,6 +135,5 @@ const char txt_upload_refresh[] PROGMEM = "刷新";
 
 // Page Init
 const char txt_init_title[] PROGMEM = "初始化设置";
-const char txt_init_reboot_mes[] PROGMEM =
-    "重启并连接至你的WiFi网络! 你将在访问点列表中见到本机.";
+const char txt_init_reboot_mes[] PROGMEM = "重启并连接至你的WiFi网络! 你将在访问点列表中见到本机.";
 const char txt_init_reboot[] PROGMEM = "重启中...";
