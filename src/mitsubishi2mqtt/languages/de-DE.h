@@ -1,9 +1,9 @@
 /*
   mitsubishi2mqtt - Mitsubishi Heat Pump to MQTT control for Home Assistant.
-  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis, alekslyse.  All right reserved.
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
+  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis,
+  alekslyse.  All right reserved. This library is free software; you can
+  redistribute it and/or modify it under the terms of the GNU Lesser General
+  Public License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -127,7 +127,8 @@ const char txt_upload_fileheader[] PROGMEM = "File magic header fängt nicht mit
 const char txt_upload_flashsize[] PROGMEM = "Datei-Flash-Größe ist größer als Geräte-Flash-Größe";
 const char txt_upload_buffer[] PROGMEM = "Datei-Upload-Puffer stimmt nicht überein";
 const char txt_upload_failed[] PROGMEM =
-    "Upload fehlgeschlagen. Aktivieren Sie die Protokollierungsoption 3, um weitere Informationen zu erhalten";
+    "Upload fehlgeschlagen. Aktivieren Sie die Protokollierungsoption 3, um "
+    "weitere Informationen zu erhalten";
 const char txt_upload_aborted[] PROGMEM = "Upload abgebrochen";
 const char txt_upload_code[] PROGMEM = "Upload Fehlercode ";
 const char txt_upload_error[] PROGMEM = "Update Fehlercode (see Updater.cpp) ";
@@ -136,6 +137,7 @@ const char txt_upload_refresh[] PROGMEM = "Aktualisierung in";
 
 // Page Init
 const char txt_init_title[] PROGMEM = "Ersteinrichtung";
-const char txt_init_reboot_mes[] PROGMEM = "Neustart und Verbindung zu deinem WLAN-Netzwerk wird hergestellt! Du "
-                                           "solltest es in deiner AccessPoint Auflistung sehen.";
+const char txt_init_reboot_mes[] PROGMEM =
+    "Neustart und Verbindung zu deinem WLAN-Netzwerk wird hergestellt! Du "
+    "solltest es in deiner AccessPoint Auflistung sehen.";
 const char txt_init_reboot[] PROGMEM = "Neustart...";

@@ -1,9 +1,9 @@
 /*
   mitsubishi2mqtt - Mitsubishi Heat Pump to MQTT control for Home Assistant.
-  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis, alekslyse.  All right reserved.
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
+  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis,
+  alekslyse.  All right reserved. This library is free software; you can
+  redistribute it and/or modify it under the terms of the GNU Lesser General
+  Public License as published by the Free Software Foundation; either
   version 2.1 of the License, or (at your option) any later version.
   This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -112,7 +112,8 @@ const char txt_unit_password[] PROGMEM = "Contraseña interfaz";
 // Page Login
 const char txt_login_title[] PROGMEM = "Autentificación";
 const char txt_login_password[] PROGMEM = "Contraseña";
-const char txt_login_sucess[] PROGMEM = "Autentificación correcta, en pocos segundos serás redirigido.";
+const char txt_login_sucess[] PROGMEM =
+    "Autentificación correcta, en pocos segundos serás redirigido.";
 const char txt_login_fail[] PROGMEM = "¡Usuario contraseña invalidos! Intentalo de nuevo.";
 
 // Page Upgrade
@@ -124,9 +125,11 @@ const char txt_upgrade_start[] PROGMEM = "Actualización iniciada";
 const char txt_upload_nofile[] PROGMEM = "Ningun fichero bin selecionado";
 const char txt_upload_filetoolarge[] PROGMEM = "El fichero es mayor que el espacio disponible";
 const char txt_upload_fileheader[] PROGMEM = "La cabecera del fichero no comienza con 0xE9";
-const char txt_upload_flashsize[] PROGMEM = "El fichero es mayor que el espacio disponible en memoria flash";
+const char txt_upload_flashsize[] PROGMEM =
+    "El fichero es mayor que el espacio disponible en memoria flash";
 const char txt_upload_buffer[] PROGMEM = "El bufer de subida de fichero es erroneo";
-const char txt_upload_failed[] PROGMEM = "Subida fallida. Habilita opcion 3 de depuración para mas información";
+const char txt_upload_failed[] PROGMEM =
+    "Subida fallida. Habilita opcion 3 de depuración para mas información";
 const char txt_upload_aborted[] PROGMEM = "Subida abortada";
 const char txt_upload_code[] PROGMEM = "Código de error de subida";
 const char txt_upload_error[] PROGMEM = "Código de error de subida (mirar en Updater.cpp) ";
@@ -136,5 +139,6 @@ const char txt_upload_refresh[] PROGMEM = "Refescando en ";
 // Page Init
 const char txt_init_title[] PROGMEM = "Configuración inicial";
 const char txt_init_reboot_mes[] PROGMEM =
-    "Reiniciando y conectando a su red WiFi! Debería ver el equipo en su punto de acceso.";
+    "Reiniciando y conectando a su red WiFi! Debería ver el equipo en su punto "
+    "de acceso.";
 const char txt_init_reboot[] PROGMEM = "Reiniciando...";
