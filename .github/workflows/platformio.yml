@@ -10,6 +10,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/cache@v3
         with:
           path: |
@@ -19,6 +20,14 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
+      - name: clang-format style check
+        uses: jidicula/clang-format-action@v4.11.0
+        with:
+          clang-format-version: '13'
+          check-path: 'src'
+          fallback-style: 'llvm' # optional
+
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
 
