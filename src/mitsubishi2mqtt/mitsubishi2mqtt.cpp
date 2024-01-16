@@ -887,7 +887,7 @@ void handleControl() {
 
   if (settings.power == "ON") {
     controlPage.replace("_POWER_ON_", "selected");
-  } else if (settings.power = "OFF") {
+  } else if (settings.power == "OFF") {
     controlPage.replace("_POWER_OFF_", "selected");
   }
 
