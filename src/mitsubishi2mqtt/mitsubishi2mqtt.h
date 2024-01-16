@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <HeatPump.h>
 
+class HeatpumpSettings;
+
 String getId();
 void setDefaults();
 bool loadWifi();
@@ -33,13 +35,13 @@ void hpStatusChanged(heatpumpStatus newStatus);
 void hpPacketDebug(byte *packet, unsigned int length, const char *packetDirection);
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit);
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit);
-String hpGetMode(heatpumpSettings hpSettings);
-String hpGetAction(heatpumpStatus hpStatus, heatpumpSettings hpSettings);
+String hpGetMode(const HeatpumpSettings &hpSettings);
+String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings);
 void mqttCallback(char *topic, byte *payload, unsigned int length);
 void mqttConnect();
 bool connectWifi();
 bool checkLogin();
-heatpumpSettings change_states(heatpumpSettings settings);
+HeatpumpSettings change_states(const HeatpumpSettings &settings);
 String getTemperatureScale();
 bool is_authenticated();
 void hpCheckRemoteTemp();
