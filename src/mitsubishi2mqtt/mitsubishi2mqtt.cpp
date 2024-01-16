@@ -16,6 +16,7 @@
 #include "mitsubishi2mqtt.h"
 
 #include "FS.h"  // SPIFFS for store config
+#include "HeatpumpSettings.h"
 #ifdef ESP32
 #include <ESPmDNS.h>    // mDNS for ESP32
 #include <WebServer.h>  // webServer for ESP32
@@ -180,7 +181,7 @@ void setup() {
     hp.enableAutoUpdate();
     hp.connect(&Serial);
     heatpumpStatus currentStatus = hp.getStatus();
-    heatpumpSettings currentSettings = hp.getSettings();
+    HeatpumpSettings currentSettings = hp.getSettings();
     rootInfo["roomTemperature"] =
         convertCelsiusToLocalUnit(currentStatus.roomTemperature, useFahrenheit);
     rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
@@ -845,7 +846,7 @@ void handleControl() {
     server.send(302);
     return;
   }
-  heatpumpSettings settings = hp.getSettings();
+  HeatpumpSettings settings = hp.getSettings();
   settings = change_states(settings);
   String controlPage = FPSTR(html_page_control);
   String headerContent = FPSTR(html_common_header);
@@ -884,69 +885,69 @@ void handleControl() {
   controlPage.replace("_TXT_F_SWING_", FPSTR(txt_f_swing));
   controlPage.replace("_TXT_F_POS_", FPSTR(txt_f_pos));
 
-  if (strcmp(settings.power, "ON") == 0) {
+  if (settings.power == "ON") {
     controlPage.replace("_POWER_ON_", "selected");
-  } else if (strcmp(settings.power, "OFF") == 0) {
+  } else if (settings.power = "OFF") {
     controlPage.replace("_POWER_OFF_", "selected");
   }
 
-  if (strcmp(settings.mode, "HEAT") == 0) {
+  if (settings.mode == "HEAT") {
     controlPage.replace("_MODE_H_", "selected");
-  } else if (strcmp(settings.mode, "DRY") == 0) {
+  } else if (settings.mode == "DRY") {
     controlPage.replace("_MODE_D_", "selected");
-  } else if (strcmp(settings.mode, "COOL") == 0) {
+  } else if (settings.mode == "COOL") {
     controlPage.replace("_MODE_C_", "selected");
-  } else if (strcmp(settings.mode, "FAN") == 0) {
+  } else if (settings.mode == "FAN") {
     controlPage.replace("_MODE_F_", "selected");
-  } else if (strcmp(settings.mode, "AUTO") == 0) {
+  } else if (settings.mode == "AUTO") {
     controlPage.replace("_MODE_A_", "selected");
   }
 
-  if (strcmp(settings.fan, "AUTO") == 0) {
+  if (settings.fan == "AUTO") {
     controlPage.replace("_FAN_A_", "selected");
-  } else if (strcmp(settings.fan, "QUIET") == 0) {
+  } else if (settings.fan == "QUIET") {
     controlPage.replace("_FAN_Q_", "selected");
-  } else if (strcmp(settings.fan, "1") == 0) {
+  } else if (settings.fan == "1") {
     controlPage.replace("_FAN_1_", "selected");
-  } else if (strcmp(settings.fan, "2") == 0) {
+  } else if (settings.fan == "2") {
     controlPage.replace("_FAN_2_", "selected");
-  } else if (strcmp(settings.fan, "3") == 0) {
+  } else if (settings.fan == "3") {
     controlPage.replace("_FAN_3_", "selected");
-  } else if (strcmp(settings.fan, "4") == 0) {
+  } else if (settings.fan == "4") {
     controlPage.replace("_FAN_4_", "selected");
   }
 
   controlPage.replace("_VANE_V_", settings.vane);
-  if (strcmp(settings.vane, "AUTO") == 0) {
+  if (settings.vane == "AUTO") {
     controlPage.replace("_VANE_A_", "selected");
-  } else if (strcmp(settings.vane, "1") == 0) {
+  } else if (settings.vane == "1") {
     controlPage.replace("_VANE_1_", "selected");
-  } else if (strcmp(settings.vane, "2") == 0) {
+  } else if (settings.vane == "2") {
     controlPage.replace("_VANE_2_", "selected");
-  } else if (strcmp(settings.vane, "3") == 0) {
+  } else if (settings.vane == "3") {
     controlPage.replace("_VANE_3_", "selected");
-  } else if (strcmp(settings.vane, "4") == 0) {
+  } else if (settings.vane == "4") {
     controlPage.replace("_VANE_4_", "selected");
-  } else if (strcmp(settings.vane, "5") == 0) {
+  } else if (settings.vane == "5") {
     controlPage.replace("_VANE_5_", "selected");
-  } else if (strcmp(settings.vane, "SWING") == 0) {
+  } else if (settings.vane == "SWING") {
     controlPage.replace("_VANE_S_", "selected");
   }
 
   controlPage.replace("_WIDEVANE_V_", settings.wideVane);
-  if (strcmp(settings.wideVane, "<<") == 0) {
+  if (settings.wideVane == "<<") {
     controlPage.replace("_WVANE_1_", "selected");
-  } else if (strcmp(settings.wideVane, "<") == 0) {
+  } else if (settings.wideVane == "<") {
     controlPage.replace("_WVANE_2_", "selected");
-  } else if (strcmp(settings.wideVane, "|") == 0) {
+  } else if (settings.wideVane == "|") {
     controlPage.replace("_WVANE_3_", "selected");
-  } else if (strcmp(settings.wideVane, ">") == 0) {
+  } else if (settings.wideVane == ">") {
     controlPage.replace("_WVANE_4_", "selected");
-  } else if (strcmp(settings.wideVane, ">>") == 0) {
+  } else if (settings.wideVane == ">>") {
     controlPage.replace("_WVANE_5_", "selected");
-  } else if (strcmp(settings.wideVane, "<>") == 0) {
+  } else if (settings.wideVane == "<>") {
     controlPage.replace("_WVANE_6_", "selected");
-  } else if (strcmp(settings.wideVane, "SWING") == 0) {
+  } else if (settings.wideVane == "SWING") {
     controlPage.replace("_WVANE_S_", "selected");
   }
   controlPage.replace("_TEMP_",
@@ -967,10 +968,10 @@ void handleControl() {
 void handleMetrics() {
   String metrics = FPSTR(html_metrics);
 
-  heatpumpSettings currentSettings = hp.getSettings();
+  HeatpumpSettings currentSettings = hp.getSettings();
   heatpumpStatus currentStatus = hp.getStatus();
 
-  String hppower = String(currentSettings.power) == "ON" ? "1" : "0";
+  String hppower = currentSettings.power == "ON" ? "1" : "0";
 
   String hpfan = currentSettings.fan;
   if (hpfan == "AUTO") hpfan = "-1";
@@ -1017,14 +1018,14 @@ void handleMetrics() {
   metrics.replace("_UNIT_NAME_", hostname);
   metrics.replace("_VERSION_", m2mqtt_version);
   metrics.replace("_POWER_", hppower);
-  metrics.replace("_ROOMTEMP_", (String)currentStatus.roomTemperature);
-  metrics.replace("_TEMP_", (String)currentSettings.temperature);
+  metrics.replace("_ROOMTEMP_", String(currentStatus.roomTemperature));
+  metrics.replace("_TEMP_", String(currentSettings.temperature));
   metrics.replace("_FAN_", hpfan);
   metrics.replace("_VANE_", hpvane);
   metrics.replace("_WIDEVANE_", hpwidevane);
   metrics.replace("_MODE_", hpmode);
-  metrics.replace("_OPER_", (String)currentStatus.operating);
-  metrics.replace("_COMPFREQ_", (String)currentStatus.compressorFrequency);
+  metrics.replace("_OPER_", String(currentStatus.operating));
+  metrics.replace("_COMPFREQ_", String(currentStatus.compressorFrequency));
   server.send(200, F("text/plain"), metrics);
 }
 
@@ -1234,44 +1235,46 @@ void write_log(String log) {
   logFile.close();
 }
 
-heatpumpSettings change_states(heatpumpSettings settings) {
+HeatpumpSettings change_states(const HeatpumpSettings &settings) {
+  HeatpumpSettings newSettings = settings;
   if (server.hasArg("CONNECT")) {
     hp.connect(&Serial);
   } else {
     bool update = false;
     if (server.hasArg("POWER")) {
-      settings.power = server.arg("POWER").c_str();
+      newSettings.power = server.arg("POWER");
       update = true;
     }
     if (server.hasArg("MODE")) {
-      settings.mode = server.arg("MODE").c_str();
+      newSettings.mode = server.arg("MODE");
       update = true;
     }
     if (server.hasArg("TEMP")) {
-      settings.temperature = convertLocalUnitToCelsius(server.arg("TEMP").toInt(), useFahrenheit);
+      newSettings.temperature =
+          convertLocalUnitToCelsius(server.arg("TEMP").toInt(), useFahrenheit);
       update = true;
     }
     if (server.hasArg("FAN")) {
-      settings.fan = server.arg("FAN").c_str();
+      newSettings.fan = server.arg("FAN").c_str();
       update = true;
     }
     if (server.hasArg("VANE")) {
-      settings.vane = server.arg("VANE").c_str();
+      newSettings.vane = server.arg("VANE").c_str();
       update = true;
     }
     if (server.hasArg("WIDEVANE")) {
-      settings.wideVane = server.arg("WIDEVANE").c_str();
+      newSettings.wideVane = server.arg("WIDEVANE").c_str();
       update = true;
     }
     if (update) {
-      hp.setSettings(settings);
+      hp.setSettings(newSettings.getRaw());
     }
   }
-  return settings;
+  return newSettings;
 }
 
 void readHeatPumpSettings() {
-  heatpumpSettings currentSettings = hp.getSettings();
+  HeatpumpSettings currentSettings = hp.getSettings();
 
   rootInfo.clear();
   rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
@@ -1296,16 +1299,16 @@ void hpSettingsChanged() {
   hpStatusChanged(hp.getStatus());
 }
 
-String hpGetMode(heatpumpSettings hpSettings) {
+String hpGetMode(const HeatpumpSettings &hpSettings) {
   // Map the heat pump state to one of HA's HVAC_MODE_* values.
   // https://github.com/home-assistant/core/blob/master/homeassistant/components/climate/const.py#L3-L23
 
-  String hppower = String(hpSettings.power);
+  String hppower = hpSettings.power;
   if (hppower.equalsIgnoreCase("off")) {
     return "off";
   }
 
-  String hpmode = String(hpSettings.mode);
+  String hpmode = hpSettings.mode;
   hpmode.toLowerCase();
 
   if (hpmode == "fan")
@@ -1316,16 +1319,16 @@ String hpGetMode(heatpumpSettings hpSettings) {
     return hpmode;  // cool, heat, dry
 }
 
-String hpGetAction(heatpumpStatus hpStatus, heatpumpSettings hpSettings) {
+String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) {
   // Map heat pump state to one of HA's CURRENT_HVAC_* values.
   // https://github.com/home-assistant/core/blob/master/homeassistant/components/climate/const.py#L80-L86
 
-  String hppower = String(hpSettings.power);
+  String hppower = hpSettings.power;
   if (hppower.equalsIgnoreCase("off")) {
     return "off";
   }
 
-  String hpmode = String(hpSettings.mode);
+  String hpmode = hpSettings.mode;
   hpmode.toLowerCase();
 
   if (hpmode == "fan")
@@ -1352,7 +1355,7 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
                           // disable it and revert to the internal thermometer.
 
     // send room temp, operating info and all information
-    heatpumpSettings currentSettings = hp.getSettings();
+    HeatpumpSettings currentSettings = hp.getSettings();
 
     if (currentStatus.roomTemperature == 0) return;
 
