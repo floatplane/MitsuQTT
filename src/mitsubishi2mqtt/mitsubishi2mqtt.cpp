@@ -1386,7 +1386,7 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
     return hpmode;  // unknown
 }
 
-void hpStatusChanged(heatpumpStatus currentStatus) {
+void hpStatusChanged(heatpumpStatus newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS (millis
                                                                // rollover tolerant)
@@ -1396,18 +1396,18 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
     // send room temp, operating info and all information
     HeatpumpSettings currentSettings(hp.getSettings());
 
-    if (currentStatus.roomTemperature == 0) return;
+    if (newStatus.roomTemperature == 0) return;
 
     rootInfo.clear();
     rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(currentStatus.roomTemperature, useFahrenheit);
+        convertCelsiusToLocalUnit(newStatus.roomTemperature, useFahrenheit);
     rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
     rootInfo["fan"] = currentSettings.fan;
     rootInfo["vane"] = currentSettings.vane;
     rootInfo["wideVane"] = currentSettings.wideVane;
     rootInfo["mode"] = hpGetMode(currentSettings);
-    rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
-    rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
+    rootInfo["action"] = hpGetAction(newStatus, currentSettings);
+    rootInfo["compressorFrequency"] = newStatus.compressorFrequency;
     String mqttOutput;
     serializeJson(rootInfo, mqttOutput);
 

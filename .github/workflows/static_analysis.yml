@@ -27,13 +27,16 @@ jobs:
         run: pip install --upgrade platformio
 
       - name: Check Generic8266(ESP-01)
+        # TODO: add  --fail-on-defect medium when all medium errors are fixed
         run: |
-          pio check -e ESP8266-ESP01
+          pio check -e ESP8266-ESP01 --fail-on-defect high
 
       - name: Check WEMOS_D1_Mini
+        # TODO: add  --fail-on-defect medium when all medium errors are fixed
         run: |
-          pio check -e WEMOS_D1_Mini
+          pio check -e WEMOS_D1_Mini --fail-on-defect high
 
       - name: Check ESP32DEV
+        # TODO: add  --fail-on-defect medium when all medium errors are fixed
         run: |
-          pio check -e ESP32DEV
+          pio check -e ESP32DEV --fail-on-defect high
