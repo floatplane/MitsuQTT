@@ -301,13 +301,17 @@ bool loadUnit() {
   deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
-  if (unit_tempUnit == "fah") useFahrenheit = true;
+  if (unit_tempUnit == "fah") {
+    useFahrenheit = true;
+  }
   min_temp = doc["min_temp"].as<uint8_t>();
   max_temp = doc["max_temp"].as<uint8_t>();
   temp_step = doc["temp_step"].as<String>();
   // mode
   String supportMode = doc["support_mode"].as<String>();
-  if (supportMode == "nht") supportHeatMode = false;
+  if (supportMode == "nht") {
+    supportHeatMode = false;
+  }
   // prevent login password is "null" if not exist key
   if (doc.containsKey("login_password")) {
     login_password = doc["login_password"].as<String>();
@@ -339,7 +343,9 @@ bool loadOthers() {
   deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
-  if (unit_tempUnit == "fah") useFahrenheit = true;
+  if (unit_tempUnit == "fah") {
+    useFahrenheit = true;
+  }
   others_haa_topic = doc["haat"].as<String>();
   String haa = doc["haa"].as<String>();
   String debugPckts = doc["debugPckts"].as<String>();
@@ -387,22 +393,34 @@ void saveUnit(String tempUnit, String supportMode, String loginPassword, String 
   const size_t capacity = JSON_OBJECT_SIZE(6) + 200;
   DynamicJsonDocument doc(capacity);
   // if temp unit is empty, we use default celcius
-  if (tempUnit.isEmpty()) tempUnit = "cel";
+  if (tempUnit.isEmpty()) {
+    tempUnit = "cel";
+  }
   doc["unit_tempUnit"] = tempUnit;
   // if minTemp is empty, we use default 16
-  if (minTemp.isEmpty()) minTemp = 16;
+  if (minTemp.isEmpty()) {
+    minTemp = 16;
+  }
   doc["min_temp"] = minTemp;
   // if maxTemp is empty, we use default 31
-  if (maxTemp.isEmpty()) maxTemp = 31;
+  if (maxTemp.isEmpty()) {
+    maxTemp = 31;
+  }
   doc["max_temp"] = maxTemp;
   // if tempStep is empty, we use default 1
-  if (tempStep.isEmpty()) tempStep = 1;
+  if (tempStep.isEmpty()) {
+    tempStep = 1;
+  }
   doc["temp_step"] = tempStep;
   // if support mode is empty, we use default all mode
-  if (supportMode.isEmpty()) supportMode = "all";
+  if (supportMode.isEmpty()) {
+    supportMode = "all";
+  }
   doc["support_mode"] = supportMode;
   // if login password is empty, we use empty
-  if (loginPassword.isEmpty()) loginPassword = "";
+  if (loginPassword.isEmpty()) {
+    loginPassword = "";
+  }
 
   doc["login_password"] = loginPassword;
   File configFile = SPIFFS.open(unit_conf, "w");
@@ -577,7 +595,9 @@ void handleNotFound() {
 }
 
 void handleSaveWifi() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   // Serial.println(F("Saving wifi config"));
   if (server.method() == HTTP_POST) {
@@ -594,7 +614,9 @@ void handleSaveWifi() {
 }
 
 void handleReboot() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   String initRebootPage = FPSTR(html_init_reboot);
   initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
@@ -604,7 +626,9 @@ void handleReboot() {
 }
 
 void handleRoot() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.hasArg("REBOOT")) {
     String rebootPage = FPSTR(html_page_reboot);
@@ -646,7 +670,9 @@ void handleInitSetup() {
 }
 
 void handleSetup() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.hasArg("RESET")) {
     String pageReset = FPSTR(html_page_reset);
@@ -685,7 +711,9 @@ void rebootAndSendPage() {
 }
 
 void handleOthers() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
     saveOthers({
@@ -728,7 +756,9 @@ void handleOthers() {
 }
 
 void handleMqtt() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
     saveMqtt({.mqttFn = server.arg("fn"),
@@ -760,7 +790,9 @@ void handleMqtt() {
 }
 
 void handleUnit() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
     saveUnit(server.arg("tu"), server.arg("md"), server.arg("lpw"),
@@ -787,22 +819,26 @@ void handleUnit() {
     unitPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(max_temp, useFahrenheit)));
     unitPage.replace(F("_TEMP_STEP_"), String(temp_step));
     // temp
-    if (useFahrenheit)
+    if (useFahrenheit) {
       unitPage.replace(F("_TU_FAH_"), F("selected"));
-    else
+    } else {
       unitPage.replace(F("_TU_CEL_"), F("selected"));
+    }
     // mode
-    if (supportHeatMode)
+    if (supportHeatMode) {
       unitPage.replace(F("_MD_ALL_"), F("selected"));
-    else
+    } else {
       unitPage.replace(F("_MD_NONHEAT_"), F("selected"));
+    }
     unitPage.replace(F("_LOGIN_PASSWORD_"), login_password);
     sendWrappedHTML(unitPage);
   }
 }
 
 void handleWifi() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
     saveWifi({.apSsid = server.arg("ssid"),
@@ -838,7 +874,9 @@ void handleWifi() {
 }
 
 void handleStatus() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   String statusPage = FPSTR(html_page_status);
   statusPage.replace("_TXT_BACK_", FPSTR(txt_back));
@@ -848,7 +886,9 @@ void handleStatus() {
   statusPage.replace("_TXT_STATUS_WIFI_", FPSTR(txt_status_wifi));
   statusPage.replace("_TXT_RETRIES_HVAC_", FPSTR(txt_retries_hvac));
 
-  if (server.hasArg("mrconn")) mqttConnect();
+  if (server.hasArg("mrconn")) {
+    mqttConnect();
+  }
 
   String connected = F("<span style='color:#47c266'><b>");
   connected += FPSTR(txt_status_connect);
@@ -858,14 +898,16 @@ void handleStatus() {
   disconnected += FPSTR(txt_status_disconnect);
   disconnected += F("</b></span>");
 
-  if ((Serial) and hp.isConnected())
+  if ((Serial) and hp.isConnected()) {
     statusPage.replace(F("_HVAC_STATUS_"), connected);
-  else
+  } else {
     statusPage.replace(F("_HVAC_STATUS_"), disconnected);
-  if (mqtt_client.connected())
+  }
+  if (mqtt_client.connected()) {
     statusPage.replace(F("_MQTT_STATUS_"), connected);
-  else
+  } else {
     statusPage.replace(F("_MQTT_STATUS_"), disconnected);
+  }
   statusPage.replace(F("_HVAC_RETRIES_"), String(hpConnectionTotalRetries));
   statusPage.replace(F("_MQTT_REASON_"), String(mqtt_client.state()));
   statusPage.replace(F("_WIFI_STATUS_"), String(WiFi.RSSI()));
@@ -873,7 +915,9 @@ void handleStatus() {
 }
 
 void handleControl() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   // not connected to hp, redirect to status page
   if (!hp.isConnected()) {
@@ -1011,46 +1055,56 @@ void handleMetrics() {
   String hppower = currentSettings.power == "ON" ? "1" : "0";
 
   String hpfan = currentSettings.fan;
-  if (hpfan == "AUTO") hpfan = "-1";
-  if (hpfan == "QUIET") hpfan = "0";
+  if (hpfan == "AUTO") {
+    hpfan = "-1";
+  }
+  if (hpfan == "QUIET") {
+    hpfan = "0";
+  }
 
   String hpvane = currentSettings.vane;
-  if (hpvane == "AUTO") hpvane = "-1";
-  if (hpvane == "SWING") hpvane = "0";
+  if (hpvane == "AUTO") {
+    hpvane = "-1";
+  }
+  if (hpvane == "SWING") {
+    hpvane = "0";
+  }
 
   String hpwidevane = currentSettings.wideVane;
-  if (hpwidevane == "SWING")
+  if (hpwidevane == "SWING") {
     hpwidevane = "0";
-  else if (hpwidevane == "<<")
+  } else if (hpwidevane == "<<") {
     hpwidevane = "1";
-  else if (hpwidevane == "<")
+  } else if (hpwidevane == "<") {
     hpwidevane = "2";
-  else if (hpwidevane == "|")
+  } else if (hpwidevane == "|") {
     hpwidevane = "3";
-  else if (hpwidevane == ">")
+  } else if (hpwidevane == ">") {
     hpwidevane = "4";
-  else if (hpwidevane == ">>")
+  } else if (hpwidevane == ">>") {
     hpwidevane = "5";
-  else if (hpwidevane == "<>")
+  } else if (hpwidevane == "<>") {
     hpwidevane = "6";
-  else
+  } else {
     hpwidevane = "-2";
+  }
 
   String hpmode = currentSettings.mode;
-  if (hpmode == "AUTO")
+  if (hpmode == "AUTO") {
     hpmode = "-1";
-  else if (hpmode == "COOL")
+  } else if (hpmode == "COOL") {
     hpmode = "1";
-  else if (hpmode == "DRY")
+  } else if (hpmode == "DRY") {
     hpmode = "2";
-  else if (hpmode == "HEAT")
+  } else if (hpmode == "HEAT") {
     hpmode = "3";
-  else if (hpmode == "FAN")
+  } else if (hpmode == "FAN") {
     hpmode = "4";
-  else if (hppower == "0")
+  } else if (hppower == "0") {
     hpmode = "0";
-  else
+  } else {
     hpmode = "-2";
+  }
 
   metrics.replace("_UNIT_NAME_", hostname);
   metrics.replace("_VERSION_", BUILD_DATE);
@@ -1126,7 +1180,9 @@ void handleLogin() {
 }
 
 void handleUpgrade() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   uploaderror = 0;
   String upgradePage = FPSTR(html_page_upgrade);
@@ -1192,7 +1248,9 @@ void handleUploadDone() {
 }
 
 void handleUploadLoop() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   // Based on ESP8266HTTPUpdateServer.cpp uses ESP8266WebServer Parsing.cpp and
   // Cores Updater.cpp (Update) char log[200];
@@ -1331,8 +1389,9 @@ void hpSettingsChanged() {
   serializeJson(rootInfo, mqttOutput);
 
   if (!mqtt_client.publish(ha_settings_topic.c_str(), mqttOutput.c_str(), true)) {
-    if (g_debugModeLogs)
+    if (g_debugModeLogs) {
       mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish hp settings");
+    }
   }
 
   hpStatusChanged(hp.getStatus());
@@ -1350,12 +1409,13 @@ String hpGetMode(const HeatpumpSettings &hpSettings) {
   String hpmode = hpSettings.mode;
   hpmode.toLowerCase();
 
-  if (hpmode == "fan")
+  if (hpmode == "fan") {
     return "fan_only";
-  else if (hpmode == "auto")
+  } else if (hpmode == "auto") {
     return "heat_cool";
-  else
+  } else {
     return hpmode;  // cool, heat, dry
+  }
 }
 
 String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) {
@@ -1370,20 +1430,21 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
   String hpmode = hpSettings.mode;
   hpmode.toLowerCase();
 
-  if (hpmode == "fan")
+  if (hpmode == "fan") {
     return "fan";
-  else if (!hpStatus.operating)
+  } else if (!hpStatus.operating) {
     return "idle";
-  else if (hpmode == "auto")
+  } else if (hpmode == "auto") {
     return "idle";
-  else if (hpmode == "cool")
+  } else if (hpmode == "cool") {
     return "cooling";
-  else if (hpmode == "heat")
+  } else if (hpmode == "heat") {
     return "heating";
-  else if (hpmode == "dry")
+  } else if (hpmode == "dry") {
     return "drying";
-  else
+  } else {
     return hpmode;  // unknown
+  }
 }
 
 void hpStatusChanged(heatpumpStatus newStatus) {
@@ -1396,7 +1457,9 @@ void hpStatusChanged(heatpumpStatus newStatus) {
     // send room temp, operating info and all information
     HeatpumpSettings currentSettings(hp.getSettings());
 
-    if (newStatus.roomTemperature == 0) return;
+    if (newStatus.roomTemperature == 0) {
+      return;
+    }
 
     rootInfo.clear();
     rootInfo["roomTemperature"] =
@@ -1412,8 +1475,9 @@ void hpStatusChanged(heatpumpStatus newStatus) {
     serializeJson(rootInfo, mqttOutput);
 
     if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
-      if (g_debugModeLogs)
+      if (g_debugModeLogs) {
         mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish hp status change");
+      }
     }
 
     lastTempSend = millis();
@@ -1460,8 +1524,9 @@ void hpSendLocalState() {
   serializeJson(rootInfo, mqttOutput);
   mqtt_client.publish(ha_debug_pckts_topic.c_str(), mqttOutput.c_str(), false);
   if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
-    if (g_debugModeLogs)
+    if (g_debugModeLogs) {
       mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish dummy hp status change");
+    }
   }
 
   // Restart counter for waiting enought time for the unit to update before
@@ -1927,8 +1992,9 @@ void loop() {
         }
       }
       // MQTT config problem on MQTT do nothing
-      else if (mqtt_client.state() > MQTT_CONNECTED)
+      else if (mqtt_client.state() > MQTT_CONNECTED) {
         return;
+      }
       // MQTT connected send status
       else {
         hpStatusChanged(hp.getStatus());
