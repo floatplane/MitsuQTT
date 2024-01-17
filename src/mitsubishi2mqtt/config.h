@@ -13,6 +13,8 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
+#include <Arduino.h>
 
 #ifndef LANG_PATH
 #define LANG_PATH "languages/en-GB.h"  // default language English
@@ -91,11 +93,11 @@ String login_password;
 // debug mode logs, when true, will send all debug messages to topic
 // heatpump_debug_logs_topic this can also be set by sending "on" to
 // heatpump_debug_set_topic
-bool _debugModeLogs = false;
+bool g_debugModeLogs = false;
 // debug mode packets, when true, will send all packets received from the
 // heatpump to topic heatpump_debug_packets_topic this can also be set by
 // sending "on" to heatpump_debug_set_topic
-bool _debugModePckts = false;
+bool g_debugModePckts = false;
 
 // Customization
 uint8_t min_temp = 16;   // Minimum temperature, in your selected unit, check
