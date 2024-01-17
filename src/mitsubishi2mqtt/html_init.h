@@ -13,6 +13,8 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
+#include <Arduino.h>
 
 const char html_init_setup[] PROGMEM = R"====(
 <div id='l1' name='l1'></div>

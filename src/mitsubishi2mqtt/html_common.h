@@ -13,6 +13,9 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#pragma once
+#include <Arduino.h>
+
 const char html_common_header[] PROGMEM = R"====(<!DOCTYPE html>
 <html lang="en" class="">
 
