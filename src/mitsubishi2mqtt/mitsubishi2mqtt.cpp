@@ -530,7 +530,8 @@ void sendWrappedHTML(String content) {
   String footerContent = FPSTR(html_common_footer);
   String toSend = headerContent + content + footerContent;
   toSend.replace(F("_UNIT_NAME_"), hostname);
-  toSend.replace(F("_VERSION_"), m2mqtt_version);
+  toSend.replace(F("_VERSION_"), BUILD_DATE);
+  toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
   server.send(200, F("text/html"), toSend);
 }
 
@@ -854,7 +855,8 @@ void handleControl() {
   String footerContent = FPSTR(html_common_footer);
   // write_log("Enter HVAC control");
   headerContent.replace("_UNIT_NAME_", hostname);
-  footerContent.replace("_VERSION_", m2mqtt_version);
+  footerContent.replace("_VERSION_", BUILD_DATE);
+  footerContent.replace("_GIT_HASH_", COMMIT_HASH);
   controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
   controlPage.replace("_UNIT_NAME_", hostname);
   controlPage.replace("_RATE_", "60");
@@ -1017,7 +1019,8 @@ void handleMetrics() {
     hpmode = "-2";
 
   metrics.replace("_UNIT_NAME_", hostname);
-  metrics.replace("_VERSION_", m2mqtt_version);
+  metrics.replace("_VERSION_", BUILD_DATE);
+  metrics.replace("_GIT_HASH_", COMMIT_HASH);
   metrics.replace("_POWER_", hppower);
   metrics.replace("_ROOMTEMP_", String(currentStatus.roomTemperature));
   metrics.replace("_TEMP_", String(currentSettings.temperature));
@@ -1672,7 +1675,7 @@ void haConfig() {
 
   haConfigDevice["ids"] = mqtt_fn;
   haConfigDevice["name"] = mqtt_fn;
-  haConfigDevice["sw"] = "Mitsubishi2MQTT " + String(m2mqtt_version);
+  haConfigDevice["sw"] = "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
   haConfigDevice["mdl"] = "HVAC MITSUBISHI";
   haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";
   haConfigDevice["configuration_url"] = "http://" + WiFi.localIP().toString();

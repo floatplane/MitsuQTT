@@ -18,8 +18,6 @@
 #define LANG_PATH "languages/en-GB.h"  // default language English
 #endif
 
-const PROGMEM char *m2mqtt_version = "2023.8.0";
-
 // Define global variables for files
 #ifdef ESP32
 const PROGMEM char *wifi_conf = "/wifi.json";

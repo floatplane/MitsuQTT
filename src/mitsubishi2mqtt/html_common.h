@@ -177,7 +177,7 @@ const char html_common_header[] PROGMEM = R"====(<!DOCTYPE html>
 const char html_common_footer[] PROGMEM = R"====(
         <br/>
         <div style='text-align:right;font-size:10px;color: grey;'>
-            <hr/>Mitsubishi2MQTT _VERSION_
+            <hr/>Mitsubishi2MQTT _VERSION_ (_GIT_HASH_)
         </div>
     </div>
 </body>
