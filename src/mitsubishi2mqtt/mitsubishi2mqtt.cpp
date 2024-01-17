@@ -805,7 +805,10 @@ void handleWifi() {
   if (!checkLogin()) return;
 
   if (server.method() == HTTP_POST) {
-    saveWifi(server.arg("ssid"), server.arg("psk"), server.arg("hn"), server.arg("otapwd"));
+    saveWifi({.apSsid = server.arg("ssid"),
+              .apPwd = server.arg("psk"),
+              .hostName = server.arg("hn"),
+              .otaPwd = server.arg("otapwd")});
     rebootAndSendPage();
 #ifdef ESP32
     ESP.restart();
