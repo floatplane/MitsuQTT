@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <HeatPump.h>
 
-class HeatpumpSettings;
+#include "HeatpumpSettings.hpp"
 
 String getId();
 void setDefaults();

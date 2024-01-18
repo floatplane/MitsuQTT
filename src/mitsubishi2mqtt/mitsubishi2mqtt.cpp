@@ -38,15 +38,124 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <math.h>          // for rounding to Fahrenheit values
 // #include <Ticker.h>     // for LED status (Using a Wemos D1-Mini)
 
-#include "HeatpumpSettings.h"
-#include "config.h"             // config file
-#include "html_common.h"        // common code HTML (like header, footer)
-#include "html_init.h"          // code html for initial config
-#include "html_menu.h"          // code html for menu
-#include "html_metrics.h"       // prometheus metrics
-#include "html_pages.h"         // code html for pages
-#include "javascript_common.h"  // common code javascript (like refresh page)
-#include "mitsubishi2mqtt.h"
+#include "HeatpumpSettings.hpp"
+// #include "config.hpp"             // config file
+#include "html_common.hpp"        // common code HTML (like header, footer)
+#include "html_init.hpp"          // code html for initial config
+#include "html_menu.hpp"          // code html for menu
+#include "html_metrics.hpp"       // prometheus metrics
+#include "html_pages.hpp"         // code html for pages
+#include "javascript_common.hpp"  // common code javascript (like refresh page)
+#include "mitsubishi2mqtt.hpp"
+
+// BEGIN include the contents of config.h
+#ifndef LANG_PATH
+#define LANG_PATH "languages/en-GB.h"  // default language English
+#endif
+
+// Define global variables for files
+#ifdef ESP32
+const PROGMEM char *const wifi_conf = "/wifi.json";
+const PROGMEM char *const mqtt_conf = "/mqtt.json";
+const PROGMEM char *const unit_conf = "/unit.json";
+const PROGMEM char *const console_file = "/console.log";
+const PROGMEM char *const others_conf = "/others.json";
+// pinouts
+const PROGMEM uint8_t blueLedPin = 2;  // The ESP32 has an internal blue LED at D2 (GPIO 02)
+#else
+const PROGMEM char *const wifi_conf = "wifi.json";
+const PROGMEM char *const mqtt_conf = "mqtt.json";
+const PROGMEM char *const unit_conf = "unit.json";
+const PROGMEM char *const console_file = "console.log";
+const PROGMEM char *const others_conf = "others.json";
+// pinouts
+const PROGMEM uint8_t blueLedPin = LED_BUILTIN;  // Onboard LED = digital pin 2 "D4" (blue LED on
+                                                 // WEMOS D1-Mini)
+#endif
+const PROGMEM uint8_t redLedPin = 0;
+
+// Define global variables for network
+const PROGMEM char *const hostnamePrefix = "HVAC_";
+const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
+unsigned long wifi_timeout;
+bool wifi_config_exists;
+String hostname = "";
+String ap_ssid;
+String ap_pwd;
+String ota_pwd;
+
+// Define global variables for MQTT
+String mqtt_fn;
+String mqtt_server;
+String mqtt_port;
+String mqtt_username;
+String mqtt_password;
+String mqtt_topic = "mitsubishi2mqtt";
+String mqtt_client_id;
+const PROGMEM char *const mqtt_payload_available = "online";
+const PROGMEM char *const mqtt_payload_unavailable = "offline";
+
+// Define global variables for Others settings
+bool others_haa;
+String others_haa_topic;
+
+// Define global variables for HA topics
+String ha_system_set_topic;
+String ha_mode_set_topic;
+String ha_temp_set_topic;
+String ha_remote_temp_set_topic;
+String ha_fan_set_topic;
+String ha_vane_set_topic;
+String ha_wideVane_set_topic;
+String ha_settings_topic;
+String ha_state_topic;
+String ha_debug_pckts_topic;
+String ha_debug_pckts_set_topic;
+String ha_debug_logs_topic;
+String ha_debug_logs_set_topic;
+String ha_config_topic;
+String ha_discovery_topic;
+String ha_custom_packet;
+String ha_availability_topic;
+String hvac_name;
+
+// login
+String login_username = "admin";
+String login_password;
+
+// debug mode logs, when true, will send all debug messages to topic
+// heatpump_debug_logs_topic this can also be set by sending "on" to
+// heatpump_debug_set_topic
+bool g_debugModeLogs = false;
+// debug mode packets, when true, will send all packets received from the
+// heatpump to topic heatpump_debug_packets_topic this can also be set by
+// sending "on" to heatpump_debug_set_topic
+bool g_debugModePckts = false;
+
+// Customization
+uint8_t min_temp = 16;   // Minimum temperature, in your selected unit, check
+                         // value from heatpump remote control
+uint8_t max_temp = 31;   // Maximum temperature, in your selected unit, check
+                         // value from heatpump remote control
+String temp_step = "1";  // Temperature setting step, check value from heatpump remote control
+
+// sketch settings
+const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS =
+    30000;  // 45 seconds (anything less may cause bouncing)
+const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000;  // 5 minutes
+const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;           // 1 second
+const PROGMEM uint32_t HP_RETRY_INTERVAL_MS = 1000;             // 1 second
+const PROGMEM uint32_t HP_MAX_RETRIES =
+    10;  // Double the interval between retries up to this many times, then keep
+         // retrying forever at that maximum interval.
+// Default values give a final retry interval of 1000ms * 2^10, which is 1024
+// seconds, about 17 minutes.
+
+// temp settings
+bool useFahrenheit = false;
+// support heat mode settings, some model do not support heat mode
+bool supportHeatMode = true;
+// END include the contents of config.h
 
 // Languages
 #include LANG_PATH  // defined in config.h
@@ -531,11 +640,10 @@ boolean initWifi() {
     connectWifiSuccess = wifi_config = connectWifi();
     if (connectWifiSuccess) {
       return true;
-    } else {
-      // reset hostname back to default before starting AP mode for privacy
-      hostname = hostnamePrefix;
-      hostname += getId();
     }
+    // reset hostname back to default before starting AP mode for privacy
+    hostname = hostnamePrefix;
+    hostname += getId();
   }
 
   // Serial.println(F("\n\r \n\rStarting in AP mode"));
@@ -1413,9 +1521,8 @@ String hpGetMode(const HeatpumpSettings &hpSettings) {
     return "fan_only";
   } else if (hpmode == "auto") {
     return "heat_cool";
-  } else {
-    return hpmode;  // cool, heat, dry
   }
+  return hpmode;  // cool, heat, dry
 }
 
 String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) {
@@ -1442,9 +1549,8 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
     return "heating";
   } else if (hpmode == "dry") {
     return "drying";
-  } else {
-    return hpmode;  // unknown
   }
+  return hpmode;  // unknown
 }
 
 void hpStatusChanged(heatpumpStatus newStatus) {
@@ -1804,10 +1910,9 @@ void mqttConnect() {
       if (attempts == 5) {
         lastMqttRetry = millis();
         return;
-      } else {
-        delay(10);
-        attempts++;
       }
+      delay(10);
+      attempts++;
     }
     // If state > 0 (MQTT_CONNECTED) => config or server problem we stop retry
     else if (mqtt_client.state() > MQTT_CONNECTED) {
@@ -1890,25 +1995,22 @@ float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0) / 1.8; }
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit) {
   if (isFahrenheit) {
     return toFahrenheit(temperature);
-  } else {
-    return temperature;
   }
+  return temperature;
 }
 
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit) {
   if (isFahrenheit) {
     return toCelsius(temperature);
-  } else {
-    return temperature;
   }
+  return temperature;
 }
 
 String getTemperatureScale() {
   if (useFahrenheit) {
     return "F";
-  } else {
-    return "C";
   }
+  return "C";
 }
 
 String getId() {

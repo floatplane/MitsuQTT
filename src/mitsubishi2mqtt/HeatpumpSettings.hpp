@@ -5,6 +5,8 @@
 
 class HeatpumpSettings {
  public:
+  HeatpumpSettings() = delete;
+
   explicit HeatpumpSettings(const heatpumpSettings& settings)
       : power(settings.power),
         mode(settings.mode),
