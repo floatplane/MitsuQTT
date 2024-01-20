@@ -54,6 +54,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #endif
 
 // Define global variables for files
+const size_t maxFileSize = 1024;
 #ifdef ESP32
 const PROGMEM char *const wifi_conf = "/wifi.json";
 const PROGMEM char *const mqtt_conf = "/mqtt.json";
@@ -83,6 +84,9 @@ String hostname = "";
 String ap_ssid;
 String ap_pwd;
 String ota_pwd;
+const int httpSuccess = 200;
+const int httpRedirectTemporarily =
+    302;  // TODO: is this actually permanent? can't remember, i'm offline rn
 
 // Define global variables for MQTT
 String mqtt_fn;
@@ -94,6 +98,7 @@ String mqtt_topic = "mitsubishi2mqtt";
 String mqtt_client_id;
 const PROGMEM char *const mqtt_payload_available = "online";
 const PROGMEM char *const mqtt_payload_unavailable = "offline";
+const size_t maxCustomPacketLength = 20;  // max custom packet bytes is 20
 
 // Define global variables for Others settings
 bool others_haa;
@@ -133,11 +138,15 @@ bool g_debugModeLogs = false;
 bool g_debugModePckts = false;
 
 // Customization
-uint8_t min_temp = 16;   // Minimum temperature, in your selected unit, check
-                         // value from heatpump remote control
-uint8_t max_temp = 31;   // Maximum temperature, in your selected unit, check
-                         // value from heatpump remote control
-String temp_step = "1";  // Temperature setting step, check value from heatpump remote control
+const uint8_t defaultMinimumTemp = 16;
+const uint8_t defaultMaximumTemp = 31;
+const char *defaultTempStep = "1";
+uint8_t min_temp{defaultMinimumTemp};  // Minimum temperature, in your selected unit, check
+                                       // value from heatpump remote control
+uint8_t max_temp{defaultMaximumTemp};  // Maximum temperature, in your selected unit, check
+                                       // value from heatpump remote control
+String temp_step{defaultTempStep};     // Temperature setting step, check
+                                       // value from heatpump remote control
 
 // sketch settings
 const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS =
@@ -176,7 +185,7 @@ boolean wifi_config = false;
 boolean remoteTempActive = false;
 
 // HVAC
-HeatPump hp;
+HeatPump hp;  // NOLINT(readability-identifier-length)
 unsigned long lastTempSend;
 unsigned long lastMqttRetry;
 unsigned long lastHpSync;
@@ -188,7 +197,17 @@ unsigned long lastRemoteTemp;
 StaticJsonDocument<JSON_OBJECT_SIZE(12)> rootInfo;
 
 // Web OTA
-int uploaderror = 0;
+enum UploadError {
+  noError = 0,
+  noFileSelected,
+  fileTooLarge,
+  fileMagicHeaderIncorrect,
+  fileTooBigForDeviceFlash,
+  fileUploadBufferMiscompare,
+  fileUploadFailed,
+  fileUploadAborted,
+};
+UploadError uploaderror = UploadError::noError;
 
 // cppcheck-suppress unusedFunction
 void setup() {
@@ -196,7 +215,7 @@ void setup() {
   Serial.begin(115200);
   // Serial.println(F("Starting Mitsubishi2MQTT"));
   // Mount SPIFFS filesystem
-  if (SPIFFS.begin()) {
+  if (SPIFFS.begin()) {  // NOLINT(bugprone-branch-clone)
     // Serial.println(F("Mounted file system"));
   } else {
     // Serial.println(F("Failed to mount FS -> formating"));
@@ -323,7 +342,7 @@ bool loadWifi() {
     return false;
   }
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     // Serial.println(F("Wifi config file size is too large"));
     return false;
   }
@@ -358,7 +377,7 @@ bool loadMqtt() {
   }
 
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     // write_log("Config file size is too large");
     return false;
   }
@@ -399,7 +418,7 @@ bool loadUnit() {
   }
 
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     return false;
   }
   std::unique_ptr<char[]> buf(new char[size]);
@@ -441,7 +460,7 @@ bool loadOthers() {
   }
 
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     return false;
   }
   std::unique_ptr<char[]> buf(new char[size]);
@@ -497,41 +516,29 @@ void saveMqtt(const SaveMqttArgs &args) {
   configFile.close();
 }
 
-void saveUnit(String tempUnit, String supportMode, String loginPassword, String minTemp,
-              String maxTemp, String tempStep) {
+struct SaveUnitArgs {
+  String tempUnit{};
+  String supportMode{};
+  String loginPassword{};
+  String minTemp{};
+  String maxTemp{};
+  String tempStep{};
+};
+void saveUnit(const SaveUnitArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(6) + 200;
   DynamicJsonDocument doc(capacity);
-  // if temp unit is empty, we use default celcius
-  if (tempUnit.isEmpty()) {
-    tempUnit = "cel";
-  }
-  doc["unit_tempUnit"] = tempUnit;
+  // if temp unit is empty, we use default celsius
+  doc["unit_tempUnit"] = args.tempUnit.isEmpty() ? "cel" : args.tempUnit;
   // if minTemp is empty, we use default 16
-  if (minTemp.isEmpty()) {
-    minTemp = 16;
-  }
-  doc["min_temp"] = minTemp;
+  doc["min_temp"] = args.minTemp.isEmpty() ? String(defaultMinimumTemp) : args.minTemp;
   // if maxTemp is empty, we use default 31
-  if (maxTemp.isEmpty()) {
-    maxTemp = 31;
-  }
-  doc["max_temp"] = maxTemp;
+  doc["max_temp"] = args.maxTemp.isEmpty() ? String(defaultMaximumTemp) : args.maxTemp;
   // if tempStep is empty, we use default 1
-  if (tempStep.isEmpty()) {
-    tempStep = 1;
-  }
-  doc["temp_step"] = tempStep;
+  doc["temp_step"] = args.tempStep.isEmpty() ? defaultTempStep : args.tempStep;
   // if support mode is empty, we use default all mode
-  if (supportMode.isEmpty()) {
-    supportMode = "all";
-  }
-  doc["support_mode"] = supportMode;
+  doc["support_mode"] = args.supportMode.isEmpty() ? "all" : args.supportMode;
   // if login password is empty, we use empty
-  if (loginPassword.isEmpty()) {
-    loginPassword = "";
-  }
-
-  doc["login_password"] = loginPassword;
+  doc["login_password"] = args.loginPassword.isEmpty() ? "" : args.loginPassword;
   File configFile = SPIFFS.open(unit_conf, "w");
   if (!configFile) {
     // Serial.println(F("Failed to open config file for writing"));
@@ -558,7 +565,7 @@ void saveWifi(const SaveWifiArgs &args) {
     // Serial.println(F("Failed to open wifi file for writing"));
   }
   serializeJson(doc, configFile);
-  delay(10);
+  delay(10);  // NOLINT(readability-magic-numbers)
   configFile.close();
 }
 
@@ -580,7 +587,7 @@ void saveOthers(const SaveOthersArgs &args) {
     // Serial.println(F("Failed to open wifi file for writing"));
   }
   serializeJson(doc, configFile);
-  delay(10);
+  delay(10);  // NOLINT(readability-magic-numbers)
   configFile.close();
 }
 
@@ -652,14 +659,14 @@ bool initWifi() {
   WiFi.persistent(false);  // fix crash esp32
                            // https://github.com/espressif/arduino-esp32/issues/2025
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  if (!connectWifiSuccess and login_password != "") {
+  if (!connectWifiSuccess and login_password != "") {  // NOLINT(bugprone-branch-clone)
     // Set AP password when falling back to AP on fail
     WiFi.softAP(hostname.c_str(), login_password.c_str());
   } else {
     // First time setup does not require password
     WiFi.softAP(hostname.c_str());
   }
-  delay(2000);  // VERY IMPORTANT
+  delay(2000);  // NOLINT(readability-magic-numbers)  // VERY IMPORTANT
 
   // Serial.print(F("IP address: "));
   // Serial.println(WiFi.softAPIP());
@@ -678,7 +685,7 @@ void sendWrappedHTML(String content) {
   toSend.replace(F("_UNIT_NAME_"), hostname);
   toSend.replace(F("_VERSION_"), BUILD_DATE);
   toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
-  server.send(200, F("text/html"), toSend);
+  server.send(httpSuccess, F("text/html"), toSend);
 }
 
 void handleNotFound() {
@@ -697,7 +704,7 @@ void handleNotFound() {
   } else {
     server.sendHeader("Location", "/");
     server.sendHeader("Cache-Control", "no-cache");
-    server.send(302);
+    server.send(httpRedirectTemporarily);
     return;
   }
 }
@@ -717,7 +724,7 @@ void handleSaveWifi() {
   String initSavePage = FPSTR(html_init_save);
   initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
   sendWrappedHTML(initSavePage);
-  delay(500);
+  delay(500);  // NOLINT(readability-magic-numbers)
   ESP.restart();
 }
 
@@ -729,7 +736,7 @@ void handleReboot() {
   String initRebootPage = FPSTR(html_init_reboot);
   initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
   sendWrappedHTML(initRebootPage);
-  delay(500);
+  delay(500);  // NOLINT(readability-magic-numbers)
   ESP.restart();
 }
 
@@ -743,7 +750,7 @@ void handleRoot() {
     String countDown = FPSTR(count_down_script);
     rebootPage.replace("_TXT_M_REBOOT_", FPSTR(txt_m_reboot));
     sendWrappedHTML(rebootPage + countDown);
-    delay(500);
+    delay(500);  // NOLINT(readability-magic-numbers)
 #ifdef ESP32
     ESP.restart();
 #else
@@ -790,7 +797,7 @@ void handleSetup() {
     pageReset.replace("_SSID_", ssid);
     sendWrappedHTML(pageReset);
     SPIFFS.format();
-    delay(500);
+    delay(500);  // NOLINT(readability-magic-numbers)
 #ifdef ESP32
     ESP.restart();
 #else
@@ -814,7 +821,7 @@ void rebootAndSendPage() {
   String countDown = FPSTR(count_down_script);
   saveRebootPage.replace("_TXT_M_SAVE_", FPSTR(txt_m_save));
   sendWrappedHTML(saveRebootPage + countDown);
-  delay(500);
+  delay(500);  // NOLINT(readability-magic-numbers)
   ESP.restart();
 }
 
@@ -903,10 +910,14 @@ void handleUnit() {
   }
 
   if (server.method() == HTTP_POST) {
-    saveUnit(server.arg("tu"), server.arg("md"), server.arg("lpw"),
-             (String)convertLocalUnitToCelsius(server.arg("min_temp").toInt(), useFahrenheit),
-             (String)convertLocalUnitToCelsius(server.arg("max_temp").toInt(), useFahrenheit),
-             server.arg("temp_step"));
+    saveUnit({.tempUnit = server.arg("tu"),
+              .supportMode = server.arg("md"),
+              .loginPassword = server.arg("lpw"),
+              .minTemp =
+                  (String)convertLocalUnitToCelsius(server.arg("min_temp").toInt(), useFahrenheit),
+              .maxTemp =
+                  (String)convertLocalUnitToCelsius(server.arg("max_temp").toInt(), useFahrenheit),
+              .tempStep = server.arg("temp_step")});
     rebootAndSendPage();
   } else {
     String unitPage = FPSTR(html_page_unit);
@@ -1022,7 +1033,7 @@ void handleStatus() {
   sendWrappedHTML(statusPage);
 }
 
-void handleControl() {
+void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   if (!checkLogin()) {
     return;
   }
@@ -1031,7 +1042,7 @@ void handleControl() {
   if (!hp.isConnected()) {
     server.sendHeader("Location", "/status");
     server.sendHeader("Cache-Control", "no-cache");
-    server.send(302);
+    server.send(httpRedirectTemporarily);
     return;
   }
   HeatpumpSettings settings(hp.getSettings());
@@ -1146,12 +1157,12 @@ void handleControl() {
   // a limitation on the maximum size we can send at one
   // time (approx 6k).
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.send(200, "text/html", headerContent);
+  server.send(httpSuccess, "text/html", headerContent);
   server.sendContent(controlPage);
   server.sendContent(footerContent);
   // Signal the end of the content
   server.sendContent("");
-  // delay(100);
+  // delay(100); // NOLINT(readability-magic-numbers)
 }
 
 void handleMetrics() {
@@ -1226,7 +1237,7 @@ void handleMetrics() {
   metrics.replace("_MODE_", hpmode);
   metrics.replace("_OPER_", String(currentStatus.operating));
   metrics.replace("_COMPFREQ_", String(currentStatus.compressorFrequency));
-  server.send(200, F("text/plain"), metrics);
+  server.send(httpSuccess, F("text/plain"), metrics);
 }
 
 // login page, also called for logout
@@ -1278,7 +1289,7 @@ void handleLogin() {
       redirectPage += F("}, 1000);");
       redirectPage += F("</script>");
       redirectPage += F("</body></html>");
-      server.send(302, F("text/html"), redirectPage);
+      server.send(httpRedirectTemporarily, F("text/html"), redirectPage);
       return;
     }
   }
@@ -1292,7 +1303,7 @@ void handleUpgrade() {
     return;
   }
 
-  uploaderror = 0;
+  uploaderror = UploadError::noError;
   String upgradePage = FPSTR(html_page_upgrade);
   upgradePage.replace("_TXT_B_UPGRADE_", FPSTR(txt_upgrade));
   upgradePage.replace("_TXT_BACK_", FPSTR(txt_back));
@@ -1308,21 +1319,21 @@ void handleUploadDone() {
   bool restartflag = false;
   String uploadDonePage = FPSTR(html_page_upload);
   String content = F("<div style='text-align:center;'><b>Upload ");
-  if (uploaderror != 0) {
+  if (uploaderror != UploadError::noError) {
     content += F("<span style='color:#d43535'>failed</span></b><br/><br/>");
-    if (uploaderror == 1) {
+    if (uploaderror == UploadError::noFileSelected) {
       content += FPSTR(txt_upload_nofile);
-    } else if (uploaderror == 2) {
+    } else if (uploaderror == UploadError::fileTooLarge) {
       content += FPSTR(txt_upload_filetoolarge);
-    } else if (uploaderror == 3) {
+    } else if (uploaderror == UploadError::fileMagicHeaderIncorrect) {
       content += FPSTR(txt_upload_fileheader);
-    } else if (uploaderror == 4) {
+    } else if (uploaderror == UploadError::fileTooBigForDeviceFlash) {
       content += FPSTR(txt_upload_flashsize);
-    } else if (uploaderror == 5) {
+    } else if (uploaderror == UploadError::fileUploadBufferMiscompare) {
       content += FPSTR(txt_upload_buffer);
-    } else if (uploaderror == 6) {
+    } else if (uploaderror == UploadError::fileUploadFailed) {
       content += FPSTR(txt_upload_failed);
-    } else if (uploaderror == 7) {
+    } else if (uploaderror == UploadError::fileUploadAborted) {
       content += FPSTR(txt_upload_aborted);
     } else {
       content += FPSTR(txt_upload_error);
@@ -1346,7 +1357,7 @@ void handleUploadDone() {
   uploadDonePage.replace("_TXT_BACK_", FPSTR(txt_back));
   sendWrappedHTML(uploadDonePage);
   if (restartflag) {
-    delay(500);
+    delay(500);  // NOLINT(readability-magic-numbers)
 #ifdef ESP32
     ESP.restart();
 #else
@@ -1355,21 +1366,21 @@ void handleUploadDone() {
   }
 }
 
-void handleUploadLoop() {
+void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
   if (!checkLogin()) {
     return;
   }
 
   // Based on ESP8266HTTPUpdateServer.cpp uses ESP8266WebServer Parsing.cpp and
   // Cores Updater.cpp (Update) char log[200];
-  if (uploaderror != 0) {
+  if (uploaderror != UploadError::noError) {
     Update.end();
     return;
   }
   HTTPUpload &upload = server.upload();
   if (upload.status == UPLOAD_FILE_START) {
     if (upload.filename.c_str()[0] == 0) {
-      uploaderror = 1;
+      uploaderror = UploadError::noFileSelected;
       return;
     }
     // save cpu by disconnect/stop retry mqtt server
@@ -1382,15 +1393,15 @@ void handleUploadLoop() {
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     if (!Update.begin(maxSketchSpace)) {  // start with max available size
       // Update.printError(Serial);
-      uploaderror = 2;
+      uploaderror = UploadError::fileTooLarge;
       return;
     }
   } else if (!uploaderror && (upload.status == UPLOAD_FILE_WRITE)) {
     if (upload.totalSize == 0) {
-      if (upload.buf[0] != 0xE9) {
+      if (upload.buf[0] != 0xE9) {  // NOLINT(readability-magic-numbers)
         // Serial.println(PSTR("Upload: File magic header does not start with
         // 0xE9"));
-        uploaderror = 3;
+        uploaderror = UploadError::fileMagicHeaderIncorrect;
         return;
       }
       uint32_t bin_flash_size = ESP.magicFlashChipSize((upload.buf[3] & 0xf0) >> 4);
@@ -1401,7 +1412,7 @@ void handleUploadLoop() {
 #endif
         // Serial.printl(PSTR("Upload: File flash size is larger than device
         // flash size"));
-        uploaderror = 4;
+        uploaderror = UploadError::fileTooBigForDeviceFlash;
         return;
       }
       if (ESP.getFlashChipMode() == 3) {
@@ -1412,7 +1423,7 @@ void handleUploadLoop() {
     }
     if (!uploaderror && (Update.write(upload.buf, upload.currentSize) != upload.currentSize)) {
       // Update.printError(Serial);
-      uploaderror = 5;
+      uploaderror = UploadError::fileUploadBufferMiscompare;
       return;
     }
   } else if (!uploaderror && (upload.status == UPLOAD_FILE_END)) {
@@ -1422,15 +1433,15 @@ void handleUploadLoop() {
                              // upload.totalSize); Serial.printl(log)
     } else {
       // Update.printError(Serial);
-      uploaderror = 6;
+      uploaderror = UploadError::fileUploadFailed;
       return;
     }
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
     // Serial.println(PSTR("Upload: Update was aborted"));
-    uploaderror = 7;
+    uploaderror = UploadError::fileUploadAborted;
     Update.end();
   }
-  delay(0);
+  delay(0);  // NOLINT(readability-magic-numbers)
 }
 
 // cppcheck-suppress unusedFunction
@@ -1561,8 +1572,8 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
 
 void hpStatusChanged(heatpumpStatus newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
-                                                               // SEND_ROOM_TEMP_INTERVAL_MS (millis
-                                                               // rollover tolerant)
+                                                               // SEND_ROOM_TEMP_INTERVAL_MS
+                                                               // (millis rollover tolerant)
     hpCheckRemoteTemp();  // if the remote temperature feed from mqtt is stale,
                           // disable it and revert to the internal thermometer.
 
@@ -1599,8 +1610,8 @@ void hpStatusChanged(heatpumpStatus newStatus) {
 void hpCheckRemoteTemp() {
   if (remoteTempActive && (millis() - lastRemoteTemp >
                            CHECK_REMOTE_TEMP_INTERVAL_MS)) {  // if it's been 5 minutes since last
-                                                              // remote_temp message, revert back to
-                                                              // HP internal temp sensor
+                                                              // remote_temp message, revert back
+                                                              // to HP internal temp sensor
     remoteTempActive = false;
     float const temperature = 0;
     hp.setRemoteTemperature(temperature);
@@ -1612,8 +1623,8 @@ void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDi
   if (g_debugModePckts) {
     String message;
     for (unsigned int idx = 0; idx < length; idx++) {
-      if (packet[idx] < 16) {
-        message += "0";  // pad single hex digits with a 0
+      if (packet[idx] < 16) {  // NOLINT(readability-magic-numbers)
+        message += "0";        // pad single hex digits with a 0
       }
       message += String(packet[idx], HEX) + " ";
     }
@@ -1646,11 +1657,12 @@ void hpSendLocalState() {
   lastTempSend = millis();
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   // Copy payload into message buffer
   char message[length + 1];
   for (unsigned int i = 0; i < length; i++) {
-    message[i] = payload[i];
+    message[i] = static_cast<char>(payload[i]);
   }
   message[length] = '\0';
 
@@ -1693,7 +1705,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
     float temperature = strtof(message, NULL);
     float temperature_c = convertLocalUnitToCelsius(temperature, useFahrenheit);
     if (temperature_c < min_temp || temperature_c > max_temp) {
-      temperature_c = 23;
+      temperature_c = (min_temp + max_temp) / 2;
       rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, useFahrenheit);
     } else {
       rootInfo["temperature"] = temperature;
@@ -1753,7 +1765,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
     char buffer[(custom.length() + 1)];  // +1 for the NULL at the end
     custom.toCharArray(buffer, (custom.length() + 1));
 
-    byte bytes[20];  // max custom packet bytes is 20
+    byte bytes[maxCustomPacketLength];
     int byteCount = 0;
 
     // loop over the byte string, breaking it up by spaces (or at the end of the
@@ -1880,12 +1892,14 @@ void haConfig() {
 
   JsonObject haConfigDevice = haConfig.createNestedObject("device");
 
-  haConfigDevice["ids"] = mqtt_fn;
-  haConfigDevice["name"] = mqtt_fn;
-  haConfigDevice["sw"] = "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
-  haConfigDevice["mdl"] = "HVAC MITSUBISHI";
-  haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";
-  haConfigDevice["configuration_url"] = "http://" + WiFi.localIP().toString();
+  haConfigDevice["ids"] = mqtt_fn;   // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["name"] = mqtt_fn;  // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["sw"] =             // NOLINT(readability-misplaced-array-index)
+      "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
+  haConfigDevice["mdl"] = "HVAC MITSUBISHI";     // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";  // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["configuration_url"] =
+      "http://" + WiFi.localIP().toString();  // NOLINT(readability-misplaced-array-index)
 
   // Additional attributes are in the state
   // For now, only compressorFrequency
@@ -1905,6 +1919,7 @@ void haConfig() {
 void mqttConnect() {
   // Loop until we're reconnected
   int attempts = 0;
+  const int maxAttempts = 5;
   while (!mqtt_client.connected()) {
     // Attempt to connect
     mqtt_client.connect(mqtt_client_id.c_str(), mqtt_username.c_str(), mqtt_password.c_str(),
@@ -1912,11 +1927,11 @@ void mqttConnect() {
     // If state < 0 (MQTT_CONNECTED) => network problem we retry 5 times and
     // then waiting for MQTT_RETRY_INTERVAL_MS and retry reapeatly
     if (mqtt_client.state() < MQTT_CONNECTED) {
-      if (attempts == 5) {
+      if (attempts == maxAttempts) {
         lastMqttRetry = millis();
         return;
       }
-      delay(10);
+      delay(10);  // NOLINT(readability-magic-numbers)
       attempts++;
     }
     // If state > 0 (MQTT_CONNECTED) => config or server problem we stop retry
@@ -1945,6 +1960,7 @@ void mqttConnect() {
 }
 
 bool connectWifi() {
+  const int connectTimeoutMs = 30000;
 #ifdef ESP32
   WiFi.setHostname(hostname.c_str());
 #else
@@ -1952,22 +1968,22 @@ bool connectWifi() {
 #endif
   if (WiFi.getMode() != WIFI_STA) {
     WiFi.mode(WIFI_STA);
-    delay(10);
+    delay(10);  // NOLINT(readability-magic-numbers)
   }
 #ifdef ESP32
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
 #endif
   WiFi.begin(ap_ssid.c_str(), ap_pwd.c_str());
   // Serial.println("Connecting to " + ap_ssid);
-  wifi_timeout = millis() + 30000;
+  wifi_timeout = millis() + connectTimeoutMs;
   while (WiFi.status() != WL_CONNECTED && millis() < wifi_timeout) {
     Serial.write('.');
     // Serial.print(WiFi.status());
     //  wait 500ms, flashing the blue LED to indicate WiFi connecting...
     digitalWrite(blueLedPin, LOW);
-    delay(250);
+    delay(250);  // NOLINT(readability-magic-numbers)
     digitalWrite(blueLedPin, HIGH);
-    delay(250);
+    delay(250);  // NOLINT(readability-magic-numbers)
   }
   if (WiFi.status() != WL_CONNECTED) {
     // Serial.println(F("Failed to connect to wifi"));
@@ -1979,12 +1995,15 @@ bool connectWifi() {
   // Serial.print("IP address: ");
   while (WiFi.localIP().toString() == "0.0.0.0" || WiFi.localIP().toString() == "") {
     // Serial.write('.');
-    delay(500);
+    delay(500);  // NOLINT(readability-magic-numbers)
   }
-  if (WiFi.localIP().toString() == "0.0.0.0" || WiFi.localIP().toString() == "") {
-    // Serial.println(F("Failed to get IP address"));
-    return false;
-  }
+
+  // This conditional can't be true if we fell out of the loop
+  // if (WiFi.localIP().toString() == "0.0.0.0" || WiFi.localIP().toString() == "") {
+  //   // Serial.println(F("Failed to get IP address"));
+  //   return false;
+  // }
+
   // Serial.println(WiFi.localIP());
   // ticker.detach(); // Stop blinking the LED because now we are connected:)
   // keep LED off (For Wemos D1-Mini)
@@ -1993,9 +2012,13 @@ bool connectWifi() {
 }
 
 // temperature helper functions
-float toFahrenheit(float fromCelcius) { return round(1.8 * fromCelcius + 32.0); }
+float toFahrenheit(float fromCelsius) {
+  return round(1.8F * fromCelsius + 32.0F);  // NOLINT(readability-magic-numbers)
+}
 
-float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0) / 1.8; }
+float toCelsius(float fromFahrenheit) {
+  return (fromFahrenheit - 32.0F) / 1.8F;  // NOLINT(readability-magic-numbers)
+}
 
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit) {
   if (isFahrenheit) {
@@ -2054,7 +2077,7 @@ bool checkLogin() {
     redirectPage += F("}, 1000);");
     redirectPage += F("</script>");
     redirectPage += F("</body></html>");
-    server.send(302, F("text/html"), redirectPage);
+    server.send(httpRedirectTemporarily, F("text/html"), redirectPage);
     return false;
   }
   return true;
@@ -2066,7 +2089,8 @@ void loop() {
 
   // reset board to attempt to connect to wifi again if in ap mode or wifi
   // dropped out and time limit passed
-  if (WiFi.getMode() == WIFI_STA and WiFi.status() == WL_CONNECTED) {
+  if (WiFi.getMode() == WIFI_STA and
+      WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
     wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
   } else if (wifi_config_exists and millis() > wifi_timeout) {
     ESP.restart();

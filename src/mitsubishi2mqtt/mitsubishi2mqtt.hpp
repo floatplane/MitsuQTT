@@ -37,7 +37,7 @@ float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit);
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit);
 String hpGetMode(const HeatpumpSettings &hpSettings);
 String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings);
-void mqttCallback(char *topic, const byte *payload, unsigned int length);
+void mqttCallback(const char *topic, const byte *payload, unsigned int length);
 void mqttConnect();
 bool connectWifi();
 bool checkLogin();

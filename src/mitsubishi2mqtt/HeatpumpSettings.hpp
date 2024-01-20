@@ -28,6 +28,7 @@ class HeatpumpSettings {
                             .connected = connected};
   }
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   String power;
   String mode;
   float temperature;
@@ -36,4 +37,5 @@ class HeatpumpSettings {
   String wideVane;  // horizontal vane, left/right
   bool iSee;        // iSee sensor, at the moment can only detect it, not set it
   bool connected;
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
