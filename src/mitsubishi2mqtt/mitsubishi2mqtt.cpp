@@ -291,8 +291,8 @@ void setup() {
     hp.enableExternalUpdate();
     hp.enableAutoUpdate();
     hp.connect(&Serial);
-    heatpumpStatus currentStatus = hp.getStatus();
-    HeatpumpSettings currentSettings(hp.getSettings());
+    const heatpumpStatus currentStatus = hp.getStatus();
+    const HeatpumpSettings currentSettings(hp.getSettings());
     rootInfo["roomTemperature"] =
         convertCelsiusToLocalUnit(currentStatus.roomTemperature, useFahrenheit);
     rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
@@ -472,12 +472,12 @@ bool loadOthers() {
 }
 
 struct SaveMqttArgs {
-  String mqttFn;
-  String mqttHost;
-  String mqttPort;
-  String mqttUser;
-  String mqttPwd;
-  String mqttTopic;
+  String mqttFn{};
+  String mqttHost{};
+  String mqttPort{};
+  String mqttUser{};
+  String mqttPwd{};
+  String mqttTopic{};
 };
 void saveMqtt(const SaveMqttArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(6) + 400;
@@ -541,10 +541,10 @@ void saveUnit(String tempUnit, String supportMode, String loginPassword, String 
 }
 
 struct SaveWifiArgs {
-  String apSsid;
-  String apPwd;
-  String hostName;
-  String otaPwd;
+  String apSsid{};
+  String apPwd{};
+  String hostName{};
+  String otaPwd{};
 };
 void saveWifi(const SaveWifiArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(4) + 130;
@@ -563,10 +563,10 @@ void saveWifi(const SaveWifiArgs &args) {
 }
 
 struct SaveOthersArgs {
-  String haa;
-  String haat;
-  String debugPckts;
-  String debugLogs;
+  String haa{};
+  String haat{};
+  String debugPckts{};
+  String debugLogs{};
 };
 void saveOthers(const SaveOthersArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(4) + 130;
@@ -634,7 +634,7 @@ void setDefaults() {
   others_haa_topic = "homeassistant";
 }
 
-boolean initWifi() {
+bool initWifi() {
   bool connectWifiSuccess = true;
   if (ap_ssid[0] != '\0') {
     connectWifiSuccess = wifi_config = connectWifi();
@@ -1157,8 +1157,8 @@ void handleControl() {
 void handleMetrics() {
   String metrics = FPSTR(html_metrics);
 
-  HeatpumpSettings currentSettings(hp.getSettings());
-  heatpumpStatus currentStatus = hp.getStatus();
+  const HeatpumpSettings currentSettings(hp.getSettings());
+  const heatpumpStatus currentStatus = hp.getStatus();
 
   String hppower = currentSettings.power == "ON" ? "1" : "0";
 
@@ -1232,7 +1232,7 @@ void handleMetrics() {
 // login page, also called for logout
 void handleLogin() {
   bool loginSuccess = false;
-  String msg;
+  String msg{};
   String loginPage = FPSTR(html_page_login);
   loginPage.replace("_TXT_LOGIN_TITLE_", FPSTR(txt_login_title));
   loginPage.replace("_TXT_LOGIN_PASSWORD_", FPSTR(txt_login_password));
@@ -1308,7 +1308,7 @@ void handleUploadDone() {
   bool restartflag = false;
   String uploadDonePage = FPSTR(html_page_upload);
   String content = F("<div style='text-align:center;'><b>Upload ");
-  if (uploaderror) {
+  if (uploaderror != 0) {
     content += F("<span style='color:#d43535'>failed</span></b><br/><br/>");
     if (uploaderror == 1) {
       content += FPSTR(txt_upload_nofile);
@@ -1362,7 +1362,7 @@ void handleUploadLoop() {
 
   // Based on ESP8266HTTPUpdateServer.cpp uses ESP8266WebServer Parsing.cpp and
   // Cores Updater.cpp (Update) char log[200];
-  if (uploaderror) {
+  if (uploaderror != 0) {
     Update.end();
     return;
   }
@@ -1479,7 +1479,7 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
 }
 
 void readHeatPumpSettings() {
-  HeatpumpSettings currentSettings(hp.getSettings());
+  const HeatpumpSettings currentSettings(hp.getSettings());
 
   rootInfo.clear();
   rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
@@ -1519,7 +1519,8 @@ String hpGetMode(const HeatpumpSettings &hpSettings) {
 
   if (hpmode == "fan") {
     return "fan_only";
-  } else if (hpmode == "auto") {
+  }
+  if (hpmode == "auto") {
     return "heat_cool";
   }
   return hpmode;  // cool, heat, dry
@@ -1539,15 +1540,20 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
 
   if (hpmode == "fan") {
     return "fan";
-  } else if (!hpStatus.operating) {
+  }
+  if (!hpStatus.operating) {
     return "idle";
-  } else if (hpmode == "auto") {
+  }
+  if (hpmode == "auto") {
     return "idle";
-  } else if (hpmode == "cool") {
+  }
+  if (hpmode == "cool") {
     return "cooling";
-  } else if (hpmode == "heat") {
+  }
+  if (hpmode == "heat") {
     return "heating";
-  } else if (hpmode == "dry") {
+  }
+  if (hpmode == "dry") {
     return "drying";
   }
   return hpmode;  // unknown
@@ -1561,7 +1567,7 @@ void hpStatusChanged(heatpumpStatus newStatus) {
                           // disable it and revert to the internal thermometer.
 
     // send room temp, operating info and all information
-    HeatpumpSettings currentSettings(hp.getSettings());
+    HeatpumpSettings const currentSettings(hp.getSettings());
 
     if (newStatus.roomTemperature == 0) {
       return;
@@ -1596,13 +1602,13 @@ void hpCheckRemoteTemp() {
                                                               // remote_temp message, revert back to
                                                               // HP internal temp sensor
     remoteTempActive = false;
-    float temperature = 0;
+    float const temperature = 0;
     hp.setRemoteTemperature(temperature);
     hp.update();
   }
 }
 
-void hpPacketDebug(byte *packet, unsigned int length, const char *packetDirection) {
+void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDirection) {
   if (g_debugModePckts) {
     String message;
     for (unsigned int idx = 0; idx < length; idx++) {
@@ -1640,11 +1646,11 @@ void hpSendLocalState() {
   lastTempSend = millis();
 }
 
-void mqttCallback(char *topic, byte *payload, unsigned int length) {
+void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   // Copy payload into message buffer
   char message[length + 1];
   for (unsigned int i = 0; i < length; i++) {
-    message[i] = (char)payload[i];
+    message[i] = payload[i];
   }
   message[length] = '\0';
 
@@ -1749,11 +1755,10 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
 
     byte bytes[20];  // max custom packet bytes is 20
     int byteCount = 0;
-    char *nextByte;
 
     // loop over the byte string, breaking it up by spaces (or at the end of the
     // line - \n)
-    nextByte = strtok(buffer, " ");
+    char *nextByte = strtok(buffer, " ");
     while (nextByte != NULL && byteCount < 20) {
       bytes[byteCount] = strtol(nextByte, NULL, 16);  // convert from hex string
       nextByte = strtok(NULL, "   ");
