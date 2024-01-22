@@ -2051,7 +2051,7 @@ String getTemperatureScale() {
 String getId() {
 #ifdef ESP32
   uint64_t macAddress = ESP.getEfuseMac();
-  uint32_t chipID = macAddress >> 24;
+  const uint32_t chipID = macAddress >> 24;
 #else
   uint32_t chipID = ESP.getChipId();
 #endif
