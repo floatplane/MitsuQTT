@@ -1715,8 +1715,8 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   } else if (strcmp(topic, ha_temp_set_topic.c_str()) == 0) {
     float temperature = strtof(message, NULL);
     float temperature_c = convertLocalUnitToCelsius(temperature, useFahrenheit);
-    if (temperature_c < min_temp || temperature_c > max_temp) {
-      temperature_c = (min_temp + max_temp) / 2;
+    if (temperature_c < (float)min_temp || temperature_c > (float)max_temp) {
+      temperature_c = ((float)min_temp + (float)max_temp) / 2.0F;
       rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, useFahrenheit);
     } else {
       rootInfo["temperature"] = temperature;
