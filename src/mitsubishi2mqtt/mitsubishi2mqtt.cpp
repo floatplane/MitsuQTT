@@ -576,7 +576,7 @@ void saveWifi(const SaveWifiArgs &args) {
     // Serial.println(F("Failed to open wifi file for writing"));
   }
   serializeJson(doc, configFile);
-  delay(10);  // NOLINT(readability-magic-numbers)
+  delay(10);
   configFile.close();
 }
 
@@ -598,7 +598,7 @@ void saveOthers(const SaveOthersArgs &args) {
     // Serial.println(F("Failed to open wifi file for writing"));
   }
   serializeJson(doc, configFile);
-  delay(10);  // NOLINT(readability-magic-numbers)
+  delay(10);
   configFile.close();
 }
 
@@ -677,7 +677,7 @@ bool initWifi() {
     // First time setup does not require password
     WiFi.softAP(hostname.c_str());
   }
-  delay(2000);  // NOLINT(readability-magic-numbers)  // VERY IMPORTANT
+  delay(2000);  // VERY IMPORTANT
 
   // Serial.print(F("IP address: "));
   // Serial.println(WiFi.softAPIP());
@@ -735,7 +735,7 @@ void handleSaveWifi() {
   String initSavePage = FPSTR(html_init_save);
   initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
   sendWrappedHTML(initSavePage);
-  delay(500);  // NOLINT(readability-magic-numbers)
+  delay(500);
   ESP.restart();
 }
 
@@ -747,7 +747,7 @@ void handleReboot() {
   String initRebootPage = FPSTR(html_init_reboot);
   initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
   sendWrappedHTML(initRebootPage);
-  delay(500);  // NOLINT(readability-magic-numbers)
+  delay(500);
   ESP.restart();
 }
 
@@ -761,7 +761,7 @@ void handleRoot() {
     String countDown = FPSTR(count_down_script);
     rebootPage.replace("_TXT_M_REBOOT_", FPSTR(txt_m_reboot));
     sendWrappedHTML(rebootPage + countDown);
-    delay(500);  // NOLINT(readability-magic-numbers)
+    delay(500);
 #ifdef ESP32
     ESP.restart();
 #else
@@ -808,7 +808,7 @@ void handleSetup() {
     pageReset.replace("_SSID_", ssid);
     sendWrappedHTML(pageReset);
     SPIFFS.format();
-    delay(500);  // NOLINT(readability-magic-numbers)
+    delay(500);
 #ifdef ESP32
     ESP.restart();
 #else
@@ -832,7 +832,7 @@ void rebootAndSendPage() {
   String countDown = FPSTR(count_down_script);
   saveRebootPage.replace("_TXT_M_SAVE_", FPSTR(txt_m_save));
   sendWrappedHTML(saveRebootPage + countDown);
-  delay(500);  // NOLINT(readability-magic-numbers)
+  delay(500);
   ESP.restart();
 }
 
@@ -1173,7 +1173,7 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   server.sendContent(footerContent);
   // Signal the end of the content
   server.sendContent("");
-  // delay(100); // NOLINT(readability-magic-numbers)
+  // delay(100);
 }
 
 void handleMetrics() {
@@ -1368,7 +1368,7 @@ void handleUploadDone() {
   uploadDonePage.replace("_TXT_BACK_", FPSTR(txt_back));
   sendWrappedHTML(uploadDonePage);
   if (restartflag) {
-    delay(500);  // NOLINT(readability-magic-numbers)
+    delay(500);
 #ifdef ESP32
     ESP.restart();
 #else
@@ -1409,7 +1409,7 @@ void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
     }
   } else if (!uploaderror && (upload.status == UPLOAD_FILE_WRITE)) {
     if (upload.totalSize == 0) {
-      if (upload.buf[0] != 0xE9) {  // NOLINT(readability-magic-numbers)
+      if (upload.buf[0] != 0xE9) {
         // Serial.println(PSTR("Upload: File magic header does not start with
         // 0xE9"));
         uploaderror = UploadError::fileMagicHeaderIncorrect;
@@ -1452,7 +1452,7 @@ void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
     uploaderror = UploadError::fileUploadAborted;
     Update.end();
   }
-  delay(0);  // NOLINT(readability-magic-numbers)
+  delay(0);
 }
 
 // cppcheck-suppress unusedFunction
@@ -1634,8 +1634,8 @@ void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDi
   if (g_debugModePckts) {
     String message;
     for (unsigned int idx = 0; idx < length; idx++) {
-      if (packet[idx] < 16) {  // NOLINT(readability-magic-numbers)
-        message += "0";        // pad single hex digits with a 0
+      if (packet[idx] < 16) {
+        message += "0";  // pad single hex digits with a 0
       }
       message += String(packet[idx], HEX) + " ";
     }
@@ -1942,7 +1942,7 @@ void mqttConnect() {
         lastMqttRetry = millis();
         return;
       }
-      delay(10);  // NOLINT(readability-magic-numbers)
+      delay(10);
       attempts++;
     }
     // If state > 0 (MQTT_CONNECTED) => config or server problem we stop retry
@@ -1979,7 +1979,7 @@ bool connectWifi() {
 #endif
   if (WiFi.getMode() != WIFI_STA) {
     WiFi.mode(WIFI_STA);
-    delay(10);  // NOLINT(readability-magic-numbers)
+    delay(10);
   }
 #ifdef ESP32
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
@@ -1992,9 +1992,9 @@ bool connectWifi() {
     // Serial.print(WiFi.status());
     //  wait 500ms, flashing the blue LED to indicate WiFi connecting...
     digitalWrite(blueLedPin, LOW);
-    delay(250);  // NOLINT(readability-magic-numbers)
+    delay(250);
     digitalWrite(blueLedPin, HIGH);
-    delay(250);  // NOLINT(readability-magic-numbers)
+    delay(250);
   }
   if (WiFi.status() != WL_CONNECTED) {
     // Serial.println(F("Failed to connect to wifi"));
@@ -2006,7 +2006,7 @@ bool connectWifi() {
   // Serial.print("IP address: ");
   while (WiFi.localIP().toString() == "0.0.0.0" || WiFi.localIP().toString() == "") {
     // Serial.write('.');
-    delay(500);  // NOLINT(readability-magic-numbers)
+    delay(500);
   }
 
   // This conditional can't be true if we fell out of the loop
@@ -2023,13 +2023,9 @@ bool connectWifi() {
 }
 
 // temperature helper functions
-float toFahrenheit(float fromCelsius) {
-  return round(1.8F * fromCelsius + 32.0F);  // NOLINT(readability-magic-numbers)
-}
+float toFahrenheit(float fromCelsius) { return round(1.8F * fromCelsius + 32.0F); }
 
-float toCelsius(float fromFahrenheit) {
-  return (fromFahrenheit - 32.0F) / 1.8F;  // NOLINT(readability-magic-numbers)
-}
+float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0F) / 1.8F; }
 
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit) {
   if (isFahrenheit) {
