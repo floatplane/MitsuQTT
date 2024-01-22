@@ -38,15 +38,144 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <math.h>          // for rounding to Fahrenheit values
 // #include <Ticker.h>     // for LED status (Using a Wemos D1-Mini)
 
-#include "HeatpumpSettings.h"
-#include "config.h"             // config file
-#include "html_common.h"        // common code HTML (like header, footer)
-#include "html_init.h"          // code html for initial config
-#include "html_menu.h"          // code html for menu
-#include "html_metrics.h"       // prometheus metrics
-#include "html_pages.h"         // code html for pages
-#include "javascript_common.h"  // common code javascript (like refresh page)
-#include "mitsubishi2mqtt.h"
+#include "HeatpumpSettings.hpp"
+// #include "config.hpp"             // config file
+#include "html_common.hpp"        // common code HTML (like header, footer)
+#include "html_init.hpp"          // code html for initial config
+#include "html_menu.hpp"          // code html for menu
+#include "html_metrics.hpp"       // prometheus metrics
+#include "html_pages.hpp"         // code html for pages
+#include "javascript_common.hpp"  // common code javascript (like refresh page)
+#include "mitsubishi2mqtt.hpp"
+
+// BEGIN include the contents of config.h
+#ifndef LANG_PATH
+#define LANG_PATH "languages/en-GB.h"  // default language English
+#endif
+
+// Define global variables for files
+const size_t maxFileSize = 1024;
+#ifdef ESP32
+const PROGMEM char *const wifi_conf = "/wifi.json";
+const PROGMEM char *const mqtt_conf = "/mqtt.json";
+const PROGMEM char *const unit_conf = "/unit.json";
+const PROGMEM char *const console_file = "/console.log";
+const PROGMEM char *const others_conf = "/others.json";
+// pinouts
+const PROGMEM uint8_t blueLedPin = 2;  // The ESP32 has an internal blue LED at D2 (GPIO 02)
+#else
+const PROGMEM char *const wifi_conf = "wifi.json";
+const PROGMEM char *const mqtt_conf = "mqtt.json";
+const PROGMEM char *const unit_conf = "unit.json";
+const PROGMEM char *const console_file = "console.log";
+const PROGMEM char *const others_conf = "others.json";
+// pinouts
+const PROGMEM uint8_t blueLedPin = LED_BUILTIN;  // Onboard LED = digital pin 2 "D4" (blue LED on
+                                                 // WEMOS D1-Mini)
+#endif
+const PROGMEM uint8_t redLedPin = 0;
+
+// Define global variables for network
+const PROGMEM char *const hostnamePrefix = "HVAC_";
+const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
+unsigned long wifi_timeout;
+bool wifi_config_exists;
+String hostname = "";
+String ap_ssid;
+String ap_pwd;
+String ota_pwd;
+
+enum HttpStatusCodes {
+  httpOk = 200,
+  httpFound = 302,
+  httpSeeOther = 303,
+  httpBadRequest = 400,
+  httpUnauthorized = 401,
+  httpForbidden = 403,
+  httpNotFound = 404,
+  httpMethodNotAllowed = 405,
+  httpInternalServerError = 500,
+  httpNotImplemented = 501,
+  httpServiceUnavailable = 503,
+};
+
+// Define global variables for MQTT
+String mqtt_fn;
+String mqtt_server;
+String mqtt_port;
+String mqtt_username;
+String mqtt_password;
+String mqtt_topic = "mitsubishi2mqtt";
+String mqtt_client_id;
+const PROGMEM char *const mqtt_payload_available = "online";
+const PROGMEM char *const mqtt_payload_unavailable = "offline";
+const size_t maxCustomPacketLength = 20;  // max custom packet bytes is 20
+
+// Define global variables for Others settings
+bool others_haa;
+String others_haa_topic;
+
+// Define global variables for HA topics
+String ha_system_set_topic;
+String ha_mode_set_topic;
+String ha_temp_set_topic;
+String ha_remote_temp_set_topic;
+String ha_fan_set_topic;
+String ha_vane_set_topic;
+String ha_wideVane_set_topic;
+String ha_settings_topic;
+String ha_state_topic;
+String ha_debug_pckts_topic;
+String ha_debug_pckts_set_topic;
+String ha_debug_logs_topic;
+String ha_debug_logs_set_topic;
+String ha_config_topic;
+String ha_discovery_topic;
+String ha_custom_packet;
+String ha_availability_topic;
+String hvac_name;
+
+// login
+String login_username = "admin";
+String login_password;
+
+// debug mode logs, when true, will send all debug messages to topic
+// heatpump_debug_logs_topic this can also be set by sending "on" to
+// heatpump_debug_set_topic
+bool g_debugModeLogs = false;
+// debug mode packets, when true, will send all packets received from the
+// heatpump to topic heatpump_debug_packets_topic this can also be set by
+// sending "on" to heatpump_debug_set_topic
+bool g_debugModePckts = false;
+
+// Customization
+const uint8_t defaultMinimumTemp = 16;
+const uint8_t defaultMaximumTemp = 31;
+const char *defaultTempStep = "1";
+uint8_t min_temp{defaultMinimumTemp};  // Minimum temperature, in your selected unit, check
+                                       // value from heatpump remote control
+uint8_t max_temp{defaultMaximumTemp};  // Maximum temperature, in your selected unit, check
+                                       // value from heatpump remote control
+String temp_step{defaultTempStep};     // Temperature setting step, check
+                                       // value from heatpump remote control
+
+// sketch settings
+const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS =
+    30000;  // 45 seconds (anything less may cause bouncing)
+const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000;  // 5 minutes
+const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;           // 1 second
+const PROGMEM uint32_t HP_RETRY_INTERVAL_MS = 1000;             // 1 second
+const PROGMEM uint32_t HP_MAX_RETRIES =
+    10;  // Double the interval between retries up to this many times, then keep
+         // retrying forever at that maximum interval.
+// Default values give a final retry interval of 1000ms * 2^10, which is 1024
+// seconds, about 17 minutes.
+
+// temp settings
+bool useFahrenheit = false;
+// support heat mode settings, some model do not support heat mode
+bool supportHeatMode = true;
+// END include the contents of config.h
 
 // Languages
 #include LANG_PATH  // defined in config.h
@@ -67,7 +196,7 @@ boolean wifi_config = false;
 boolean remoteTempActive = false;
 
 // HVAC
-HeatPump hp;
+HeatPump hp;  // NOLINT(readability-identifier-length)
 unsigned long lastTempSend;
 unsigned long lastMqttRetry;
 unsigned long lastHpSync;
@@ -79,7 +208,17 @@ unsigned long lastRemoteTemp;
 StaticJsonDocument<JSON_OBJECT_SIZE(12)> rootInfo;
 
 // Web OTA
-int uploaderror = 0;
+enum UploadError {
+  noError = 0,
+  noFileSelected,
+  fileTooLarge,
+  fileMagicHeaderIncorrect,
+  fileTooBigForDeviceFlash,
+  fileUploadBufferMiscompare,
+  fileUploadFailed,
+  fileUploadAborted,
+};
+UploadError uploaderror = UploadError::noError;
 
 // cppcheck-suppress unusedFunction
 void setup() {
@@ -87,7 +226,7 @@ void setup() {
   Serial.begin(115200);
   // Serial.println(F("Starting Mitsubishi2MQTT"));
   // Mount SPIFFS filesystem
-  if (SPIFFS.begin()) {
+  if (SPIFFS.begin()) {  // NOLINT(bugprone-branch-clone)
     // Serial.println(F("Mounted file system"));
   } else {
     // Serial.println(F("Failed to mount FS -> formating"));
@@ -182,8 +321,8 @@ void setup() {
     hp.enableExternalUpdate();
     hp.enableAutoUpdate();
     hp.connect(&Serial);
-    heatpumpStatus currentStatus = hp.getStatus();
-    HeatpumpSettings currentSettings(hp.getSettings());
+    const heatpumpStatus currentStatus = hp.getStatus();
+    const HeatpumpSettings currentSettings(hp.getSettings());
     rootInfo["roomTemperature"] =
         convertCelsiusToLocalUnit(currentStatus.roomTemperature, useFahrenheit);
     rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
@@ -214,7 +353,7 @@ bool loadWifi() {
     return false;
   }
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     // Serial.println(F("Wifi config file size is too large"));
     return false;
   }
@@ -249,7 +388,7 @@ bool loadMqtt() {
   }
 
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     // write_log("Config file size is too large");
     return false;
   }
@@ -290,7 +429,7 @@ bool loadUnit() {
   }
 
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     return false;
   }
   std::unique_ptr<char[]> buf(new char[size]);
@@ -301,13 +440,17 @@ bool loadUnit() {
   deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
-  if (unit_tempUnit == "fah") useFahrenheit = true;
+  if (unit_tempUnit == "fah") {
+    useFahrenheit = true;
+  }
   min_temp = doc["min_temp"].as<uint8_t>();
   max_temp = doc["max_temp"].as<uint8_t>();
   temp_step = doc["temp_step"].as<String>();
   // mode
   String supportMode = doc["support_mode"].as<String>();
-  if (supportMode == "nht") supportHeatMode = false;
+  if (supportMode == "nht") {
+    supportHeatMode = false;
+  }
   // prevent login password is "null" if not exist key
   if (doc.containsKey("login_password")) {
     login_password = doc["login_password"].as<String>();
@@ -328,7 +471,7 @@ bool loadOthers() {
   }
 
   size_t size = configFile.size();
-  if (size > 1024) {
+  if (size > maxFileSize) {
     return false;
   }
   std::unique_ptr<char[]> buf(new char[size]);
@@ -339,7 +482,9 @@ bool loadOthers() {
   deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
-  if (unit_tempUnit == "fah") useFahrenheit = true;
+  if (unit_tempUnit == "fah") {
+    useFahrenheit = true;
+  }
   others_haa_topic = doc["haat"].as<String>();
   String haa = doc["haa"].as<String>();
   String debugPckts = doc["debugPckts"].as<String>();
@@ -357,12 +502,12 @@ bool loadOthers() {
 }
 
 struct SaveMqttArgs {
-  String mqttFn;
-  String mqttHost;
-  String mqttPort;
-  String mqttUser;
-  String mqttPwd;
-  String mqttTopic;
+  String mqttFn{};
+  String mqttHost{};
+  String mqttPort{};
+  String mqttUser{};
+  String mqttPwd{};
+  String mqttTopic{};
 };
 void saveMqtt(const SaveMqttArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(6) + 400;
@@ -382,29 +527,29 @@ void saveMqtt(const SaveMqttArgs &args) {
   configFile.close();
 }
 
-void saveUnit(String tempUnit, String supportMode, String loginPassword, String minTemp,
-              String maxTemp, String tempStep) {
+struct SaveUnitArgs {
+  String tempUnit{};
+  String supportMode{};
+  String loginPassword{};
+  String minTemp{};
+  String maxTemp{};
+  String tempStep{};
+};
+void saveUnit(const SaveUnitArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(6) + 200;
   DynamicJsonDocument doc(capacity);
-  // if temp unit is empty, we use default celcius
-  if (tempUnit.isEmpty()) tempUnit = "cel";
-  doc["unit_tempUnit"] = tempUnit;
+  // if temp unit is empty, we use default celsius
+  doc["unit_tempUnit"] = args.tempUnit.isEmpty() ? "cel" : args.tempUnit;
   // if minTemp is empty, we use default 16
-  if (minTemp.isEmpty()) minTemp = 16;
-  doc["min_temp"] = minTemp;
+  doc["min_temp"] = args.minTemp.isEmpty() ? String(defaultMinimumTemp) : args.minTemp;
   // if maxTemp is empty, we use default 31
-  if (maxTemp.isEmpty()) maxTemp = 31;
-  doc["max_temp"] = maxTemp;
+  doc["max_temp"] = args.maxTemp.isEmpty() ? String(defaultMaximumTemp) : args.maxTemp;
   // if tempStep is empty, we use default 1
-  if (tempStep.isEmpty()) tempStep = 1;
-  doc["temp_step"] = tempStep;
+  doc["temp_step"] = args.tempStep.isEmpty() ? defaultTempStep : args.tempStep;
   // if support mode is empty, we use default all mode
-  if (supportMode.isEmpty()) supportMode = "all";
-  doc["support_mode"] = supportMode;
+  doc["support_mode"] = args.supportMode.isEmpty() ? "all" : args.supportMode;
   // if login password is empty, we use empty
-  if (loginPassword.isEmpty()) loginPassword = "";
-
-  doc["login_password"] = loginPassword;
+  doc["login_password"] = args.loginPassword.isEmpty() ? "" : args.loginPassword;
   File configFile = SPIFFS.open(unit_conf, "w");
   if (!configFile) {
     // Serial.println(F("Failed to open config file for writing"));
@@ -414,10 +559,10 @@ void saveUnit(String tempUnit, String supportMode, String loginPassword, String 
 }
 
 struct SaveWifiArgs {
-  String apSsid;
-  String apPwd;
-  String hostName;
-  String otaPwd;
+  String apSsid{};
+  String apPwd{};
+  String hostName{};
+  String otaPwd{};
 };
 void saveWifi(const SaveWifiArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(4) + 130;
@@ -436,10 +581,10 @@ void saveWifi(const SaveWifiArgs &args) {
 }
 
 struct SaveOthersArgs {
-  String haa;
-  String haat;
-  String debugPckts;
-  String debugLogs;
+  String haa{};
+  String haat{};
+  String debugPckts{};
+  String debugLogs{};
 };
 void saveOthers(const SaveOthersArgs &args) {
   const size_t capacity = JSON_OBJECT_SIZE(4) + 130;
@@ -507,17 +652,16 @@ void setDefaults() {
   others_haa_topic = "homeassistant";
 }
 
-boolean initWifi() {
+bool initWifi() {
   bool connectWifiSuccess = true;
   if (ap_ssid[0] != '\0') {
     connectWifiSuccess = wifi_config = connectWifi();
     if (connectWifiSuccess) {
       return true;
-    } else {
-      // reset hostname back to default before starting AP mode for privacy
-      hostname = hostnamePrefix;
-      hostname += getId();
     }
+    // reset hostname back to default before starting AP mode for privacy
+    hostname = hostnamePrefix;
+    hostname += getId();
   }
 
   // Serial.println(F("\n\r \n\rStarting in AP mode"));
@@ -526,7 +670,7 @@ boolean initWifi() {
   WiFi.persistent(false);  // fix crash esp32
                            // https://github.com/espressif/arduino-esp32/issues/2025
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  if (!connectWifiSuccess and login_password != "") {
+  if (!connectWifiSuccess and login_password != "") {  // NOLINT(bugprone-branch-clone)
     // Set AP password when falling back to AP on fail
     WiFi.softAP(hostname.c_str(), login_password.c_str());
   } else {
@@ -552,7 +696,7 @@ void sendWrappedHTML(String content) {
   toSend.replace(F("_UNIT_NAME_"), hostname);
   toSend.replace(F("_VERSION_"), BUILD_DATE);
   toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
-  server.send(200, F("text/html"), toSend);
+  server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
 }
 
 void handleNotFound() {
@@ -571,13 +715,15 @@ void handleNotFound() {
   } else {
     server.sendHeader("Location", "/");
     server.sendHeader("Cache-Control", "no-cache");
-    server.send(302);
+    server.send(HttpStatusCodes::httpFound);
     return;
   }
 }
 
 void handleSaveWifi() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   // Serial.println(F("Saving wifi config"));
   if (server.method() == HTTP_POST) {
@@ -594,7 +740,9 @@ void handleSaveWifi() {
 }
 
 void handleReboot() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   String initRebootPage = FPSTR(html_init_reboot);
   initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
@@ -604,7 +752,9 @@ void handleReboot() {
 }
 
 void handleRoot() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.hasArg("REBOOT")) {
     String rebootPage = FPSTR(html_page_reboot);
@@ -646,7 +796,9 @@ void handleInitSetup() {
 }
 
 void handleSetup() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.hasArg("RESET")) {
     String pageReset = FPSTR(html_page_reset);
@@ -685,7 +837,9 @@ void rebootAndSendPage() {
 }
 
 void handleOthers() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
     saveOthers({
@@ -728,7 +882,9 @@ void handleOthers() {
 }
 
 void handleMqtt() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
     saveMqtt({.mqttFn = server.arg("fn"),
@@ -760,13 +916,19 @@ void handleMqtt() {
 }
 
 void handleUnit() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
-    saveUnit(server.arg("tu"), server.arg("md"), server.arg("lpw"),
-             (String)convertLocalUnitToCelsius(server.arg("min_temp").toInt(), useFahrenheit),
-             (String)convertLocalUnitToCelsius(server.arg("max_temp").toInt(), useFahrenheit),
-             server.arg("temp_step"));
+    saveUnit({.tempUnit = server.arg("tu"),
+              .supportMode = server.arg("md"),
+              .loginPassword = server.arg("lpw"),
+              .minTemp =
+                  (String)convertLocalUnitToCelsius(server.arg("min_temp").toInt(), useFahrenheit),
+              .maxTemp =
+                  (String)convertLocalUnitToCelsius(server.arg("max_temp").toInt(), useFahrenheit),
+              .tempStep = server.arg("temp_step")});
     rebootAndSendPage();
   } else {
     String unitPage = FPSTR(html_page_unit);
@@ -787,22 +949,26 @@ void handleUnit() {
     unitPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(max_temp, useFahrenheit)));
     unitPage.replace(F("_TEMP_STEP_"), String(temp_step));
     // temp
-    if (useFahrenheit)
+    if (useFahrenheit) {
       unitPage.replace(F("_TU_FAH_"), F("selected"));
-    else
+    } else {
       unitPage.replace(F("_TU_CEL_"), F("selected"));
+    }
     // mode
-    if (supportHeatMode)
+    if (supportHeatMode) {
       unitPage.replace(F("_MD_ALL_"), F("selected"));
-    else
+    } else {
       unitPage.replace(F("_MD_NONHEAT_"), F("selected"));
+    }
     unitPage.replace(F("_LOGIN_PASSWORD_"), login_password);
     sendWrappedHTML(unitPage);
   }
 }
 
 void handleWifi() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   if (server.method() == HTTP_POST) {
     saveWifi({.apSsid = server.arg("ssid"),
@@ -838,7 +1004,9 @@ void handleWifi() {
 }
 
 void handleStatus() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
   String statusPage = FPSTR(html_page_status);
   statusPage.replace("_TXT_BACK_", FPSTR(txt_back));
@@ -848,7 +1016,9 @@ void handleStatus() {
   statusPage.replace("_TXT_STATUS_WIFI_", FPSTR(txt_status_wifi));
   statusPage.replace("_TXT_RETRIES_HVAC_", FPSTR(txt_retries_hvac));
 
-  if (server.hasArg("mrconn")) mqttConnect();
+  if (server.hasArg("mrconn")) {
+    mqttConnect();
+  }
 
   String connected = F("<span style='color:#47c266'><b>");
   connected += FPSTR(txt_status_connect);
@@ -858,28 +1028,32 @@ void handleStatus() {
   disconnected += FPSTR(txt_status_disconnect);
   disconnected += F("</b></span>");
 
-  if ((Serial) and hp.isConnected())
+  if ((Serial) and hp.isConnected()) {
     statusPage.replace(F("_HVAC_STATUS_"), connected);
-  else
+  } else {
     statusPage.replace(F("_HVAC_STATUS_"), disconnected);
-  if (mqtt_client.connected())
+  }
+  if (mqtt_client.connected()) {
     statusPage.replace(F("_MQTT_STATUS_"), connected);
-  else
+  } else {
     statusPage.replace(F("_MQTT_STATUS_"), disconnected);
+  }
   statusPage.replace(F("_HVAC_RETRIES_"), String(hpConnectionTotalRetries));
   statusPage.replace(F("_MQTT_REASON_"), String(mqtt_client.state()));
   statusPage.replace(F("_WIFI_STATUS_"), String(WiFi.RSSI()));
   sendWrappedHTML(statusPage);
 }
 
-void handleControl() {
-  if (!checkLogin()) return;
+void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
+  if (!checkLogin()) {
+    return;
+  }
 
   // not connected to hp, redirect to status page
   if (!hp.isConnected()) {
     server.sendHeader("Location", "/status");
     server.sendHeader("Cache-Control", "no-cache");
-    server.send(302);
+    server.send(httpFound);
     return;
   }
   HeatpumpSettings settings(hp.getSettings());
@@ -994,7 +1168,7 @@ void handleControl() {
   // a limitation on the maximum size we can send at one
   // time (approx 6k).
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.send(200, "text/html", headerContent);
+  server.send(HttpStatusCodes::httpOk, "text/html", headerContent);
   server.sendContent(controlPage);
   server.sendContent(footerContent);
   // Signal the end of the content
@@ -1005,52 +1179,62 @@ void handleControl() {
 void handleMetrics() {
   String metrics = FPSTR(html_metrics);
 
-  HeatpumpSettings currentSettings(hp.getSettings());
-  heatpumpStatus currentStatus = hp.getStatus();
+  const HeatpumpSettings currentSettings(hp.getSettings());
+  const heatpumpStatus currentStatus = hp.getStatus();
 
   String hppower = currentSettings.power == "ON" ? "1" : "0";
 
   String hpfan = currentSettings.fan;
-  if (hpfan == "AUTO") hpfan = "-1";
-  if (hpfan == "QUIET") hpfan = "0";
+  if (hpfan == "AUTO") {
+    hpfan = "-1";
+  }
+  if (hpfan == "QUIET") {
+    hpfan = "0";
+  }
 
   String hpvane = currentSettings.vane;
-  if (hpvane == "AUTO") hpvane = "-1";
-  if (hpvane == "SWING") hpvane = "0";
+  if (hpvane == "AUTO") {
+    hpvane = "-1";
+  }
+  if (hpvane == "SWING") {
+    hpvane = "0";
+  }
 
   String hpwidevane = currentSettings.wideVane;
-  if (hpwidevane == "SWING")
+  if (hpwidevane == "SWING") {
     hpwidevane = "0";
-  else if (hpwidevane == "<<")
+  } else if (hpwidevane == "<<") {
     hpwidevane = "1";
-  else if (hpwidevane == "<")
+  } else if (hpwidevane == "<") {
     hpwidevane = "2";
-  else if (hpwidevane == "|")
+  } else if (hpwidevane == "|") {
     hpwidevane = "3";
-  else if (hpwidevane == ">")
+  } else if (hpwidevane == ">") {
     hpwidevane = "4";
-  else if (hpwidevane == ">>")
+  } else if (hpwidevane == ">>") {
     hpwidevane = "5";
-  else if (hpwidevane == "<>")
+  } else if (hpwidevane == "<>") {
     hpwidevane = "6";
-  else
+  } else {
     hpwidevane = "-2";
+  }
 
   String hpmode = currentSettings.mode;
-  if (hpmode == "AUTO")
+  if (hpmode == "AUTO") {
     hpmode = "-1";
-  else if (hpmode == "COOL")
+  } else if (hpmode == "COOL") {
     hpmode = "1";
-  else if (hpmode == "DRY")
+  } else if (hpmode == "DRY") {
     hpmode = "2";
-  else if (hpmode == "HEAT")
+  } else if (hpmode == "HEAT") {
     hpmode = "3";
-  else if (hpmode == "FAN")
+  } else if (hpmode == "FAN") {
     hpmode = "4";
-  else if (hppower == "0")
+  } else if (hppower == "0") {
     hpmode = "0";
-  else
+  } else {
     hpmode = "-2";
+  }
 
   metrics.replace("_UNIT_NAME_", hostname);
   metrics.replace("_VERSION_", BUILD_DATE);
@@ -1064,13 +1248,13 @@ void handleMetrics() {
   metrics.replace("_MODE_", hpmode);
   metrics.replace("_OPER_", String(currentStatus.operating));
   metrics.replace("_COMPFREQ_", String(currentStatus.compressorFrequency));
-  server.send(200, F("text/plain"), metrics);
+  server.send(HttpStatusCodes::httpOk, F("text/plain"), metrics);
 }
 
 // login page, also called for logout
 void handleLogin() {
   bool loginSuccess = false;
-  String msg;
+  String msg{};
   String loginPage = FPSTR(html_page_login);
   loginPage.replace("_TXT_LOGIN_TITLE_", FPSTR(txt_login_title));
   loginPage.replace("_TXT_LOGIN_PASSWORD_", FPSTR(txt_login_password));
@@ -1116,7 +1300,7 @@ void handleLogin() {
       redirectPage += F("}, 1000);");
       redirectPage += F("</script>");
       redirectPage += F("</body></html>");
-      server.send(302, F("text/html"), redirectPage);
+      server.send(httpFound, F("text/html"), redirectPage);
       return;
     }
   }
@@ -1126,9 +1310,11 @@ void handleLogin() {
 }
 
 void handleUpgrade() {
-  if (!checkLogin()) return;
+  if (!checkLogin()) {
+    return;
+  }
 
-  uploaderror = 0;
+  uploaderror = UploadError::noError;
   String upgradePage = FPSTR(html_page_upgrade);
   upgradePage.replace("_TXT_B_UPGRADE_", FPSTR(txt_upgrade));
   upgradePage.replace("_TXT_BACK_", FPSTR(txt_back));
@@ -1144,21 +1330,21 @@ void handleUploadDone() {
   bool restartflag = false;
   String uploadDonePage = FPSTR(html_page_upload);
   String content = F("<div style='text-align:center;'><b>Upload ");
-  if (uploaderror) {
+  if (uploaderror != UploadError::noError) {
     content += F("<span style='color:#d43535'>failed</span></b><br/><br/>");
-    if (uploaderror == 1) {
+    if (uploaderror == UploadError::noFileSelected) {
       content += FPSTR(txt_upload_nofile);
-    } else if (uploaderror == 2) {
+    } else if (uploaderror == UploadError::fileTooLarge) {
       content += FPSTR(txt_upload_filetoolarge);
-    } else if (uploaderror == 3) {
+    } else if (uploaderror == UploadError::fileMagicHeaderIncorrect) {
       content += FPSTR(txt_upload_fileheader);
-    } else if (uploaderror == 4) {
+    } else if (uploaderror == UploadError::fileTooBigForDeviceFlash) {
       content += FPSTR(txt_upload_flashsize);
-    } else if (uploaderror == 5) {
+    } else if (uploaderror == UploadError::fileUploadBufferMiscompare) {
       content += FPSTR(txt_upload_buffer);
-    } else if (uploaderror == 6) {
+    } else if (uploaderror == UploadError::fileUploadFailed) {
       content += FPSTR(txt_upload_failed);
-    } else if (uploaderror == 7) {
+    } else if (uploaderror == UploadError::fileUploadAborted) {
       content += FPSTR(txt_upload_aborted);
     } else {
       content += FPSTR(txt_upload_error);
@@ -1191,19 +1377,21 @@ void handleUploadDone() {
   }
 }
 
-void handleUploadLoop() {
-  if (!checkLogin()) return;
+void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
+  if (!checkLogin()) {
+    return;
+  }
 
   // Based on ESP8266HTTPUpdateServer.cpp uses ESP8266WebServer Parsing.cpp and
   // Cores Updater.cpp (Update) char log[200];
-  if (uploaderror) {
+  if (uploaderror != UploadError::noError) {
     Update.end();
     return;
   }
   HTTPUpload &upload = server.upload();
   if (upload.status == UPLOAD_FILE_START) {
     if (upload.filename.c_str()[0] == 0) {
-      uploaderror = 1;
+      uploaderror = UploadError::noFileSelected;
       return;
     }
     // save cpu by disconnect/stop retry mqtt server
@@ -1216,7 +1404,7 @@ void handleUploadLoop() {
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
     if (!Update.begin(maxSketchSpace)) {  // start with max available size
       // Update.printError(Serial);
-      uploaderror = 2;
+      uploaderror = UploadError::fileTooLarge;
       return;
     }
   } else if (!uploaderror && (upload.status == UPLOAD_FILE_WRITE)) {
@@ -1224,7 +1412,7 @@ void handleUploadLoop() {
       if (upload.buf[0] != 0xE9) {
         // Serial.println(PSTR("Upload: File magic header does not start with
         // 0xE9"));
-        uploaderror = 3;
+        uploaderror = UploadError::fileMagicHeaderIncorrect;
         return;
       }
       uint32_t bin_flash_size = ESP.magicFlashChipSize((upload.buf[3] & 0xf0) >> 4);
@@ -1235,7 +1423,7 @@ void handleUploadLoop() {
 #endif
         // Serial.printl(PSTR("Upload: File flash size is larger than device
         // flash size"));
-        uploaderror = 4;
+        uploaderror = UploadError::fileTooBigForDeviceFlash;
         return;
       }
       if (ESP.getFlashChipMode() == 3) {
@@ -1246,7 +1434,7 @@ void handleUploadLoop() {
     }
     if (!uploaderror && (Update.write(upload.buf, upload.currentSize) != upload.currentSize)) {
       // Update.printError(Serial);
-      uploaderror = 5;
+      uploaderror = UploadError::fileUploadBufferMiscompare;
       return;
     }
   } else if (!uploaderror && (upload.status == UPLOAD_FILE_END)) {
@@ -1256,12 +1444,12 @@ void handleUploadLoop() {
                              // upload.totalSize); Serial.printl(log)
     } else {
       // Update.printError(Serial);
-      uploaderror = 6;
+      uploaderror = UploadError::fileUploadFailed;
       return;
     }
   } else if (upload.status == UPLOAD_FILE_ABORTED) {
     // Serial.println(PSTR("Upload: Update was aborted"));
-    uploaderror = 7;
+    uploaderror = UploadError::fileUploadAborted;
     Update.end();
   }
   delay(0);
@@ -1313,7 +1501,7 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
 }
 
 void readHeatPumpSettings() {
-  HeatpumpSettings currentSettings(hp.getSettings());
+  const HeatpumpSettings currentSettings(hp.getSettings());
 
   rootInfo.clear();
   rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
@@ -1331,8 +1519,9 @@ void hpSettingsChanged() {
   serializeJson(rootInfo, mqttOutput);
 
   if (!mqtt_client.publish(ha_settings_topic.c_str(), mqttOutput.c_str(), true)) {
-    if (g_debugModeLogs)
+    if (g_debugModeLogs) {
       mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish hp settings");
+    }
   }
 
   hpStatusChanged(hp.getStatus());
@@ -1350,12 +1539,13 @@ String hpGetMode(const HeatpumpSettings &hpSettings) {
   String hpmode = hpSettings.mode;
   hpmode.toLowerCase();
 
-  if (hpmode == "fan")
+  if (hpmode == "fan") {
     return "fan_only";
-  else if (hpmode == "auto")
+  }
+  if (hpmode == "auto") {
     return "heat_cool";
-  else
-    return hpmode;  // cool, heat, dry
+  }
+  return hpmode;  // cool, heat, dry
 }
 
 String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) {
@@ -1370,50 +1560,58 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
   String hpmode = hpSettings.mode;
   hpmode.toLowerCase();
 
-  if (hpmode == "fan")
+  if (hpmode == "fan") {
     return "fan";
-  else if (!hpStatus.operating)
+  }
+  if (!hpStatus.operating) {
     return "idle";
-  else if (hpmode == "auto")
+  }
+  if (hpmode == "auto") {
     return "idle";
-  else if (hpmode == "cool")
+  }
+  if (hpmode == "cool") {
     return "cooling";
-  else if (hpmode == "heat")
+  }
+  if (hpmode == "heat") {
     return "heating";
-  else if (hpmode == "dry")
+  }
+  if (hpmode == "dry") {
     return "drying";
-  else
-    return hpmode;  // unknown
+  }
+  return hpmode;  // unknown
 }
 
-void hpStatusChanged(heatpumpStatus currentStatus) {
+void hpStatusChanged(heatpumpStatus newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
-                                                               // SEND_ROOM_TEMP_INTERVAL_MS (millis
-                                                               // rollover tolerant)
+                                                               // SEND_ROOM_TEMP_INTERVAL_MS
+                                                               // (millis rollover tolerant)
     hpCheckRemoteTemp();  // if the remote temperature feed from mqtt is stale,
                           // disable it and revert to the internal thermometer.
 
     // send room temp, operating info and all information
-    HeatpumpSettings currentSettings(hp.getSettings());
+    HeatpumpSettings const currentSettings(hp.getSettings());
 
-    if (currentStatus.roomTemperature == 0) return;
+    if (newStatus.roomTemperature == 0) {
+      return;
+    }
 
     rootInfo.clear();
     rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(currentStatus.roomTemperature, useFahrenheit);
+        convertCelsiusToLocalUnit(newStatus.roomTemperature, useFahrenheit);
     rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
     rootInfo["fan"] = currentSettings.fan;
     rootInfo["vane"] = currentSettings.vane;
     rootInfo["wideVane"] = currentSettings.wideVane;
     rootInfo["mode"] = hpGetMode(currentSettings);
-    rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
-    rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
+    rootInfo["action"] = hpGetAction(newStatus, currentSettings);
+    rootInfo["compressorFrequency"] = newStatus.compressorFrequency;
     String mqttOutput;
     serializeJson(rootInfo, mqttOutput);
 
     if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
-      if (g_debugModeLogs)
+      if (g_debugModeLogs) {
         mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish hp status change");
+      }
     }
 
     lastTempSend = millis();
@@ -1423,16 +1621,16 @@ void hpStatusChanged(heatpumpStatus currentStatus) {
 void hpCheckRemoteTemp() {
   if (remoteTempActive && (millis() - lastRemoteTemp >
                            CHECK_REMOTE_TEMP_INTERVAL_MS)) {  // if it's been 5 minutes since last
-                                                              // remote_temp message, revert back to
-                                                              // HP internal temp sensor
+                                                              // remote_temp message, revert back
+                                                              // to HP internal temp sensor
     remoteTempActive = false;
-    float temperature = 0;
+    float const temperature = 0;
     hp.setRemoteTemperature(temperature);
     hp.update();
   }
 }
 
-void hpPacketDebug(byte *packet, unsigned int length, const char *packetDirection) {
+void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDirection) {
   if (g_debugModePckts) {
     String message;
     for (unsigned int idx = 0; idx < length; idx++) {
@@ -1460,8 +1658,9 @@ void hpSendLocalState() {
   serializeJson(rootInfo, mqttOutput);
   mqtt_client.publish(ha_debug_pckts_topic.c_str(), mqttOutput.c_str(), false);
   if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
-    if (g_debugModeLogs)
+    if (g_debugModeLogs) {
       mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish dummy hp status change");
+    }
   }
 
   // Restart counter for waiting enought time for the unit to update before
@@ -1469,11 +1668,12 @@ void hpSendLocalState() {
   lastTempSend = millis();
 }
 
-void mqttCallback(char *topic, byte *payload, unsigned int length) {
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   // Copy payload into message buffer
   char message[length + 1];
   for (unsigned int i = 0; i < length; i++) {
-    message[i] = (char)payload[i];
+    message[i] = static_cast<char>(payload[i]);
   }
   message[length] = '\0';
 
@@ -1515,8 +1715,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
   } else if (strcmp(topic, ha_temp_set_topic.c_str()) == 0) {
     float temperature = strtof(message, NULL);
     float temperature_c = convertLocalUnitToCelsius(temperature, useFahrenheit);
-    if (temperature_c < min_temp || temperature_c > max_temp) {
-      temperature_c = 23;
+    if (temperature_c < (float)min_temp || temperature_c > (float)max_temp) {
+      temperature_c = ((float)min_temp + (float)max_temp) / 2.0F;
       rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, useFahrenheit);
     } else {
       rootInfo["temperature"] = temperature;
@@ -1576,13 +1776,12 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
     char buffer[(custom.length() + 1)];  // +1 for the NULL at the end
     custom.toCharArray(buffer, (custom.length() + 1));
 
-    byte bytes[20];  // max custom packet bytes is 20
+    byte bytes[maxCustomPacketLength];
     int byteCount = 0;
-    char *nextByte;
 
     // loop over the byte string, breaking it up by spaces (or at the end of the
     // line - \n)
-    nextByte = strtok(buffer, " ");
+    char *nextByte = strtok(buffer, " ");
     while (nextByte != NULL && byteCount < 20) {
       bytes[byteCount] = strtol(nextByte, NULL, 16);  // convert from hex string
       nextByte = strtok(NULL, "   ");
@@ -1704,12 +1903,14 @@ void haConfig() {
 
   JsonObject haConfigDevice = haConfig.createNestedObject("device");
 
-  haConfigDevice["ids"] = mqtt_fn;
-  haConfigDevice["name"] = mqtt_fn;
-  haConfigDevice["sw"] = "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
-  haConfigDevice["mdl"] = "HVAC MITSUBISHI";
-  haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";
-  haConfigDevice["configuration_url"] = "http://" + WiFi.localIP().toString();
+  haConfigDevice["ids"] = mqtt_fn;   // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["name"] = mqtt_fn;  // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["sw"] =             // NOLINT(readability-misplaced-array-index)
+      "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
+  haConfigDevice["mdl"] = "HVAC MITSUBISHI";     // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";  // NOLINT(readability-misplaced-array-index)
+  haConfigDevice["configuration_url"] =
+      "http://" + WiFi.localIP().toString();  // NOLINT(readability-misplaced-array-index)
 
   // Additional attributes are in the state
   // For now, only compressorFrequency
@@ -1729,6 +1930,7 @@ void haConfig() {
 void mqttConnect() {
   // Loop until we're reconnected
   int attempts = 0;
+  const int maxAttempts = 5;
   while (!mqtt_client.connected()) {
     // Attempt to connect
     mqtt_client.connect(mqtt_client_id.c_str(), mqtt_username.c_str(), mqtt_password.c_str(),
@@ -1736,13 +1938,12 @@ void mqttConnect() {
     // If state < 0 (MQTT_CONNECTED) => network problem we retry 5 times and
     // then waiting for MQTT_RETRY_INTERVAL_MS and retry reapeatly
     if (mqtt_client.state() < MQTT_CONNECTED) {
-      if (attempts == 5) {
+      if (attempts == maxAttempts) {
         lastMqttRetry = millis();
         return;
-      } else {
-        delay(10);
-        attempts++;
       }
+      delay(10);
+      attempts++;
     }
     // If state > 0 (MQTT_CONNECTED) => config or server problem we stop retry
     else if (mqtt_client.state() > MQTT_CONNECTED) {
@@ -1770,6 +1971,7 @@ void mqttConnect() {
 }
 
 bool connectWifi() {
+  const int connectTimeoutMs = 30000;
 #ifdef ESP32
   WiFi.setHostname(hostname.c_str());
 #else
@@ -1784,7 +1986,7 @@ bool connectWifi() {
 #endif
   WiFi.begin(ap_ssid.c_str(), ap_pwd.c_str());
   // Serial.println("Connecting to " + ap_ssid);
-  wifi_timeout = millis() + 30000;
+  wifi_timeout = millis() + connectTimeoutMs;
   while (WiFi.status() != WL_CONNECTED && millis() < wifi_timeout) {
     Serial.write('.');
     // Serial.print(WiFi.status());
@@ -1806,10 +2008,13 @@ bool connectWifi() {
     // Serial.write('.');
     delay(500);
   }
-  if (WiFi.localIP().toString() == "0.0.0.0" || WiFi.localIP().toString() == "") {
-    // Serial.println(F("Failed to get IP address"));
-    return false;
-  }
+
+  // This conditional can't be true if we fell out of the loop
+  // if (WiFi.localIP().toString() == "0.0.0.0" || WiFi.localIP().toString() == "") {
+  //   // Serial.println(F("Failed to get IP address"));
+  //   return false;
+  // }
+
   // Serial.println(WiFi.localIP());
   // ticker.detach(); // Stop blinking the LED because now we are connected:)
   // keep LED off (For Wemos D1-Mini)
@@ -1818,38 +2023,35 @@ bool connectWifi() {
 }
 
 // temperature helper functions
-float toFahrenheit(float fromCelcius) { return round(1.8 * fromCelcius + 32.0); }
+float toFahrenheit(float fromCelsius) { return round(1.8F * fromCelsius + 32.0F); }
 
-float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0) / 1.8; }
+float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0F) / 1.8F; }
 
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit) {
   if (isFahrenheit) {
     return toFahrenheit(temperature);
-  } else {
-    return temperature;
   }
+  return temperature;
 }
 
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit) {
   if (isFahrenheit) {
     return toCelsius(temperature);
-  } else {
-    return temperature;
   }
+  return temperature;
 }
 
 String getTemperatureScale() {
   if (useFahrenheit) {
     return "F";
-  } else {
-    return "C";
   }
+  return "C";
 }
 
 String getId() {
 #ifdef ESP32
   uint64_t macAddress = ESP.getEfuseMac();
-  uint32_t chipID = macAddress >> 24;
+  const uint32_t chipID = macAddress >> 24;
 #else
   uint32_t chipID = ESP.getChipId();
 #endif
@@ -1882,7 +2084,7 @@ bool checkLogin() {
     redirectPage += F("}, 1000);");
     redirectPage += F("</script>");
     redirectPage += F("</body></html>");
-    server.send(302, F("text/html"), redirectPage);
+    server.send(httpFound, F("text/html"), redirectPage);
     return false;
   }
   return true;
@@ -1894,7 +2096,8 @@ void loop() {
 
   // reset board to attempt to connect to wifi again if in ap mode or wifi
   // dropped out and time limit passed
-  if (WiFi.getMode() == WIFI_STA and WiFi.status() == WL_CONNECTED) {
+  if (WiFi.getMode() == WIFI_STA and
+      WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
     wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
   } else if (wifi_config_exists and millis() > wifi_timeout) {
     ESP.restart();
@@ -1927,8 +2130,9 @@ void loop() {
         }
       }
       // MQTT config problem on MQTT do nothing
-      else if (mqtt_client.state() > MQTT_CONNECTED)
+      else if (mqtt_client.state() > MQTT_CONNECTED) {
         return;
+      }
       // MQTT connected send status
       else {
         hpStatusChanged(hp.getStatus());

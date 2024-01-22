@@ -28,12 +28,12 @@ jobs:
 
       - name: Check Generic8266(ESP-01)
         run: |
-          pio check -e ESP8266-ESP01
+          pio check -e ESP8266-ESP01 --fail-on-defect medium
 
       - name: Check WEMOS_D1_Mini
         run: |
-          pio check -e WEMOS_D1_Mini
+          pio check -e WEMOS_D1_Mini --fail-on-defect medium
 
       - name: Check ESP32DEV
         run: |
-          pio check -e ESP32DEV
+          pio check -e ESP32DEV --fail-on-defect medium

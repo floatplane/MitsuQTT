@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <HeatPump.h>
 
-class HeatpumpSettings;
+#include "HeatpumpSettings.hpp"
 
 String getId();
 void setDefaults();
@@ -32,12 +32,12 @@ void initOTA();
 void initCaptivePortal();
 void hpSettingsChanged();
 void hpStatusChanged(heatpumpStatus newStatus);
-void hpPacketDebug(byte *packet, unsigned int length, const char *packetDirection);
+void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDirection);
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit);
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit);
 String hpGetMode(const HeatpumpSettings &hpSettings);
 String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings);
-void mqttCallback(char *topic, byte *payload, unsigned int length);
+void mqttCallback(const char *topic, const byte *payload, unsigned int length);
 void mqttConnect();
 bool connectWifi();
 bool checkLogin();
