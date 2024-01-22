@@ -84,9 +84,20 @@ String hostname = "";
 String ap_ssid;
 String ap_pwd;
 String ota_pwd;
-const int httpSuccess = 200;
-const int httpRedirectTemporarily =
-    302;  // TODO: is this actually permanent? can't remember, i'm offline rn
+
+enum HttpStatusCodes {
+  httpOk = 200,
+  httpFound = 302,
+  httpSeeOther = 303,
+  httpBadRequest = 400,
+  httpUnauthorized = 401,
+  httpForbidden = 403,
+  httpNotFound = 404,
+  httpMethodNotAllowed = 405,
+  httpInternalServerError = 500,
+  httpNotImplemented = 501,
+  httpServiceUnavailable = 503,
+};
 
 // Define global variables for MQTT
 String mqtt_fn;
@@ -685,7 +696,7 @@ void sendWrappedHTML(String content) {
   toSend.replace(F("_UNIT_NAME_"), hostname);
   toSend.replace(F("_VERSION_"), BUILD_DATE);
   toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
-  server.send(httpSuccess, F("text/html"), toSend);
+  server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
 }
 
 void handleNotFound() {
@@ -704,7 +715,7 @@ void handleNotFound() {
   } else {
     server.sendHeader("Location", "/");
     server.sendHeader("Cache-Control", "no-cache");
-    server.send(httpRedirectTemporarily);
+    server.send(HttpStatusCodes::httpFound);
     return;
   }
 }
@@ -1042,7 +1053,7 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   if (!hp.isConnected()) {
     server.sendHeader("Location", "/status");
     server.sendHeader("Cache-Control", "no-cache");
-    server.send(httpRedirectTemporarily);
+    server.send(httpFound);
     return;
   }
   HeatpumpSettings settings(hp.getSettings());
@@ -1157,7 +1168,7 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   // a limitation on the maximum size we can send at one
   // time (approx 6k).
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.send(httpSuccess, "text/html", headerContent);
+  server.send(HttpStatusCodes::httpOk, "text/html", headerContent);
   server.sendContent(controlPage);
   server.sendContent(footerContent);
   // Signal the end of the content
@@ -1237,7 +1248,7 @@ void handleMetrics() {
   metrics.replace("_MODE_", hpmode);
   metrics.replace("_OPER_", String(currentStatus.operating));
   metrics.replace("_COMPFREQ_", String(currentStatus.compressorFrequency));
-  server.send(httpSuccess, F("text/plain"), metrics);
+  server.send(HttpStatusCodes::httpOk, F("text/plain"), metrics);
 }
 
 // login page, also called for logout
@@ -1289,7 +1300,7 @@ void handleLogin() {
       redirectPage += F("}, 1000);");
       redirectPage += F("</script>");
       redirectPage += F("</body></html>");
-      server.send(httpRedirectTemporarily, F("text/html"), redirectPage);
+      server.send(httpFound, F("text/html"), redirectPage);
       return;
     }
   }
@@ -2077,7 +2088,7 @@ bool checkLogin() {
     redirectPage += F("}, 1000);");
     redirectPage += F("</script>");
     redirectPage += F("</body></html>");
-    server.send(httpRedirectTemporarily, F("text/html"), redirectPage);
+    server.send(httpFound, F("text/html"), redirectPage);
     return false;
   }
   return true;
