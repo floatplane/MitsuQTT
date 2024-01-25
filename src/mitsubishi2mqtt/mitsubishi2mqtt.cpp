@@ -46,6 +46,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "html_metrics.hpp"       // prometheus metrics
 #include "html_pages.hpp"         // code html for pages
 #include "javascript_common.hpp"  // common code javascript (like refresh page)
+#include "logger.hpp"
 #include "mitsubishi2mqtt.hpp"
 
 // BEGIN include the contents of config.h
@@ -220,10 +221,21 @@ enum UploadError {
 };
 UploadError uploaderror = UploadError::noError;
 
+#ifdef ENABLE_LOGGING
+#define LOG Logger::log
+#else
+#define LOG(...)
+#endif
+
 // cppcheck-suppress unusedFunction
 void setup() {
   // Start serial for debug before HVAC connect to serial
   Serial.begin(115200);
+
+#ifdef ENABLE_LOGGING
+  Logger::initialize();
+#endif
+
   // Serial.println(F("Starting Mitsubishi2MQTT"));
   // Mount SPIFFS filesystem
   if (SPIFFS.begin()) {  // NOLINT(bugprone-branch-clone)
@@ -257,7 +269,7 @@ void setup() {
     if (SPIFFS.exists(console_file)) {
       SPIFFS.remove(console_file);
     }
-    // write_log("Starting Mitsubishi2MQTT");
+    LOG(F("Starting Mitsubishi2MQTT"));
     // Web interface
     server.on("/", handleRoot);
     server.on("/control", handleControl);
@@ -286,7 +298,7 @@ void setup() {
     hpConnectionRetries = 0;
     hpConnectionTotalRetries = 0;
     if (loadMqtt()) {
-      // write_log("Starting MQTT");
+      LOG(F("Starting MQTT"));
       //  setup HA topics
       ha_mode_set_topic = mqtt_topic + "/" + mqtt_fn + "/mode/set";
       ha_temp_set_topic = mqtt_topic + "/" + mqtt_fn + "/temp/set";
@@ -310,10 +322,10 @@ void setup() {
       // startup mqtt connection
       initMqtt();
     } else {
-      // write_log("Not found MQTT config go to configuration page");
+      LOG(F("Not found MQTT config go to configuration page"));
     }
     // Serial.println(F("Connection to HVAC. Stop serial log."));
-    // write_log("Connection to HVAC");
+    LOG(F("Connection to HVAC"));
     hp.setSettingsChangedCallback(hpSettingsChanged);
     hp.setStatusChangedCallback(hpStatusChanged);
     hp.setPacketCallback(hpPacketDebug);
@@ -380,16 +392,16 @@ bool loadMqtt() {
     Serial.println(F("MQTT config file not exist!"));
     return false;
   }
-  // write_log("Loading MQTT configuration");
+  LOG(F("Loading MQTT configuration"));
   File configFile = SPIFFS.open(mqtt_conf, "r");
   if (!configFile) {
-    // write_log("Failed to open MQTT config file");
+    LOG(F("Failed to open MQTT config file"));
     return false;
   }
 
   size_t size = configFile.size();
   if (size > maxFileSize) {
-    // write_log("Config file size is too large");
+    LOG(F("Config file size is too large"));
     return false;
   }
   std::unique_ptr<char[]> buf(new char[size]);
@@ -405,14 +417,14 @@ bool loadMqtt() {
   mqtt_password = doc["mqtt_pwd"].as<String>();
   mqtt_topic = doc["mqtt_topic"].as<String>();
 
-  // write_log("=== START DEBUG MQTT ===");
-  // write_log("Friendly Name" + mqtt_fn);
-  // write_log("IP Server " + mqtt_server);
-  // write_log("IP Port " + mqtt_port);
-  // write_log("Username " + mqtt_username);
-  // write_log("Password " + mqtt_password);
-  // write_log("Topic " + mqtt_topic);
-  // write_log("=== END DEBUG MQTT ===");
+  LOG(F("=== START DEBUG MQTT ==="));
+  LOG(F("Friendly Name") + mqtt_fn);
+  LOG(F("IP Server ") + mqtt_server);
+  LOG(F("IP Port ") + mqtt_port);
+  LOG(F("Username ") + mqtt_username);
+  LOG(F("Password ") + mqtt_password);
+  LOG(F("Topic ") + mqtt_topic);
+  LOG(F("=== END DEBUG MQTT ==="));
 
   mqtt_config = true;
   return true;
@@ -621,17 +633,13 @@ void initMqtt() {
 
 // Enable OTA only when connected as a client.
 void initOTA() {
-  // write_log("Start OTA Listener");
+  LOG(F("Start OTA Listener"));
   ArduinoOTA.setHostname(hostname.c_str());
   if (ota_pwd.length() > 0) {
     ArduinoOTA.setPassword(ota_pwd.c_str());
   }
-  ArduinoOTA.onStart([]() {
-    // write_log("Start");
-  });
-  ArduinoOTA.onEnd([]() {
-    // write_log("\nEnd");
-  });
+  ArduinoOTA.onStart([]() { LOG("Start"); });
+  ArduinoOTA.onEnd([]() { LOG("\nEnd"); });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     //    write_log("Progress: %u%%\r", (progress / (total / 100)));
   });
@@ -700,30 +708,16 @@ void sendWrappedHTML(String content) {
 }
 
 void handleNotFound() {
-  if (captive) {
-    String initSetupContent = FPSTR(html_init_setup);
-    initSetupContent.replace("_TXT_INIT_TITLE_", FPSTR(txt_init_title));
-    initSetupContent.replace("_TXT_INIT_HOST_", FPSTR(txt_wifi_hostname));
-    initSetupContent.replace("_UNIT_NAME_", hostname);
-    initSetupContent.replace("_TXT_INIT_SSID_", FPSTR(txt_wifi_SSID));
-    initSetupContent.replace("_TXT_INIT_PSK_", FPSTR(txt_wifi_psk));
-    initSetupContent.replace("_TXT_INIT_OTA_", FPSTR(txt_wifi_otap));
-    initSetupContent.replace("_TXT_SAVE_", FPSTR(txt_save));
-    initSetupContent.replace("_TXT_REBOOT_", FPSTR(txt_reboot));
-
-    sendWrappedHTML(initSetupContent);
-  } else {
-    server.sendHeader("Location", "/");
-    server.sendHeader("Cache-Control", "no-cache");
-    server.send(HttpStatusCodes::httpFound);
-    return;
-  }
+  LOG(F("handleNotFound()"));
+  server.send(HttpStatusCodes::httpNotFound, "text/plain", "Not found.");
 }
 
 void handleSaveWifi() {
   if (!checkLogin()) {
     return;
   }
+
+  LOG(F("handleSaveWifi()"));
 
   // Serial.println(F("Saving wifi config"));
   if (server.method() == HTTP_POST) {
@@ -744,6 +738,8 @@ void handleReboot() {
     return;
   }
 
+  LOG(F("handleReboot()"));
+
   String initRebootPage = FPSTR(html_init_reboot);
   initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
   sendWrappedHTML(initRebootPage);
@@ -755,6 +751,8 @@ void handleRoot() {
   if (!checkLogin()) {
     return;
   }
+
+  LOG(F("handleRoot()"));
 
   if (server.hasArg("REBOOT")) {
     String rebootPage = FPSTR(html_page_reboot);
@@ -783,6 +781,8 @@ void handleRoot() {
 }
 
 void handleInitSetup() {
+  LOG(F("handleInitSetup()"));
+
   String initSetupPage = FPSTR(html_init_setup);
   initSetupPage.replace("_TXT_INIT_TITLE_", FPSTR(txt_init_title));
   initSetupPage.replace("_TXT_INIT_HOST_", FPSTR(txt_wifi_hostname));
@@ -799,6 +799,8 @@ void handleSetup() {
   if (!checkLogin()) {
     return;
   }
+
+  LOG(F("handleSetup()"));
 
   if (server.hasArg("RESET")) {
     String pageReset = FPSTR(html_page_reset);
@@ -840,6 +842,8 @@ void handleOthers() {
   if (!checkLogin()) {
     return;
   }
+
+  LOG(F("handleOthers()"));
 
   if (server.method() == HTTP_POST) {
     saveOthers({
@@ -886,6 +890,8 @@ void handleMqtt() {
     return;
   }
 
+  LOG(F("handleMqtt()"));
+
   if (server.method() == HTTP_POST) {
     saveMqtt({.mqttFn = server.arg("fn"),
               .mqttHost = server.arg("mh"),
@@ -919,6 +925,8 @@ void handleUnit() {
   if (!checkLogin()) {
     return;
   }
+
+  LOG(F("handleUnit()"));
 
   if (server.method() == HTTP_POST) {
     saveUnit({.tempUnit = server.arg("tu"),
@@ -970,6 +978,8 @@ void handleWifi() {
     return;
   }
 
+  LOG(F("handleWifi()"));
+
   if (server.method() == HTTP_POST) {
     saveWifi({.apSsid = server.arg("ssid"),
               .apPwd = server.arg("psk"),
@@ -1007,6 +1017,7 @@ void handleStatus() {
   if (!checkLogin()) {
     return;
   }
+  LOG(F("handleStatus()"));
 
   String statusPage = FPSTR(html_page_status);
   statusPage.replace("_TXT_BACK_", FPSTR(txt_back));
@@ -1056,12 +1067,14 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
     server.send(httpFound);
     return;
   }
+
+  LOG(F("handleControl()"));
+
   HeatpumpSettings settings(hp.getSettings());
   settings = change_states(settings);
   String controlPage = FPSTR(html_page_control);
   String headerContent = FPSTR(html_common_header);
   String footerContent = FPSTR(html_common_footer);
-  // write_log("Enter HVAC control");
   headerContent.replace("_UNIT_NAME_", hostname);
   footerContent.replace("_VERSION_", BUILD_DATE);
   footerContent.replace("_GIT_HASH_", COMMIT_HASH);
@@ -1177,6 +1190,8 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
 }
 
 void handleMetrics() {
+  LOG(F("handleMetrics()"));
+
   String metrics = FPSTR(html_metrics);
 
   const HeatpumpSettings currentSettings(hp.getSettings());
@@ -1253,6 +1268,8 @@ void handleMetrics() {
 
 // login page, also called for logout
 void handleLogin() {
+  LOG(F("handleLogin()"));
+
   bool loginSuccess = false;
   String msg{};
   String loginPage = FPSTR(html_page_login);
@@ -1314,6 +1331,8 @@ void handleUpgrade() {
     return;
   }
 
+  LOG(F("handleUpgrade()"));
+
   uploaderror = UploadError::noError;
   String upgradePage = FPSTR(html_page_upgrade);
   upgradePage.replace("_TXT_B_UPGRADE_", FPSTR(txt_upgrade));
@@ -1326,6 +1345,8 @@ void handleUpgrade() {
 }
 
 void handleUploadDone() {
+  LOG(F("handleUploadDone()"));
+
   // Serial.printl(PSTR("HTTP: Firmware upload done"));
   bool restartflag = false;
   String uploadDonePage = FPSTR(html_page_upload);
@@ -1368,6 +1389,7 @@ void handleUploadDone() {
   uploadDonePage.replace("_TXT_BACK_", FPSTR(txt_back));
   sendWrappedHTML(uploadDonePage);
   if (restartflag) {
+    LOG(F("Restarting in 500ms..."));
     delay(500);
 #ifdef ESP32
     ESP.restart();
@@ -1453,13 +1475,6 @@ void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
     Update.end();
   }
   delay(0);
-}
-
-// cppcheck-suppress unusedFunction
-void write_log(String log) {
-  File logFile = SPIFFS.open(console_file, "a");
-  logFile.println(log);
-  logFile.close();
 }
 
 HeatpumpSettings change_states(const HeatpumpSettings &settings) {
