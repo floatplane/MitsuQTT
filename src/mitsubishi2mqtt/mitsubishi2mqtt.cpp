@@ -710,7 +710,6 @@ void sendWrappedHTML(String content) {
 void handleNotFound() {
   LOG(F("handleNotFound()"));
   server.send(HttpStatusCodes::httpNotFound, "text/plain", "Not found.");
-  return;
 }
 
 void handleSaveWifi() {
