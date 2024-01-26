@@ -38,7 +38,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <math.h>          // for rounding to Fahrenheit values
 // #include <Ticker.h>     // for LED status (Using a Wemos D1-Mini)
 
-#include "HeatpumpSettings.hpp"
+#include <HeatpumpSettings.hpp>
 // #include "config.hpp"             // config file
 #include "html_common.hpp"        // common code HTML (like header, footer)
 #include "html_init.hpp"          // code html for initial config
