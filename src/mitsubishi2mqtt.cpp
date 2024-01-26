@@ -795,8 +795,7 @@ void handleSetup() {
 
   if (server.hasArg("RESET")) {
     String pageReset = FPSTR(html_page_reset);
-    const String ssid = hostnamePrefix;
-    ssid += getId();
+    const String ssid = String(hostnamePrefix) + getId();
     pageReset.replace("_TXT_M_RESET_", FPSTR(txt_m_reset));
     pageReset.replace("_SSID_", ssid);
     sendWrappedHTML(pageReset);
