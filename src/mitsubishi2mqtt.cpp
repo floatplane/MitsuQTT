@@ -1867,7 +1867,7 @@ void haConfig() {
   haConfig["temp_step"] = temp_step;
   haConfig["temperature_unit"] = useFahrenheit ? "F" : "C";
 
-  JsonArray haConfigFan_modes = haConfig["modes"].to<JsonArray>();
+  JsonArray haConfigFan_modes = haConfig["fan_modes"].to<JsonArray>();
   haConfigFan_modes.add("AUTO");
   haConfigFan_modes.add("QUIET");
   haConfigFan_modes.add("1");
