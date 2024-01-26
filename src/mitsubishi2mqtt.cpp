@@ -1635,7 +1635,7 @@ void hpCheckRemoteTemp() {
   }
 }
 
-void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDirection) {
+void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
   if (g_debugModePckts) {
     String message;  // NOLINT(misc-const-correctness)
     for (unsigned int idx = 0; idx < length; idx++) {
