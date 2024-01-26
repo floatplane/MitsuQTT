@@ -1,11 +1,18 @@
 # mitsubishi2MQTT
-Use MQTT and ESP8266/ESP32 module to control Mitsubishi HVAC unit.
-It use SwiCago libraries: https://github.com/SwiCago/HeatPump
+
+Heavily based on [gysmo38/mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT), but with more emphasis on automated formatting and testing, and more modern C++ idioms.
 
 [![.github/workflows/build.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml)
 [![.github/workflows/test.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml)
 [![.github/workflows/static_analysis.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml)
 [![.github/workflows/clangformat.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml)
+
+Original readme contents:
+***
+
+Use MQTT and ESP8266/ESP32 module to control Mitsubishi HVAC unit.
+It use SwiCago libraries: https://github.com/SwiCago/HeatPump
+
 
 ***
 Features:
@@ -17,11 +24,11 @@ Features:
 
 Screenshots:
 
-![Main page](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/images/main_page.png)
+![Main page](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/doc/images/main_page.png)
 
-![](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/images/control_page.png)
+![](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/doc/images/control_page.png)
 
-![](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/images/config_page.png)
+![](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/doc/images/config_page.png)
 
 ***
 How to use:
@@ -66,7 +73,7 @@ Grafana -> Connections -> Add new connection -> Prometheus -> ```Prometheus serv
 
 Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/gysmo38/mitsubishi2MQTT/blob/master/Mitsubishi2mqtt.json
 
-![](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/images/Grafana-screenshot.png)
+![](https://github.com/gysmo38/mitsubishi2MQTT/blob/master/doc/images/Grafana-screenshot.png)
 
 If you like my work and use it ;)<br>
 
