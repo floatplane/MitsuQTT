@@ -22,11 +22,11 @@ Features:
 
 Screenshots:
 
-![Main page](https://github.com/floatplane/mitsubishi2MQTT/blob/master/doc/images/main_page.png)
+![Main page](doc/images/main_page.png)
 
-![](https://github.com/floatplane/mitsubishi2MQTT/blob/master/doc/images/control_page.png)
+![](doc/images/control_page.png)
 
-![](https://github.com/floatplane/mitsubishi2MQTT/blob/master/doc/images/config_page.png)
+![](doc/images/config_page.png)
 
 ***
 How to use:
@@ -71,8 +71,4 @@ Grafana -> Connections -> Add new connection -> Prometheus -> ```Prometheus serv
 
 Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/floatplane/mitsubishi2MQTT/blob/master/misc/prometheus.json
 
-![](https://github.com/floatplane/mitsubishi2MQTT/blob/master/doc/images/Grafana-screenshot.png)
-
-If you like my work and use it ;)<br>
-
-<a href='https://ko-fi.com/L3L0GSF7X' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+![](doc/images/Grafana-screenshot.png)
