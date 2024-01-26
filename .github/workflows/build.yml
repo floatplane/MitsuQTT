@@ -14,7 +14,6 @@ jobs:
       - uses: actions/checkout@v3
 
       - uses: actions/cache@v3
-        id: package-cache
         with:
           path: |
             ~/.cache/pip
@@ -26,7 +25,6 @@ jobs:
           python-version: '3.9'
 
       - name: Install PlatformIO Core
-        if: steps.package-cache.outputs.cache-hit != 'true'
         run: pip install --upgrade platformio
 
       - name: Build Generic8266(ESP-01)
