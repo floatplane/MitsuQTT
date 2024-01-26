@@ -1635,7 +1635,10 @@ void hpCheckRemoteTemp() {
   }
 }
 
+// NOLINTNEXTLINE(readability-non-const-parameter)
 void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
+  // packetDirection should have been declared as const char *, but since hpPacketDebug is a
+  // callback function, it can't be.  So we'll just have to be careful not to modify it.
   if (g_debugModePckts) {
     String message;  // NOLINT(misc-const-correctness)
     for (unsigned int idx = 0; idx < length; idx++) {
@@ -1797,7 +1800,9 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
     // dump the packet so we can see what it is. handy because you can run the
     // code without connecting the ESP to the heatpump, and test sending custom
     // packets
-    hpPacketDebug(bytes, byteCount, "customPacket");
+    // packetDirection should have been declared as const char *, but since hpPacketDebug is a
+    // callback function, it can't be.  So we'll just have to be careful not to modify it.
+    hpPacketDebug(bytes, byteCount, const_cast<char *>("customPacket"));
 
     hp.sendCustomPacket(bytes, byteCount);
   } else {
