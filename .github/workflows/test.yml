@@ -28,4 +28,4 @@ jobs:
 
       - name: Run tests
         run: |
-          pio test -e native
+          pio test -e test-native

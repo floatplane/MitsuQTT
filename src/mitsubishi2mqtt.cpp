@@ -30,7 +30,7 @@ WebServer server(80);  // ESP32 web
 #include <WiFiClient.h>
 ESP8266WebServer server(80);  // ESP8266 web
 #endif
-#include <ArduinoJson.h>   // json to process MQTT: ArduinoJson 6.11.4
+#include <ArduinoJson.h>
 #include <ArduinoOTA.h>    // for OTA
 #include <DNSServer.h>     // DNS for captive portal
 #include <HeatPump.h>      // SwiCago library: https://github.com/SwiCago/HeatPump
@@ -206,7 +206,7 @@ unsigned int hpConnectionTotalRetries;
 unsigned long lastRemoteTemp;
 
 // Local state
-StaticJsonDocument<JSON_OBJECT_SIZE(12)> rootInfo;
+JsonDocument rootInfo;
 
 // Web OTA
 enum UploadError {
@@ -373,8 +373,7 @@ bool loadWifi() {
   // Allocate a buffer to store contents of the file.
   std::unique_ptr<char[]> buf(new char[size]);
   configFile.readBytes(buf.get(), size);
-  const size_t capacity = JSON_OBJECT_SIZE(4) + 130;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   deserializeJson(doc, buf.get());
   hostname = doc["hostname"].as<String>();
   ap_ssid = doc["ap_ssid"].as<String>();
@@ -407,8 +406,7 @@ bool loadMqtt() {
   std::unique_ptr<char[]> buf(new char[size]);
 
   configFile.readBytes(buf.get(), size);
-  const size_t capacity = JSON_OBJECT_SIZE(6) + 400;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   deserializeJson(doc, buf.get());
   mqtt_fn = doc["mqtt_fn"].as<String>();
   mqtt_server = doc["mqtt_host"].as<String>();
@@ -447,8 +445,7 @@ bool loadUnit() {
   std::unique_ptr<char[]> buf(new char[size]);
 
   configFile.readBytes(buf.get(), size);
-  const size_t capacity = JSON_OBJECT_SIZE(3) + 200;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
@@ -489,8 +486,7 @@ bool loadOthers() {
   std::unique_ptr<char[]> buf(new char[size]);
 
   configFile.readBytes(buf.get(), size);
-  const size_t capacity = JSON_OBJECT_SIZE(4) + 200;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
@@ -522,8 +518,7 @@ struct SaveMqttArgs {
   String mqttTopic{};
 };
 void saveMqtt(const SaveMqttArgs &args) {
-  const size_t capacity = JSON_OBJECT_SIZE(6) + 400;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   doc["mqtt_fn"] = args.mqttFn;
   doc["mqtt_host"] = args.mqttHost;
   // if mqtt port is empty, we use default port
@@ -548,8 +543,7 @@ struct SaveUnitArgs {
   String tempStep{};
 };
 void saveUnit(const SaveUnitArgs &args) {
-  const size_t capacity = JSON_OBJECT_SIZE(6) + 200;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   // if temp unit is empty, we use default celsius
   doc["unit_tempUnit"] = args.tempUnit.isEmpty() ? "cel" : args.tempUnit;
   // if minTemp is empty, we use default 16
@@ -577,8 +571,7 @@ struct SaveWifiArgs {
   String otaPwd{};
 };
 void saveWifi(const SaveWifiArgs &args) {
-  const size_t capacity = JSON_OBJECT_SIZE(4) + 130;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   doc["ap_ssid"] = args.apSsid;
   doc["ap_pwd"] = args.apPwd;
   doc["hostname"] = args.hostName;
@@ -599,8 +592,7 @@ struct SaveOthersArgs {
   String debugLogs{};
 };
 void saveOthers(const SaveOthersArgs &args) {
-  const size_t capacity = JSON_OBJECT_SIZE(4) + 130;
-  DynamicJsonDocument doc(capacity);
+  JsonDocument doc;
   doc["haa"] = args.haa;
   doc["haat"] = args.haat;
   doc["debugPckts"] = args.debugPckts;
@@ -1655,7 +1647,7 @@ void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDi
       message += String(packet[idx], HEX) + " ";
     }
 
-    StaticJsonDocument<JSON_OBJECT_SIZE(10)> root;
+    JsonDocument root;
 
     root[packetDirection] = message;
     String mqttOutput;
@@ -1818,14 +1810,12 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
 void haConfig() {
   // send HA config packet
   // setup HA payload device
-  const size_t capacity = JSON_ARRAY_SIZE(5) + 2 * JSON_ARRAY_SIZE(6) + JSON_ARRAY_SIZE(7) +
-                          JSON_OBJECT_SIZE(24) + 2048;
-  DynamicJsonDocument haConfig(capacity);
+  JsonDocument haConfig;
 
   haConfig["name"] = nullptr;
   haConfig["unique_id"] = getId();
 
-  JsonArray haConfigModes = haConfig.createNestedArray("modes");
+  JsonArray haConfigModes = haConfig["modes"].to<JsonArray>();
   haConfigModes.add("heat_cool");  // native AUTO mode
   haConfigModes.add("cool");
   haConfigModes.add("dry");
@@ -1877,7 +1867,7 @@ void haConfig() {
   haConfig["temp_step"] = temp_step;
   haConfig["temperature_unit"] = useFahrenheit ? "F" : "C";
 
-  JsonArray haConfigFan_modes = haConfig.createNestedArray("fan_modes");
+  JsonArray haConfigFan_modes = haConfig["modes"].to<JsonArray>();
   haConfigFan_modes.add("AUTO");
   haConfigFan_modes.add("QUIET");
   haConfigFan_modes.add("1");
@@ -1892,7 +1882,7 @@ void haConfig() {
         "defined and value_json.fan|length) else "
         "'AUTO' }}");  // Set default value for fix "Could not parse data for HA"
 
-  JsonArray haConfigSwing_modes = haConfig.createNestedArray("swing_modes");
+  JsonArray haConfigSwing_modes = haConfig["swing_modes"].to<JsonArray>();
   haConfigSwing_modes.add("AUTO");
   haConfigSwing_modes.add("1");
   haConfigSwing_modes.add("2");
@@ -1916,7 +1906,7 @@ void haConfig() {
                                                       // fix "Could not parse
                                                       // data for HA"
 
-  JsonObject haConfigDevice = haConfig.createNestedObject("device");
+  JsonObject haConfigDevice = haConfig["device"].to<JsonObject>();
 
   haConfigDevice["ids"] = mqtt_fn;   // NOLINT(readability-misplaced-array-index)
   haConfigDevice["name"] = mqtt_fn;  // NOLINT(readability-misplaced-array-index)
