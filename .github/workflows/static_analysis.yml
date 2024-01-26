@@ -34,6 +34,10 @@ jobs:
         run: |
           pio check -e WEMOS_D1_Mini --fail-on-defect medium
 
+      - name: Check WEMOS_D1_Mini_Testing
+        run: |
+          pio check -e WEMOS_D1_Mini_Testing --fail-on-defect medium
+
       - name: Check ESP32DEV
         run: |
           pio check -e ESP32DEV --fail-on-defect medium
