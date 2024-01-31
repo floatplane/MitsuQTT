@@ -14,7 +14,6 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <FS.h>  // SPIFFS for store config
 #ifdef ESP32
 #include <ESPmDNS.h>    // mDNS for ESP32
 #include <SPIFFS.h>     // ESP32 SPIFFS for store config
@@ -38,8 +37,8 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <math.h>          // for rounding to Fahrenheit values
 // #include <Ticker.h>     // for LED status (Using a Wemos D1-Mini)
 
-#include <HeatpumpSettings.hpp>
-// #include "config.hpp"             // config file
+#include "HeatpumpSettings.hpp"
+#include "filesystem.hpp"
 #include "html_common.hpp"        // common code HTML (like header, footer)
 #include "html_init.hpp"          // code html for initial config
 #include "html_menu.hpp"          // code html for menu
@@ -55,8 +54,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #define LANG_PATH "languages/en-GB.h"  // default language English
 #endif
 
-// Define global variables for files
-const size_t maxFileSize = 1024;
 #ifdef ESP32
 const PROGMEM char *const wifi_conf = "/wifi.json";
 const PROGMEM char *const mqtt_conf = "/mqtt.json";
@@ -231,15 +228,8 @@ void setup() {
 #endif
 
   // Serial.println(F("Starting Mitsubishi2MQTT"));
-  // Mount SPIFFS filesystem
-  if (SPIFFS.begin()) {  // NOLINT(bugprone-branch-clone)
-    // Serial.println(F("Mounted file system"));
-  } else {
-    // Serial.println(F("Failed to mount FS -> formating"));
-    SPIFFS.format();
-    // if (SPIFFS.begin())
-    // Serial.println(F("Mounted file system after formating"));
-  }
+  FileSystem::init();
+
   // set led pin as output
   pinMode(blueLedPin, OUTPUT);
   /*
@@ -260,9 +250,7 @@ void setup() {
   WiFi.hostname(hostname.c_str());
 #endif
   if (initWifi()) {
-    if (SPIFFS.exists(console_file)) {
-      SPIFFS.remove(console_file);
-    }
+    FileSystem::deleteFile(console_file);
     LOG(F("Starting Mitsubishi2MQTT"));
     // Web interface
     server.on("/", handleRoot);
@@ -349,26 +337,11 @@ void setup() {
 bool loadWifi() {
   ap_ssid = "";
   ap_pwd = "";
-  if (!SPIFFS.exists(wifi_conf)) {
-    // Serial.println(F("Wifi config file not exist!"));
-    return false;
-  }
-  File configFile = SPIFFS.open(wifi_conf, "r");
-  if (!configFile) {
-    // Serial.println(F("Failed to open wifi config file"));
-    return false;
-  }
-  const size_t size = configFile.size();
-  if (size > maxFileSize) {
-    // Serial.println(F("Wifi config file size is too large"));
-    return false;
-  }
 
-  // Allocate a buffer to store contents of the file.
-  std::unique_ptr<char[]> buf(new char[size]);
-  configFile.readBytes(buf.get(), size);
-  JsonDocument doc;
-  deserializeJson(doc, buf.get());
+  const JsonDocument doc = FileSystem::loadJSON(wifi_conf);
+  if (doc.isNull()) {
+    return false;
+  }
   hostname = doc["hostname"].as<String>();
   ap_ssid = doc["ap_ssid"].as<String>();
   ap_pwd = doc["ap_pwd"].as<String>();
@@ -380,28 +353,14 @@ bool loadWifi() {
   }
   return true;
 }
+
 bool loadMqtt() {
-  if (!SPIFFS.exists(mqtt_conf)) {
-    Serial.println(F("MQTT config file not exist!"));
-    return false;
-  }
   LOG(F("Loading MQTT configuration"));
-  File configFile = SPIFFS.open(mqtt_conf, "r");
-  if (!configFile) {
-    LOG(F("Failed to open MQTT config file"));
+
+  const JsonDocument doc = FileSystem::loadJSON(mqtt_conf);
+  if (doc.isNull()) {
     return false;
   }
-
-  const size_t size = configFile.size();
-  if (size > maxFileSize) {
-    LOG(F("Config file size is too large"));
-    return false;
-  }
-  std::unique_ptr<char[]> buf(new char[size]);
-
-  configFile.readBytes(buf.get(), size);
-  JsonDocument doc;
-  deserializeJson(doc, buf.get());
   mqtt_fn = doc["mqtt_fn"].as<String>();
   mqtt_server = doc["mqtt_host"].as<String>();
   mqtt_port = doc["mqtt_port"].as<String>();
@@ -423,24 +382,10 @@ bool loadMqtt() {
 }
 
 bool loadUnit() {
-  if (!SPIFFS.exists(unit_conf)) {
-    // Serial.println(F("Unit config file not exist!"));
+  const JsonDocument doc = FileSystem::loadJSON(unit_conf);
+  if (doc.isNull()) {
     return false;
   }
-  File configFile = SPIFFS.open(unit_conf, "r");
-  if (!configFile) {
-    return false;
-  }
-
-  const size_t size = configFile.size();
-  if (size > maxFileSize) {
-    return false;
-  }
-  std::unique_ptr<char[]> buf(new char[size]);
-
-  configFile.readBytes(buf.get(), size);
-  JsonDocument doc;
-  deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
   if (unit_tempUnit == "fah") {
@@ -464,24 +409,10 @@ bool loadUnit() {
 }
 
 bool loadOthers() {
-  if (!SPIFFS.exists(others_conf)) {
-    // Serial.println(F("Others config file not exist!"));
+  const JsonDocument doc = FileSystem::loadJSON(others_conf);
+  if (doc.isNull()) {
     return false;
   }
-  File configFile = SPIFFS.open(others_conf, "r");
-  if (!configFile) {
-    return false;
-  }
-
-  const size_t size = configFile.size();
-  if (size > maxFileSize) {
-    return false;
-  }
-  std::unique_ptr<char[]> buf(new char[size]);
-
-  configFile.readBytes(buf.get(), size);
-  JsonDocument doc;
-  deserializeJson(doc, buf.get());
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
   if (unit_tempUnit == "fah") {
@@ -520,12 +451,7 @@ void saveMqtt(const SaveMqttArgs &args) {
   doc["mqtt_user"] = args.mqttUser;
   doc["mqtt_pwd"] = args.mqttPwd;
   doc["mqtt_topic"] = args.mqttTopic;
-  File configFile = SPIFFS.open(mqtt_conf, "w");
-  if (!configFile) {
-    // Serial.println(F("Failed to open config file for writing"));
-  }
-  serializeJson(doc, configFile);
-  configFile.close();
+  FileSystem::saveJSON(mqtt_conf, doc);
 }
 
 struct SaveUnitArgs {
@@ -550,12 +476,7 @@ void saveUnit(const SaveUnitArgs &args) {
   doc["support_mode"] = args.supportMode.isEmpty() ? "all" : args.supportMode;
   // if login password is empty, we use empty
   doc["login_password"] = args.loginPassword.isEmpty() ? "" : args.loginPassword;
-  File configFile = SPIFFS.open(unit_conf, "w");
-  if (!configFile) {
-    // Serial.println(F("Failed to open config file for writing"));
-  }
-  serializeJson(doc, configFile);
-  configFile.close();
+  FileSystem::saveJSON(unit_conf, doc);
 }
 
 struct SaveWifiArgs {
@@ -570,13 +491,8 @@ void saveWifi(const SaveWifiArgs &args) {
   doc["ap_pwd"] = args.apPwd;
   doc["hostname"] = args.hostName;
   doc["ota_pwd"] = args.otaPwd;
-  File configFile = SPIFFS.open(wifi_conf, "w");
-  if (!configFile) {
-    // Serial.println(F("Failed to open wifi file for writing"));
-  }
-  serializeJson(doc, configFile);
+  FileSystem::saveJSON(wifi_conf, doc);
   delay(10);
-  configFile.close();
 }
 
 struct SaveOthersArgs {
@@ -591,13 +507,8 @@ void saveOthers(const SaveOthersArgs &args) {
   doc["haat"] = args.haat;
   doc["debugPckts"] = args.debugPckts;
   doc["debugLogs"] = args.debugLogs;
-  File configFile = SPIFFS.open(others_conf, "w");
-  if (!configFile) {
-    // Serial.println(F("Failed to open wifi file for writing"));
-  }
-  serializeJson(doc, configFile);
+  FileSystem::saveJSON(others_conf, doc);
   delay(10);
-  configFile.close();
 }
 
 // Initialize captive portal page
@@ -772,7 +683,7 @@ void handleSetup() {
     pageReset.replace("_TXT_M_RESET_", FPSTR(txt_m_reset));
     pageReset.replace("_SSID_", ssid);
     sendWrappedHTML(pageReset);
-    SPIFFS.format();
+    FileSystem::format();
     delay(500);
 #ifdef ESP32
     ESP.restart();
