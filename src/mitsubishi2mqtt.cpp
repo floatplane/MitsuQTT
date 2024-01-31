@@ -31,7 +31,7 @@ WebServer server(80);  // ESP32 web
 ESP8266WebServer server(80);  // ESP8266 web
 #endif
 #include <ArduinoJson.h>
-#include <ArduinoOTA.h>    // for OTA
+#include <ArduinoOTA.h>    // for Update
 #include <DNSServer.h>     // DNS for captive portal
 #include <HeatPump.h>      // SwiCago library: https://github.com/SwiCago/HeatPump
 #include <PubSubClient.h>  // MQTT: PubSubClient 2.8.0
@@ -48,6 +48,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "javascript_common.hpp"  // common code javascript (like refresh page)
 #include "logger.hpp"
 #include "mitsubishi2mqtt.hpp"
+#include "ota.hpp"
 
 // BEGIN include the contents of config.h
 #ifndef LANG_PATH
@@ -221,12 +222,6 @@ enum UploadError {
 };
 UploadError uploaderror = UploadError::noError;
 
-#ifdef ENABLE_LOGGING
-#define LOG Logger::log
-#else
-#define LOG(...)
-#endif
-
 void setup() {
   // Start serial for debug before HVAC connect to serial
   Serial.begin(115200);
@@ -348,7 +343,7 @@ void setup() {
     dnsServer.start(DNS_PORT, "*", apIP);
     initCaptivePortal();
   }
-  initOTA();
+  initOTA(hostname, ota_pwd);
 }
 
 bool loadWifi() {
@@ -622,28 +617,6 @@ void initMqtt() {
   mqttConnect();
 }
 
-// Enable OTA only when connected as a client.
-void initOTA() {
-  LOG(F("Start OTA Listener"));
-  ArduinoOTA.setHostname(hostname.c_str());
-  if (ota_pwd.length() > 0) {
-    ArduinoOTA.setPassword(ota_pwd.c_str());
-  }
-  ArduinoOTA.onStart([]() { LOG("Start"); });
-  ArduinoOTA.onEnd([]() { LOG("\nEnd"); });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    //    write_log("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    //    write_log("Error[%u]: ", error);
-    // if (error == OTA_AUTH_ERROR) Serial.println(F("Auth Failed"));
-    // else if (error == OTA_BEGIN_ERROR) Serial.println(F("Begin Failed"));
-    // else if (error == OTA_CONNECT_ERROR) Serial.println(F("Connect Failed"));
-    // else if (error == OTA_RECEIVE_ERROR) Serial.println(F("Receive Failed"));
-    // else if (error == OTA_END_ERROR) Serial.println(F("End Failed"));
-  });
-  ArduinoOTA.begin();
-}
 void setDefaults() {
   ap_ssid = "";
   ap_pwd = "";
@@ -2104,7 +2077,7 @@ bool checkLogin() {
 
 void loop() {
   server.handleClient();
-  ArduinoOTA.handle();
+  processOTALoop();
 
   // reset board to attempt to connect to wifi again if in ap mode or wifi
   // dropped out and time limit passed

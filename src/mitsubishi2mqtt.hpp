@@ -28,7 +28,6 @@ void handleUploadLoop();
 void handleControl();
 bool loadMqtt();
 void initMqtt();
-void initOTA();
 void initCaptivePortal();
 void hpSettingsChanged();
 void hpStatusChanged(heatpumpStatus newStatus);

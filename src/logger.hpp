@@ -12,4 +12,10 @@ inline void log(const String& message) {
 }
 }  // namespace Logger
 
+#ifdef ENABLE_LOGGING
+#define LOG Logger::log
+#else
+#define LOG(...)
+#endif
+
 #endif  // LOGGER_HPP
