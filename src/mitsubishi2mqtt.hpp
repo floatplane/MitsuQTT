@@ -32,7 +32,7 @@ void initOTA();
 void initCaptivePortal();
 void hpSettingsChanged();
 void hpStatusChanged(heatpumpStatus newStatus);
-void hpPacketDebug(const byte *packet, unsigned int length, const char *packetDirection);
+void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection);
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit);
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit);
 String hpGetMode(const HeatpumpSettings &hpSettings);

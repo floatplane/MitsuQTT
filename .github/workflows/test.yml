@@ -18,7 +18,9 @@ jobs:
           path: |
             ~/.cache/pip
             ~/.platformio/.cache
+            .pio/libdeps
           key: ${{ runner.os }}-pio
+
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
@@ -28,4 +30,4 @@ jobs:
 
       - name: Run tests
         run: |
-          pio test -e native
+          pio test -e test-native

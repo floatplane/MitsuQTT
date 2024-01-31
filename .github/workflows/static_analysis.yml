@@ -18,7 +18,9 @@ jobs:
           path: |
             ~/.cache/pip
             ~/.platformio/.cache
+            .pio/libdeps
           key: ${{ runner.os }}-pio
+
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
@@ -33,6 +35,10 @@ jobs:
       - name: Check WEMOS_D1_Mini
         run: |
           pio check -e WEMOS_D1_Mini --fail-on-defect medium
+
+      - name: Check WEMOS_D1_Mini_Testing
+        run: |
+          pio check -e WEMOS_D1_Mini_Testing --fail-on-defect medium
 
       - name: Check ESP32DEV
         run: |
