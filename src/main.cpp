@@ -46,7 +46,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "html_pages.hpp"         // code html for pages
 #include "javascript_common.hpp"  // common code javascript (like refresh page)
 #include "logger.hpp"
-#include "mitsubishi2mqtt.hpp"
+#include "main.hpp"
 #include "ota.hpp"
 
 // BEGIN include the contents of config.h
