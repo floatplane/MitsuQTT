@@ -2032,9 +2032,13 @@ bool connectWifi() {
 }
 
 // temperature helper functions
-float toFahrenheit(float fromCelsius) { return round(1.8F * fromCelsius + 32.0F); }
+float toFahrenheit(float fromCelsius) {
+  return round(1.8F * fromCelsius + 32.0F);
+}
 
-float toCelsius(float fromFahrenheit) { return (fromFahrenheit - 32.0F) / 1.8F; }
+float toCelsius(float fromFahrenheit) {
+  return (fromFahrenheit - 32.0F) / 1.8F;
+}
 
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit) {
   if (isFahrenheit) {
