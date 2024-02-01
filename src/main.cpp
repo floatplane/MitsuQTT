@@ -37,6 +37,8 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <math.h>          // for rounding to Fahrenheit values
 // #include <Ticker.h>     // for LED status (Using a Wemos D1-Mini)
 
+#include <map>
+
 #include "HeatpumpSettings.hpp"
 #include "filesystem.hpp"
 #include "html_common.hpp"        // common code HTML (like header, footer)
@@ -316,6 +318,9 @@ void setup() {
       }
       // startup mqtt connection
       initMqtt();
+      if (g_debugModeLogs) {
+        Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
+      }
     } else {
       LOG(F("Not found MQTT config go to configuration page"));
     }
@@ -1405,9 +1410,7 @@ void hpSettingsChanged() {
   serializeJson(rootInfo, mqttOutput);
 
   if (!mqtt_client.publish(ha_settings_topic.c_str(), mqttOutput.c_str(), true)) {
-    if (g_debugModeLogs) {
-      mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish hp settings");
-    }
+    LOG(F("Failed to publish hp settings"));
   }
 
   hpStatusChanged(hp.getStatus());
@@ -1493,9 +1496,7 @@ void hpStatusChanged(heatpumpStatus newStatus) {
     serializeJson(rootInfo, mqttOutput);
 
     if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
-      if (g_debugModeLogs) {
-        mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish hp status change");
-      }
+      LOG(F("Failed to publish hp status change"));
     }
 
     lastTempSend = millis();
@@ -1545,9 +1546,7 @@ void hpSendLocalState() {
   serializeJson(rootInfo, mqttOutput);
   mqtt_client.publish(ha_debug_pckts_topic.c_str(), mqttOutput.c_str(), false);
   if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
-    if (g_debugModeLogs) {
-      mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish dummy hp status change");
-    }
+    LOG(F("Failed to publish dummy hp status change"));
   }
 
   // Restart counter for waiting enought time for the unit to update before
@@ -1555,7 +1554,18 @@ void hpSendLocalState() {
   lastTempSend = millis();
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+static std::map<String, std::function<void(const char *)>> callbackHandlers = {
+    {ha_mode_set_topic, onSetMode},
+    {ha_temp_set_topic, onSetTemp},
+    {ha_fan_set_topic, onSetFan},
+    {ha_vane_set_topic, onSetVane},
+    {ha_wideVane_set_topic, onSetWideVane},
+    {ha_remote_temp_set_topic, onSetRemoteTemp},
+    {ha_system_set_topic, onSetSystem},
+    {ha_debug_pckts_set_topic, onSetDebugPackets},
+    {ha_debug_logs_set_topic, onSetDebugLogs},
+    {ha_custom_packet, onSetCustomPacket}};
+
 void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   // Copy payload into message buffer
   char message[length + 1];
@@ -1564,129 +1574,148 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   }
   message[length] = '\0';
 
-  // HA topics
-  // Receive power topic
-  if (strcmp(topic, ha_mode_set_topic.c_str()) == 0) {
-    String modeUpper = message;
-    modeUpper.toUpperCase();
-    if (modeUpper == "OFF") {
-      rootInfo["mode"] = "off";
-      rootInfo["action"] = "off";
-      hpSendLocalState();
-      hp.setPowerSetting("OFF");
-    } else {
-      if (modeUpper == "HEAT_COOL") {
-        rootInfo["mode"] = "heat_cool";
-        rootInfo["action"] = "idle";
-        modeUpper = "AUTO";
-        // NOLINTNEXTLINE(bugprone-branch-clone) why is the next branch getting flagged as a clone?
-      } else if (modeUpper == "HEAT") {
-        rootInfo["mode"] = "heat";
-        rootInfo["action"] = "heating";
-      } else if (modeUpper == "COOL") {
-        rootInfo["mode"] = "cool";
-        rootInfo["action"] = "cooling";
-      } else if (modeUpper == "DRY") {
-        rootInfo["mode"] = "dry";
-        rootInfo["action"] = "drying";
-      } else if (modeUpper == "FAN_ONLY") {
-        rootInfo["mode"] = "fan_only";
-        rootInfo["action"] = "fan";
-        modeUpper = "FAN";
-      } else {
-        return;
-      }
-      hpSendLocalState();
-      hp.setPowerSetting("ON");
-      hp.setModeSetting(modeUpper.c_str());
-    }
-  } else if (strcmp(topic, ha_temp_set_topic.c_str()) == 0) {
-    const float temperature = strtof(message, NULL);
-    float temperature_c = convertLocalUnitToCelsius(temperature, useFahrenheit);
-    if (temperature_c < (float)min_temp || temperature_c > (float)max_temp) {
-      temperature_c = ((float)min_temp + (float)max_temp) / 2.0F;
-      rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, useFahrenheit);
-    } else {
-      rootInfo["temperature"] = temperature;
-    }
-    hpSendLocalState();
-    hp.setTemperature(temperature_c);
-  } else if (strcmp(topic, ha_fan_set_topic.c_str()) == 0) {
-    rootInfo["fan"] = (String)message;
-    hpSendLocalState();
-    hp.setFanSpeed(message);
-  } else if (strcmp(topic, ha_vane_set_topic.c_str()) == 0) {
-    rootInfo["vane"] = (String)message;
-    hpSendLocalState();
-    hp.setVaneSetting(message);
-  } else if (strcmp(topic, ha_wideVane_set_topic.c_str()) == 0) {
-    rootInfo["wideVane"] = (String)message;
-    hpSendLocalState();
-    hp.setWideVaneSetting(message);
-  } else if (strcmp(topic, ha_remote_temp_set_topic.c_str()) == 0) {
-    const float temperature = strtof(message, NULL);
-    if (temperature == 0) {      // Remote temp disabled by mqtt topic set
-      remoteTempActive = false;  // clear the remote temp flag
-      hp.setRemoteTemperature(0.0);
-    } else {
-      remoteTempActive = true;    // Remote temp has been pushed.
-      lastRemoteTemp = millis();  // Note time
-      hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, useFahrenheit));
-    }
-  } else if (strcmp(topic, ha_system_set_topic.c_str()) == 0) {  // We receive command for board
-    if (strcmp(message, "reboot") == 0) {                        // We receive reboot command
-      restartAfterDelay(0);
-    }
-  } else if (strcmp(topic, ha_debug_pckts_set_topic.c_str()) ==
-             0) {  // if the incoming message is on the heatpump_debug_set_topic
-                   // topic...
-    if (strcmp(message, "on") == 0) {
-      g_debugModePckts = true;
-      mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode enabled");
-    } else if (strcmp(message, "off") == 0) {
-      g_debugModePckts = false;
-      mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode disabled");
-    }
-  } else if (strcmp(topic, ha_debug_logs_set_topic.c_str()) ==
-             0) {  // if the incoming message is on the heatpump_debug_set_topic
-                   // topic...
-    if (strcmp(message, "on") == 0) {
-      g_debugModeLogs = true;
-      mqtt_client.publish(ha_debug_logs_topic.c_str(), "Debug logs mode enabled");
-    } else if (strcmp(message, "off") == 0) {
-      g_debugModeLogs = false;
-      mqtt_client.publish(ha_debug_logs_topic.c_str(), "Debug logs mode disabled");
-    }
-  } else if (strcmp(topic, ha_custom_packet.c_str()) == 0) {  // send custom packet for advance user
-    const String custom = message;
-
-    // copy custom packet to char array
-    char buffer[(custom.length() + 1)];  // +1 for the NULL at the end
-    custom.toCharArray(buffer, (custom.length() + 1));
-
-    byte bytes[maxCustomPacketLength];
-    int byteCount = 0;
-
-    // loop over the byte string, breaking it up by spaces (or at the end of the
-    // line - \n)
-    char *nextByte = strtok(buffer, " ");
-    while (nextByte != NULL && byteCount < 20) {
-      bytes[byteCount] = strtol(nextByte, NULL, 16);  // convert from hex string
-      nextByte = strtok(NULL, "   ");
-      byteCount++;
-    }
-
-    // dump the packet so we can see what it is. handy because you can run the
-    // code without connecting the ESP to the heatpump, and test sending custom
-    // packets
-    // packetDirection should have been declared as const char *, but since hpPacketDebug is a
-    // callback function, it can't be.  So we'll just have to be careful not to modify it.
-    hpPacketDebug(bytes, byteCount, const_cast<char *>("customPacket"));
-
-    hp.sendCustomPacket(bytes, byteCount);
+  auto handler = callbackHandlers.find(topic);
+  if (handler != callbackHandlers.end()) {
+    handler->second(message);
   } else {
-    const String msg = String("heatpump: wrong mqtt topic: ") + topic;
+    const String msg = String("heatpump: unrecognized mqtt topic: ") + topic;
     mqtt_client.publish(ha_debug_logs_topic.c_str(), msg.c_str());
+  }
+}
+
+void onSetCustomPacket(const char *message) {
+  const String custom = message;
+
+  // copy custom packet to char array
+  char buffer[(custom.length() + 1)];  // +1 for the NULL at the end
+  custom.toCharArray(buffer, (custom.length() + 1));
+
+  byte bytes[maxCustomPacketLength];
+  int byteCount = 0;
+
+  // loop over the byte string, breaking it up by spaces (or at the end of the
+  // line - \n)
+  char *nextByte = strtok(buffer, " ");
+  while (nextByte != NULL && byteCount < 20) {
+    bytes[byteCount] = strtol(nextByte, NULL, 16);  // convert from hex string
+    nextByte = strtok(NULL, "   ");
+    byteCount++;
+  }
+
+  // dump the packet so we can see what it is. handy because you can run the
+  // code without connecting the ESP to the heatpump, and test sending custom
+  // packets
+  // packetDirection should have been declared as const char *, but since hpPacketDebug is a
+  // callback function, it can't be.  So we'll just have to be careful not to modify it.
+  hpPacketDebug(bytes, byteCount, const_cast<char *>("customPacket"));
+
+  hp.sendCustomPacket(bytes, byteCount);
+}
+
+void onSetDebugLogs(const char *message) {
+  if (strcmp(message, "on") == 0) {
+    Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
+    g_debugModeLogs = true;
+    LOG(F("Debug logs mode enabled"));
+  } else if (strcmp(message, "off") == 0) {
+    g_debugModeLogs = false;
+    LOG(F("Debug logs mode disabled"));
+    Logger::disableMqttLogging();
+  }
+}
+
+void onSetDebugPackets(const char *message) {
+  if (strcmp(message, "on") == 0) {
+    g_debugModePckts = true;
+    mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode enabled");
+  } else if (strcmp(message, "off") == 0) {
+    g_debugModePckts = false;
+    mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode disabled");
+  }
+}
+
+void onSetSystem(const char *message) {
+  if (strcmp(message, "reboot") == 0) {  // We receive reboot command
+    restartAfterDelay(0);
+  }
+}
+
+void onSetRemoteTemp(const char *message) {
+  const float temperature = strtof(message, NULL);
+  if (temperature == 0) {      // Remote temp disabled by mqtt topic set
+    remoteTempActive = false;  // clear the remote temp flag
+    hp.setRemoteTemperature(0.0);
+  } else {
+    remoteTempActive = true;    // Remote temp has been pushed.
+    lastRemoteTemp = millis();  // Note time
+    hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, useFahrenheit));
+  }
+}
+
+void onSetWideVane(const char *message) {
+  rootInfo["wideVane"] = (String)message;
+  hpSendLocalState();
+  hp.setWideVaneSetting(message);
+}
+
+void onSetVane(const char *message) {
+  rootInfo["vane"] = (String)message;
+  hpSendLocalState();
+  hp.setVaneSetting(message);
+}
+
+void onSetFan(const char *message) {
+  rootInfo["fan"] = (String)message;
+  hpSendLocalState();
+  hp.setFanSpeed(message);
+}
+
+void onSetTemp(const char *message) {
+  const float temperature = strtof(message, NULL);
+  float temperature_c = convertLocalUnitToCelsius(temperature, useFahrenheit);
+  if (temperature_c < (float)min_temp || temperature_c > (float)max_temp) {
+    temperature_c = ((float)min_temp + (float)max_temp) / 2.0F;
+    rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, useFahrenheit);
+  } else {
+    rootInfo["temperature"] = temperature;
+  }
+  hpSendLocalState();
+  hp.setTemperature(temperature_c);
+}
+
+void onSetMode(const char *message) {
+  String modeUpper = message;
+  modeUpper.toUpperCase();
+  if (modeUpper == "OFF") {
+    rootInfo["mode"] = "off";
+    rootInfo["action"] = "off";
+    hpSendLocalState();
+    hp.setPowerSetting("OFF");
+  } else {
+    if (modeUpper == "HEAT_COOL") {
+      rootInfo["mode"] = "heat_cool";
+      rootInfo["action"] = "idle";
+      modeUpper = "AUTO";
+      // NOLINTNEXTLINE(bugprone-branch-clone) why is the next branch getting flagged as a clone?
+    } else if (modeUpper == "HEAT") {
+      rootInfo["mode"] = "heat";
+      rootInfo["action"] = "heating";
+    } else if (modeUpper == "COOL") {
+      rootInfo["mode"] = "cool";
+      rootInfo["action"] = "cooling";
+    } else if (modeUpper == "DRY") {
+      rootInfo["mode"] = "dry";
+      rootInfo["action"] = "drying";
+    } else if (modeUpper == "FAN_ONLY") {
+      rootInfo["mode"] = "fan_only";
+      rootInfo["action"] = "fan";
+      modeUpper = "FAN";
+    } else {
+      return;
+    }
+    hpSendLocalState();
+    hp.setPowerSetting("ON");
+    hp.setModeSetting(modeUpper.c_str());
   }
 }
 
