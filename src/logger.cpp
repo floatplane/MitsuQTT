@@ -17,7 +17,6 @@ void onEvent(const AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEven
   }
 }
 
-// cppcheck-suppress unusedFunction
 void Logger::initialize() {
   webSocket.onEvent(onEvent);
   server.addHandler(&webSocket);
