@@ -1981,7 +1981,7 @@ bool checkLogin() {
   return true;
 }
 
-void loop() {
+void loop() {  // NOLINT(readability-function-cognitive-complexity)
   getTimer()->tick();
 
   if (restartPending) {
