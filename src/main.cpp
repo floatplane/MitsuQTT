@@ -48,6 +48,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "logger.hpp"
 #include "main.hpp"
 #include "ota.hpp"
+#include "timer.hpp"
 
 // BEGIN include the contents of config.h
 #ifndef LANG_PATH
@@ -219,6 +220,18 @@ enum UploadError {
 };
 UploadError uploaderror = UploadError::noError;
 
+static bool restartPending = false;
+void restartAfterDelay(uint32_t delayMs) {
+  if (restartPending) {
+    return;
+  }
+  restartPending = true;
+  getTimer()->in(delayMs, []() {
+    ESP.restart();
+    return Timers::TimerStatus::completed;
+  });
+}
+
 void setup() {
   // Start serial for debug before HVAC connect to serial
   Serial.begin(115200);
@@ -327,11 +340,21 @@ void setup() {
     rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
+    initOTA(hostname, ota_pwd);
   } else {
-    dnsServer.start(DNS_PORT, "*", apIP);
-    initCaptivePortal();
+    //
+    // an older version of the code had a 2000ms delay in the code path with a mysterious comment:
+    // delay(2000);  // VERY IMPORTANT
+    //
+    // I have no idea what it's for, but I'm keeping it until I do
+    //
+    getTimer()->in(2000, []() {
+      dnsServer.start(DNS_PORT, "*", apIP);
+      initCaptivePortal();
+      initOTA(hostname, ota_pwd);
+      return Timers::TimerStatus::completed;
+    });
   }
-  initOTA(hostname, ota_pwd);
 }
 
 bool loadWifi() {
@@ -492,7 +515,6 @@ void saveWifi(const SaveWifiArgs &args) {
   doc["hostname"] = args.hostName;
   doc["ota_pwd"] = args.otaPwd;
   FileSystem::saveJSON(wifi_conf, doc);
-  delay(10);
 }
 
 struct SaveOthersArgs {
@@ -508,7 +530,6 @@ void saveOthers(const SaveOthersArgs &args) {
   doc["debugPckts"] = args.debugPckts;
   doc["debugLogs"] = args.debugLogs;
   FileSystem::saveJSON(others_conf, doc);
-  delay(10);
 }
 
 // Initialize captive portal page
@@ -560,7 +581,6 @@ bool initWifi() {
     // First time setup does not require password
     WiFi.softAP(hostname.c_str());
   }
-  delay(2000);  // VERY IMPORTANT
 
   // Serial.print(F("IP address: "));
   // Serial.println(WiFi.softAPIP());
@@ -604,8 +624,7 @@ void handleSaveWifi() {
   String initSavePage = FPSTR(html_init_save);
   initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
   sendWrappedHTML(initSavePage);
-  delay(500);
-  ESP.restart();
+  restartAfterDelay(500);
 }
 
 void handleReboot() {
@@ -618,8 +637,7 @@ void handleReboot() {
   String initRebootPage = FPSTR(html_init_reboot);
   initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
   sendWrappedHTML(initRebootPage);
-  delay(500);
-  ESP.restart();
+  restartAfterDelay(500);
 }
 
 void handleRoot() {
@@ -634,12 +652,7 @@ void handleRoot() {
     const String countDown = FPSTR(count_down_script);
     rebootPage.replace("_TXT_M_REBOOT_", FPSTR(txt_m_reboot));
     sendWrappedHTML(rebootPage + countDown);
-    delay(500);
-#ifdef ESP32
-    ESP.restart();
-#else
-    ESP.reset();
-#endif
+    restartAfterDelay(500);
   } else {
     String menuRootPage = FPSTR(html_menu_root);
     menuRootPage.replace("_SHOW_LOGOUT_", (String)(login_password.length() > 0 ? 1 : 0));
@@ -684,12 +697,7 @@ void handleSetup() {
     pageReset.replace("_SSID_", ssid);
     sendWrappedHTML(pageReset);
     FileSystem::format();
-    delay(500);
-#ifdef ESP32
-    ESP.restart();
-#else
-    ESP.reset();
-#endif
+    restartAfterDelay(500);
   } else {
     String menuSetupPage = FPSTR(html_menu_setup);
     menuSetupPage.replace("_TXT_MQTT_", FPSTR(txt_MQTT));
@@ -708,8 +716,7 @@ void rebootAndSendPage() {
   const String countDown = FPSTR(count_down_script);
   saveRebootPage.replace("_TXT_M_SAVE_", FPSTR(txt_m_save));
   sendWrappedHTML(saveRebootPage + countDown);
-  delay(500);
-  ESP.restart();
+  restartAfterDelay(500);
 }
 
 void handleOthers() {
@@ -861,11 +868,6 @@ void handleWifi() {
               .hostName = server.arg("hn"),
               .otaPwd = server.arg("otapwd")});
     rebootAndSendPage();
-#ifdef ESP32
-    ESP.restart();
-#else
-    ESP.reset();
-#endif
   } else {
     String wifiPage = FPSTR(html_page_wifi);
     String str_ap_ssid = ap_ssid;
@@ -1059,7 +1061,6 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   server.sendContent(footerContent);
   // Signal the end of the content
   server.sendContent("");
-  // delay(100);
 }
 
 void handleMetrics() {
@@ -1264,12 +1265,7 @@ void handleUploadDone() {
   sendWrappedHTML(uploadDonePage);
   if (restartflag) {
     LOG(F("Restarting in 500ms..."));
-    delay(500);
-#ifdef ESP32
-    ESP.restart();
-#else
-    ESP.reset();
-#endif
+    restartAfterDelay(500);
   }
 }
 
@@ -1349,7 +1345,6 @@ void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
     uploaderror = UploadError::fileUploadAborted;
     Update.end();
   }
-  delay(0);
 }
 
 HeatpumpSettings change_states(const HeatpumpSettings &settings) {
@@ -1640,7 +1635,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
     }
   } else if (strcmp(topic, ha_system_set_topic.c_str()) == 0) {  // We receive command for board
     if (strcmp(message, "reboot") == 0) {                        // We receive reboot command
-      ESP.restart();
+      restartAfterDelay(0);
     }
   } else if (strcmp(topic, ha_debug_pckts_set_topic.c_str()) ==
              0) {  // if the incoming message is on the heatpump_debug_set_topic
@@ -1987,6 +1982,14 @@ bool checkLogin() {
 }
 
 void loop() {
+  getTimer()->tick();
+
+  if (restartPending) {
+    // We're waiting for the timeout specified in restartAfterDelay, we shouldn't process anything
+    // else in the meantime
+    return;
+  }
+
   server.handleClient();
   processOTALoop();
 
@@ -1996,7 +1999,7 @@ void loop() {
       WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
     wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
   } else if (wifi_config_exists and millis() > wifi_timeout) {
-    ESP.restart();
+    restartAfterDelay(0);
   }
 
   if (!captive) {
