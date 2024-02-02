@@ -122,9 +122,12 @@ struct Config {
                                  // value from heatpump remote control
     uint8_t maxTempCelsius{31};  // Maximum temperature, check
                                  // value from heatpump remote control
+
     // TODO(floatplane) why isn't this a float?
+    // TODO(floatplane) more importantly...why isn't this even used? unreal 🙄
     String tempStep{"1"};  // Temperature setting step, check
                            // value from heatpump remote control
+
     String login_password;
   } unit;
 
@@ -141,8 +144,67 @@ struct Config {
       return friendlyName.length() > 0 && server.length() > 0 && username.length() > 0 &&
              password.length() > 0 && topic.length() > 0;
     }
+    const String &ha_availability_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/availability";
+      return topicPath;
+    }
+    const String &ha_custom_packet() const {
+      static String topicPath = topic + "/" + friendlyName + "/custom/send";
+      return topicPath;
+    }
+    const String &ha_debug_logs_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/debug/logs/set";
+      return topicPath;
+    }
+    const String &ha_debug_logs_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/debug/logs";
+      return topicPath;
+    }
+    const String &ha_debug_pckts_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/debug/packets/set";
+      return topicPath;
+    }
+    const String &ha_debug_pckts_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/debug/packets";
+      return topicPath;
+    }
+    const String &ha_fan_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/fan/set";
+      return topicPath;
+    }
+    const String &ha_mode_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/mode/set";
+      return topicPath;
+    }
+    const String &ha_remote_temp_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/remote_temp/set";
+      return topicPath;
+    }
+    const String &ha_settings_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/settings";
+      return topicPath;
+    }
+    const String &ha_state_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/state";
+      return topicPath;
+    }
+    const String &ha_system_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/system/set";
+      return topicPath;
+    }
+    const String &ha_temp_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/temp/set";
+      return topicPath;
+    }
+    const String &ha_vane_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/vane/set";
+      return topicPath;
+    }
+    const String &ha_wideVane_set_topic() const {
+      static String topicPath = topic + "/" + friendlyName + "/wideVane/set";
+      return topicPath;
+    }
   } mqtt;
-
 } config;
 
 // Define global variables for network
@@ -169,27 +231,7 @@ const PROGMEM char *const mqtt_payload_unavailable = "offline";
 const size_t maxCustomPacketLength = 20;  // max custom packet bytes is 20
 
 // Define global variables for HA topics
-String ha_system_set_topic;
-String ha_mode_set_topic;
-String ha_temp_set_topic;
-String ha_remote_temp_set_topic;
-String ha_fan_set_topic;
-String ha_vane_set_topic;
-String ha_wideVane_set_topic;
-String ha_settings_topic;
-String ha_state_topic;
-String ha_debug_pckts_topic;
-String ha_debug_pckts_set_topic;
-String ha_debug_logs_topic;
-String ha_debug_logs_set_topic;
 String ha_config_topic;
-String ha_discovery_topic;
-String ha_custom_packet;
-String ha_availability_topic;
-String hvac_name;
-
-// login
-String login_username = "admin";
 
 // Customization
 
@@ -318,26 +360,6 @@ void setup() {
     hpConnectionTotalRetries = 0;
     if (config.mqtt.configured()) {
       LOG(F("Starting MQTT"));
-      //  setup HA topics
-      ha_mode_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/mode/set";
-      ha_temp_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/temp/set";
-      ha_remote_temp_set_topic =
-          config.mqtt.topic + "/" + config.mqtt.friendlyName + "/remote_temp/set";
-      ha_fan_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/fan/set";
-      ha_vane_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/vane/set";
-      ha_wideVane_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/wideVane/set";
-      ha_settings_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/settings";
-      ha_state_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/state";
-      ha_debug_pckts_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/packets";
-      ha_debug_pckts_set_topic =
-          config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/packets/set";
-      ha_debug_logs_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/logs";
-      ha_debug_logs_set_topic =
-          config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/logs/set";
-      ha_custom_packet = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/custom/send";
-      ha_availability_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/availability";
-      ha_system_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/system/set";
-
       if (config.other.haAutodiscovery) {
         ha_config_topic =
             config.other.haAutodiscoveryTopic + "/climate/" + config.mqtt.friendlyName + "/config";
@@ -345,7 +367,7 @@ void setup() {
       // startup mqtt connection
       initMqtt();
       if (config.other.logToMqtt) {
-        Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
+        Logger::enableMqttLogging(mqtt_client, config.mqtt.ha_debug_logs_topic().c_str());
       }
     } else {
       LOG(F("Not found MQTT config go to configuration page"));
@@ -1394,7 +1416,7 @@ void hpSettingsChanged() {
   String mqttOutput;  // NOLINT(misc-const-correctness)
   serializeJson(rootInfo, mqttOutput);
 
-  if (!mqtt_client.publish(ha_settings_topic.c_str(), mqttOutput.c_str(), true)) {
+  if (!mqtt_client.publish(config.mqtt.ha_settings_topic().c_str(), mqttOutput.c_str(), true)) {
     LOG(F("Failed to publish hp settings"));
   }
 
@@ -1481,7 +1503,7 @@ void hpStatusChanged(heatpumpStatus newStatus) {
     String mqttOutput;  // NOLINT(misc-const-correctness)
     serializeJson(rootInfo, mqttOutput);
 
-    if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
+    if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
       LOG(F("Failed to publish hp status change"));
     }
 
@@ -1519,8 +1541,9 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
     root[packetDirection] = message;
     String mqttOutput;  // NOLINT(misc-const-correctness)
     serializeJson(root, mqttOutput);
-    if (!mqtt_client.publish(ha_debug_pckts_topic.c_str(), mqttOutput.c_str())) {
-      mqtt_client.publish(ha_debug_logs_topic.c_str(), "Failed to publish to heatpump/debug topic");
+    if (!mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str())) {
+      mqtt_client.publish(config.mqtt.ha_debug_logs_topic().c_str(),
+                          "Failed to publish to heatpump/debug topic");
     }
   }
 }
@@ -1530,8 +1553,8 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
 void hpSendLocalState() {
   String mqttOutput;  // NOLINT(misc-const-correctness)
   serializeJson(rootInfo, mqttOutput);
-  mqtt_client.publish(ha_debug_pckts_topic.c_str(), mqttOutput.c_str(), false);
-  if (!mqtt_client.publish_P(ha_state_topic.c_str(), mqttOutput.c_str(), false)) {
+  mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str(), false);
+  if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
     LOG(F("Failed to publish dummy hp status change"));
   }
 
@@ -1540,17 +1563,7 @@ void hpSendLocalState() {
   lastTempSend = millis();
 }
 
-static std::map<String, std::function<void(const char *)>> callbackHandlers = {
-    {ha_mode_set_topic, onSetMode},
-    {ha_temp_set_topic, onSetTemp},
-    {ha_fan_set_topic, onSetFan},
-    {ha_vane_set_topic, onSetVane},
-    {ha_wideVane_set_topic, onSetWideVane},
-    {ha_remote_temp_set_topic, onSetRemoteTemp},
-    {ha_system_set_topic, onSetSystem},
-    {ha_debug_pckts_set_topic, onSetDebugPackets},
-    {ha_debug_logs_set_topic, onSetDebugLogs},
-    {ha_custom_packet, onSetCustomPacket}};
+static std::map<String, std::function<void(const char *)>> mqttTopicHandlers;
 
 void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   // Copy payload into message buffer
@@ -1560,12 +1573,12 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length) {
   }
   message[length] = '\0';
 
-  auto handler = callbackHandlers.find(topic);
-  if (handler != callbackHandlers.end()) {
+  auto handler = mqttTopicHandlers.find(topic);
+  if (handler != mqttTopicHandlers.end()) {
     handler->second(message);
   } else {
     const String msg = String("heatpump: unrecognized mqtt topic: ") + topic;
-    mqtt_client.publish(ha_debug_logs_topic.c_str(), msg.c_str());
+    mqtt_client.publish(config.mqtt.ha_debug_logs_topic().c_str(), msg.c_str());
   }
 }
 
@@ -1600,7 +1613,7 @@ void onSetCustomPacket(const char *message) {
 
 void onSetDebugLogs(const char *message) {
   if (strcmp(message, "on") == 0) {
-    Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
+    Logger::enableMqttLogging(mqtt_client, config.mqtt.ha_debug_logs_topic().c_str());
     config.other.logToMqtt = true;
     LOG(F("Debug logs mode enabled"));
   } else if (strcmp(message, "off") == 0) {
@@ -1613,10 +1626,10 @@ void onSetDebugLogs(const char *message) {
 void onSetDebugPackets(const char *message) {
   if (strcmp(message, "on") == 0) {
     config.other.dumpPacketsToMqtt = true;
-    mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode enabled");
+    mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), "Debug packets mode enabled");
   } else if (strcmp(message, "off") == 0) {
     config.other.dumpPacketsToMqtt = false;
-    mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode disabled");
+    mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), "Debug packets mode disabled");
   }
 }
 
@@ -1713,7 +1726,7 @@ void haConfig() {
   // setup HA payload device
   JsonDocument haConfig;  // NOLINT(misc-const-correctness)
 
-  haConfig["name"] = nullptr;
+  haConfig["name"] = config.network.hostname;
   haConfig["unique_id"] = getId();
 
   JsonArray haConfigModes = haConfig["modes"].to<JsonArray>();
@@ -1726,16 +1739,17 @@ void haConfig() {
   haConfigModes.add("fan_only");  // native FAN mode
   haConfigModes.add("off");
 
-  haConfig["mode_cmd_t"] = ha_mode_set_topic;
-  haConfig["mode_stat_t"] = ha_state_topic;
+  haConfig["mode_cmd_t"] = config.mqtt.ha_mode_set_topic();
+  haConfig["mode_stat_t"] = config.mqtt.ha_state_topic();
   haConfig["mode_stat_tpl"] =
       F("{{ value_json.mode if (value_json is defined and value_json.mode is "
         "defined and value_json.mode|length) "
         "else 'off' }}");  // Set default value for fix "Could not parse data
                            // for HA"
-  haConfig["temp_cmd_t"] = ha_temp_set_topic;
-  haConfig["temp_stat_t"] = ha_state_topic;
-  haConfig["avty_t"] = ha_availability_topic;           // MQTT last will (status) messages topic
+  haConfig["temp_cmd_t"] = config.mqtt.ha_temp_set_topic();
+  haConfig["temp_stat_t"] = config.mqtt.ha_state_topic();
+  haConfig["avty_t"] =
+      config.mqtt.ha_availability_topic();              // MQTT last will (status) messages topic
   haConfig["pl_not_avail"] = mqtt_payload_unavailable;  // MQTT offline message payload
   haConfig["pl_avail"] = mqtt_payload_available;        // MQTT online message payload
   // Set default value for fix "Could not parse data for HA"
@@ -1761,7 +1775,7 @@ void haConfig() {
       "{% endif %}{% else %}" + String(convertCelsiusToLocalUnit(22, config.unit.useFahrenheit)) +
       "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
-  haConfig["curr_temp_t"] = ha_state_topic;
+  haConfig["curr_temp_t"] = config.mqtt.ha_state_topic();
   // NOLINTNEXTLINE(misc-const-correctness)
   const String curr_temp_tpl_str =
       String(F("{{ value_json.roomTemperature if (value_json is defined and "
@@ -1785,8 +1799,8 @@ void haConfig() {
   haConfigFan_modes.add("3");
   haConfigFan_modes.add("4");
 
-  haConfig["fan_mode_cmd_t"] = ha_fan_set_topic;
-  haConfig["fan_mode_stat_t"] = ha_state_topic;
+  haConfig["fan_mode_cmd_t"] = config.mqtt.ha_fan_set_topic();
+  haConfig["fan_mode_stat_t"] = config.mqtt.ha_state_topic();
   haConfig["fan_mode_stat_tpl"] =
       F("{{ value_json.fan if (value_json is defined and value_json.fan is "
         "defined and value_json.fan|length) else "
@@ -1801,14 +1815,14 @@ void haConfig() {
   haConfigSwing_modes.add("5");
   haConfigSwing_modes.add("SWING");
 
-  haConfig["swing_mode_cmd_t"] = ha_vane_set_topic;
-  haConfig["swing_mode_stat_t"] = ha_state_topic;
+  haConfig["swing_mode_cmd_t"] = config.mqtt.ha_vane_set_topic();
+  haConfig["swing_mode_stat_t"] = config.mqtt.ha_state_topic();
   haConfig["swing_mode_stat_tpl"] =
       F("{{ value_json.vane if (value_json is defined and value_json.vane is "
         "defined and value_json.vane|length) "
         "else 'AUTO' }}");  // Set default value for fix "Could not parse data
                             // for HA"
-  haConfig["action_topic"] = ha_state_topic;
+  haConfig["action_topic"] = config.mqtt.ha_state_topic();
   haConfig["action_template"] =
       F("{{ value_json.action if (value_json is defined and value_json.action "
         "is defined and "
@@ -1827,7 +1841,7 @@ void haConfig() {
 
   // Additional attributes are in the state
   // For now, only compressorFrequency
-  haConfig["json_attr_t"] = ha_state_topic;
+  haConfig["json_attr_t"] = config.mqtt.ha_state_topic();
   haConfig["json_attr_tpl"] =
       F("{{ {'compressorFrequency': value_json.compressorFrequency if "
         "(value_json is defined "
@@ -1847,8 +1861,8 @@ void mqttConnect() {
   while (!mqtt_client.connected()) {
     // Attempt to connect
     mqtt_client.connect(config.network.hostname.c_str(), config.mqtt.username.c_str(),
-                        config.mqtt.password.c_str(), ha_availability_topic.c_str(), 1, true,
-                        mqtt_payload_unavailable);
+                        config.mqtt.password.c_str(), config.mqtt.ha_availability_topic().c_str(),
+                        1, true, mqtt_payload_unavailable);
     // If state < 0 (MQTT_CONNECTED) => network problem we retry 5 times and
     // then waiting for MQTT_RETRY_INTERVAL_MS and retry reapeatly
     if (mqtt_client.state() < MQTT_CONNECTED) {
@@ -1865,17 +1879,20 @@ void mqttConnect() {
     }
     // We are connected
     else {
-      mqtt_client.subscribe(ha_system_set_topic.c_str());
-      mqtt_client.subscribe(ha_debug_pckts_set_topic.c_str());
-      mqtt_client.subscribe(ha_debug_logs_set_topic.c_str());
-      mqtt_client.subscribe(ha_mode_set_topic.c_str());
-      mqtt_client.subscribe(ha_fan_set_topic.c_str());
-      mqtt_client.subscribe(ha_temp_set_topic.c_str());
-      mqtt_client.subscribe(ha_vane_set_topic.c_str());
-      mqtt_client.subscribe(ha_wideVane_set_topic.c_str());
-      mqtt_client.subscribe(ha_remote_temp_set_topic.c_str());
-      mqtt_client.subscribe(ha_custom_packet.c_str());
-      mqtt_client.publish(ha_availability_topic.c_str(), mqtt_payload_available,
+      mqttTopicHandlers = {{config.mqtt.ha_mode_set_topic(), onSetMode},
+                           {config.mqtt.ha_temp_set_topic(), onSetTemp},
+                           {config.mqtt.ha_fan_set_topic(), onSetFan},
+                           {config.mqtt.ha_vane_set_topic(), onSetVane},
+                           {config.mqtt.ha_wideVane_set_topic(), onSetWideVane},
+                           {config.mqtt.ha_remote_temp_set_topic(), onSetRemoteTemp},
+                           {config.mqtt.ha_system_set_topic(), onSetSystem},
+                           {config.mqtt.ha_debug_pckts_set_topic(), onSetDebugPackets},
+                           {config.mqtt.ha_debug_logs_set_topic(), onSetDebugLogs},
+                           {config.mqtt.ha_custom_packet(), onSetCustomPacket}};
+      for (const auto &[topic, _] : mqttTopicHandlers) {
+        mqtt_client.subscribe(topic.c_str());
+      }
+      mqtt_client.publish(config.mqtt.ha_availability_topic().c_str(), mqtt_payload_available,
                           true);  // publish status as available
       if (config.other.haAutodiscovery) {
         haConfig();
