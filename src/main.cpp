@@ -77,12 +77,15 @@ const PROGMEM uint8_t blueLedPin = LED_BUILTIN;  // Onboard LED = digital pin 2 
 #endif
 const PROGMEM uint8_t redLedPin = 0;
 
-const String defaultHostname() {
+String defaultHostname() {
   return String(F("HVAC_")) +
          getId();  // default hostname, will be used if no hostname is set in config
 }
 
 struct Config {
+  // Note: I'm being pretty blase about alignment and padding here, since there's only
+  // one instance of this struct.
+
   // WiFi
   String hostname{defaultHostname()};
   String accessPointSsid;
@@ -105,11 +108,24 @@ struct Config {
   // sending "on" to heatpump_debug_set_topic
   bool dumpPacketsToMqtt = false;
 
+  // Unit
+  bool useFahrenheit = false;
+  // support heat mode settings, some model do not support heat mode
+  bool supportHeatMode = true;
+  uint8_t min_temp{16};  // Minimum temperature, in your selected unit, check
+                         // value from heatpump remote control
+  uint8_t max_temp{31};  // Maximum temperature, in your selected unit, check
+                         // value from heatpump remote control
+  // TODO(floatplane) why isn't this a float?
+  String temp_step{"1"};  // Temperature setting step, check
+                          // value from heatpump remote control
+  String login_password;
+
 } config;
 
 // Define global variables for network
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
-unsigned long wifi_timeout;
+uint64 wifi_timeout;
 
 enum HttpStatusCodes {
   httpOk = 200,
@@ -159,18 +175,8 @@ String hvac_name;
 
 // login
 String login_username = "admin";
-String login_password;
 
 // Customization
-const uint8_t defaultMinimumTemp = 16;
-const uint8_t defaultMaximumTemp = 31;
-const char *defaultTempStep = "1";
-uint8_t min_temp{defaultMinimumTemp};  // Minimum temperature, in your selected unit, check
-                                       // value from heatpump remote control
-uint8_t max_temp{defaultMaximumTemp};  // Maximum temperature, in your selected unit, check
-                                       // value from heatpump remote control
-String temp_step{defaultTempStep};     // Temperature setting step, check
-                                       // value from heatpump remote control
 
 // sketch settings
 const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS =
@@ -184,10 +190,6 @@ const PROGMEM uint32_t HP_MAX_RETRIES =
 // Default values give a final retry interval of 1000ms * 2^10, which is 1024
 // seconds, about 17 minutes.
 
-// temp settings
-bool useFahrenheit = false;
-// support heat mode settings, some model do not support heat mode
-bool supportHeatMode = true;
 // END include the contents of config.h
 
 // Languages
@@ -210,12 +212,12 @@ boolean remoteTempActive = false;
 
 // HVAC
 HeatPump hp;  // NOLINT(readability-identifier-length)
-unsigned long lastTempSend;
-unsigned long lastMqttRetry;
-unsigned long lastHpSync;
+uint64 lastTempSend;
+uint64 lastMqttRetry;
+uint64 lastHpSync;
 unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
-unsigned long lastRemoteTemp;
+uint64 lastRemoteTemp;
 
 // Local state
 JsonDocument rootInfo;
@@ -285,7 +287,7 @@ void setup() {
     server.on("/others", handleOthers);
     server.on("/metrics", handleMetrics);
     server.onNotFound(handleNotFound);
-    if (login_password.length() > 0) {
+    if (config.login_password.length() > 0) {
       server.on("/login", handleLogin);
       // here the list of headers to be recorded, use for authentication
       const char *headerkeys[] = {"User-Agent", "Cookie"};
@@ -343,8 +345,9 @@ void setup() {
     const heatpumpStatus currentStatus = hp.getStatus();
     const HeatpumpSettings currentSettings(hp.getSettings());
     rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(currentStatus.roomTemperature, useFahrenheit);
-    rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
+        convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.useFahrenheit);
+    rootInfo["temperature"] =
+        convertCelsiusToLocalUnit(currentSettings.temperature, config.useFahrenheit);
     rootInfo["fan"] = currentSettings.fan;
     rootInfo["vane"] = currentSettings.vane;
     rootInfo["wideVane"] = currentSettings.wideVane;
@@ -424,21 +427,18 @@ bool loadUnit() {
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
   if (unit_tempUnit == "fah") {
-    useFahrenheit = true;
+    config.useFahrenheit = true;
   }
-  min_temp = doc["min_temp"].as<uint8_t>();
-  max_temp = doc["max_temp"].as<uint8_t>();
-  temp_step = doc["temp_step"].as<String>();
+  config.min_temp = doc["min_temp"].as<uint8_t>();
+  config.max_temp = doc["max_temp"].as<uint8_t>();
+  config.temp_step = doc["temp_step"].as<String>();
   // mode
-  String supportMode = doc["support_mode"].as<String>();
-  if (supportMode == "nht") {
-    supportHeatMode = false;
-  }
+  config.supportHeatMode = doc["support_mode"].as<String>() == "all";
   // prevent login password is "null" if not exist key
   if (doc.containsKey("login_password")) {
-    login_password = doc["login_password"].as<String>();
+    config.login_password = doc["login_password"].as<String>();
   } else {
-    login_password = "";
+    config.login_password = "";
   }
   return true;
 }
@@ -474,28 +474,14 @@ void saveMqtt(const SaveMqttArgs &args) {
   FileSystem::saveJSON(mqtt_conf, doc);
 }
 
-struct SaveUnitArgs {
-  String tempUnit{};
-  String supportMode{};
-  String loginPassword{};
-  String minTemp{};
-  String maxTemp{};
-  String tempStep{};
-};
-void saveUnit(const SaveUnitArgs &args) {
+void saveUnit(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  // if temp unit is empty, we use default celsius
-  doc["unit_tempUnit"] = args.tempUnit.isEmpty() ? "cel" : args.tempUnit;
-  // if minTemp is empty, we use default 16
-  doc["min_temp"] = args.minTemp.isEmpty() ? String(defaultMinimumTemp) : args.minTemp;
-  // if maxTemp is empty, we use default 31
-  doc["max_temp"] = args.maxTemp.isEmpty() ? String(defaultMaximumTemp) : args.maxTemp;
-  // if tempStep is empty, we use default 1
-  doc["temp_step"] = args.tempStep.isEmpty() ? defaultTempStep : args.tempStep;
-  // if support mode is empty, we use default all mode
-  doc["support_mode"] = args.supportMode.isEmpty() ? "all" : args.supportMode;
-  // if login password is empty, we use empty
-  doc["login_password"] = args.loginPassword.isEmpty() ? "" : args.loginPassword;
+  doc["unit_tempUnit"] = config.useFahrenheit ? "fah" : "cel";
+  doc["min_temp"] = config.min_temp;
+  doc["max_temp"] = config.max_temp;
+  doc["temp_step"] = config.temp_step;
+  doc["support_mode"] = config.supportHeatMode ? "all" : "nht";
+  doc["login_password"] = config.login_password;
   FileSystem::saveJSON(unit_conf, doc);
 }
 
@@ -551,9 +537,9 @@ bool initWifi() {
   WiFi.persistent(false);  // fix crash esp32
                            // https://github.com/espressif/arduino-esp32/issues/2025
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  if (!connectWifiSuccess and login_password != "") {  // NOLINT(bugprone-branch-clone)
+  if (!connectWifiSuccess and config.login_password != "") {  // NOLINT(bugprone-branch-clone)
     // Set AP password when falling back to AP on fail
-    WiFi.softAP(config.hostname.c_str(), login_password.c_str());
+    WiFi.softAP(config.hostname.c_str(), config.login_password.c_str());
   } else {
     // First time setup does not require password
     WiFi.softAP(config.hostname.c_str());
@@ -633,9 +619,9 @@ void handleRoot() {
     restartAfterDelay(500);
   } else {
     String menuRootPage = FPSTR(html_menu_root);
-    menuRootPage.replace("_SHOW_LOGOUT_", (String)(login_password.length() > 0 ? 1 : 0));
+    menuRootPage.replace("_SHOW_LOGOUT_", String(config.login_password.length() > 0 ? 1 : 0));
     // not show control button if hp not connected
-    menuRootPage.replace("_SHOW_CONTROL_", (String)(hp.isConnected() ? 1 : 0));
+    menuRootPage.replace("_SHOW_CONTROL_", String(hp.isConnected() ? 1 : 0));
     menuRootPage.replace("_TXT_CONTROL_", FPSTR(txt_control));
     menuRootPage.replace("_TXT_SETUP_", FPSTR(txt_setup));
     menuRootPage.replace("_TXT_STATUS_", FPSTR(txt_status));
@@ -787,15 +773,23 @@ void handleUnit() {
   LOG(F("handleUnit()"));
 
   if (server.method() == HTTP_POST) {
-    saveUnit({.tempUnit = server.arg("tu"),
-              .supportMode = server.arg("md"),
-              .loginPassword = server.arg("lpw"),
-              // using std::round to maintain existing behavior, though I'm not sure it's correct
-              .minTemp = (String)convertLocalUnitToCelsius(
-                  std::round(server.arg("min_temp").toFloat()), useFahrenheit),
-              .maxTemp = (String)convertLocalUnitToCelsius(
-                  std::round(server.arg("max_temp").toFloat()), useFahrenheit),
-              .tempStep = server.arg("temp_step")});
+    config.useFahrenheit =
+        server.arg("tu").isEmpty() ? config.useFahrenheit : server.arg("tu") == "fah";
+    config.supportHeatMode =
+        server.arg("md").isEmpty() ? config.supportHeatMode : server.arg("md") == "all";
+    config.login_password = server.arg("lpw").isEmpty() ? config.login_password : server.arg("lpw");
+    // using std::round to maintain existing behavior, though I'm not sure it's correct
+    config.min_temp = server.arg("min_temp").isEmpty()
+                          ? config.min_temp
+                          : convertLocalUnitToCelsius(std::round(server.arg("min_temp").toFloat()),
+                                                      config.useFahrenheit);
+    config.max_temp = server.arg("max_temp").isEmpty()
+                          ? config.max_temp
+                          : convertLocalUnitToCelsius(std::round(server.arg("max_temp").toFloat()),
+                                                      config.useFahrenheit);
+    config.temp_step =
+        server.arg("temp_step").isEmpty() ? config.temp_step : server.arg("temp_step");
+    saveUnit(config);
     rebootAndSendPage();
   } else {
     String unitPage = FPSTR(html_page_unit);
@@ -812,22 +806,24 @@ void handleUnit() {
     unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
     unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
     unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-    unitPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(min_temp, useFahrenheit)));
-    unitPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(max_temp, useFahrenheit)));
-    unitPage.replace(F("_TEMP_STEP_"), String(temp_step));
+    unitPage.replace(F("_MIN_TEMP_"),
+                     String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)));
+    unitPage.replace(F("_MAX_TEMP_"),
+                     String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)));
+    unitPage.replace(F("_TEMP_STEP_"), String(config.temp_step));
     // temp
-    if (useFahrenheit) {
+    if (config.useFahrenheit) {
       unitPage.replace(F("_TU_FAH_"), F("selected"));
     } else {
       unitPage.replace(F("_TU_CEL_"), F("selected"));
     }
     // mode
-    if (supportHeatMode) {
+    if (config.supportHeatMode) {
       unitPage.replace(F("_MD_ALL_"), F("selected"));
     } else {
       unitPage.replace(F("_MD_NONHEAT_"), F("selected"));
     }
-    unitPage.replace(F("_LOGIN_PASSWORD_"), login_password);
+    unitPage.replace(F("_LOGIN_PASSWORD_"), config.login_password);
     sendWrappedHTML(unitPage);
   }
 }
@@ -934,14 +930,16 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
   controlPage.replace("_UNIT_NAME_", config.hostname);
   controlPage.replace("_RATE_", "60");
-  controlPage.replace("_ROOMTEMP_",
-                      String(convertCelsiusToLocalUnit(hp.getRoomTemperature(), useFahrenheit)));
-  controlPage.replace("_USE_FAHRENHEIT_", String(useFahrenheit ? 1 : 0));
+  controlPage.replace("_ROOMTEMP_", String(convertCelsiusToLocalUnit(hp.getRoomTemperature(),
+                                                                     config.useFahrenheit)));
+  controlPage.replace("_USE_FAHRENHEIT_", String(config.useFahrenheit ? 1 : 0));
   controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
-  controlPage.replace("_HEAT_MODE_SUPPORT_", String(supportHeatMode ? 1 : 0));
-  controlPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(min_temp, useFahrenheit)));
-  controlPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(max_temp, useFahrenheit)));
-  controlPage.replace(F("_TEMP_STEP_"), String(temp_step));
+  controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.supportHeatMode ? 1 : 0));
+  controlPage.replace(F("_MIN_TEMP_"),
+                      String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)));
+  controlPage.replace(F("_MAX_TEMP_"),
+                      String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)));
+  controlPage.replace(F("_TEMP_STEP_"), String(config.temp_step));
   controlPage.replace("_TXT_CTRL_CTEMP_", FPSTR(txt_ctrl_ctemp));
   controlPage.replace("_TXT_CTRL_TEMP_", FPSTR(txt_ctrl_temp));
   controlPage.replace("_TXT_CTRL_TITLE_", FPSTR(txt_ctrl_title));
@@ -1028,7 +1026,7 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
     controlPage.replace("_WVANE_S_", "selected");
   }
   controlPage.replace("_TEMP_",
-                      String(convertCelsiusToLocalUnit(hp.getTemperature(), useFahrenheit)));
+                      String(convertCelsiusToLocalUnit(hp.getTemperature(), config.useFahrenheit)));
 
   // We need to send the page content in chunks to overcome
   // a limitation on the maximum size we can send at one
@@ -1137,7 +1135,7 @@ void handleLogin() {
       loginSuccess = false;
     }
     if (server.hasArg("USERNAME") && server.hasArg("PASSWORD")) {
-      if (server.arg("USERNAME") == "admin" && server.arg("PASSWORD") == login_password) {
+      if (server.arg("USERNAME") == "admin" && server.arg("PASSWORD") == config.login_password) {
         server.sendHeader("Cache-Control", "no-cache");
         server.sendHeader("Set-Cookie", "M2MSESSIONID=1");
         loginSuccess = true;
@@ -1158,7 +1156,7 @@ void handleLogin() {
       }
     }
   } else {
-    if (is_authenticated() or login_password.length() == 0) {
+    if (is_authenticated() or config.login_password.length() == 0) {
       server.sendHeader("Location", "/");
       server.sendHeader("Cache-Control", "no-cache");
       // use javascript in the case browser disable redirect
@@ -1342,7 +1340,7 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
     if (server.hasArg("TEMP")) {
       // using std::round to maintain existing behavior, though I'm not sure it's correct
       newSettings.temperature =
-          convertLocalUnitToCelsius(std::round(server.arg("TEMP").toFloat()), useFahrenheit);
+          convertLocalUnitToCelsius(std::round(server.arg("TEMP").toFloat()), config.useFahrenheit);
       update = true;
     }
     if (server.hasArg("FAN")) {
@@ -1368,7 +1366,8 @@ void readHeatPumpSettings() {
   const HeatpumpSettings currentSettings(hp.getSettings());
 
   rootInfo.clear();
-  rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
+  rootInfo["temperature"] =
+      convertCelsiusToLocalUnit(currentSettings.temperature, config.useFahrenheit);
   rootInfo["fan"] = currentSettings.fan;
   rootInfo["vane"] = currentSettings.vane;
   rootInfo["wideVane"] = currentSettings.wideVane;
@@ -1457,8 +1456,9 @@ void hpStatusChanged(heatpumpStatus newStatus) {
 
     rootInfo.clear();
     rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(newStatus.roomTemperature, useFahrenheit);
-    rootInfo["temperature"] = convertCelsiusToLocalUnit(currentSettings.temperature, useFahrenheit);
+        convertCelsiusToLocalUnit(newStatus.roomTemperature, config.useFahrenheit);
+    rootInfo["temperature"] =
+        convertCelsiusToLocalUnit(currentSettings.temperature, config.useFahrenheit);
     rootInfo["fan"] = currentSettings.fan;
     rootInfo["vane"] = currentSettings.vane;
     rootInfo["wideVane"] = currentSettings.wideVane;
@@ -1621,34 +1621,37 @@ void onSetRemoteTemp(const char *message) {
   } else {
     remoteTempActive = true;    // Remote temp has been pushed.
     lastRemoteTemp = millis();  // Note time
-    hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, useFahrenheit));
+    hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, config.useFahrenheit));
   }
 }
 
 void onSetWideVane(const char *message) {
-  rootInfo["wideVane"] = (String)message;
+  rootInfo["wideVane"] = String(message);
   hpSendLocalState();
   hp.setWideVaneSetting(message);
 }
 
 void onSetVane(const char *message) {
-  rootInfo["vane"] = (String)message;
+  rootInfo["vane"] = String(message);
   hpSendLocalState();
   hp.setVaneSetting(message);
 }
 
 void onSetFan(const char *message) {
-  rootInfo["fan"] = (String)message;
+  rootInfo["fan"] = String(message);
   hpSendLocalState();
   hp.setFanSpeed(message);
 }
 
 void onSetTemp(const char *message) {
   const float temperature = strtof(message, NULL);
-  float temperature_c = convertLocalUnitToCelsius(temperature, useFahrenheit);
-  if (temperature_c < (float)min_temp || temperature_c > (float)max_temp) {
-    temperature_c = ((float)min_temp + (float)max_temp) / 2.0F;
-    rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, useFahrenheit);
+  const float minTemp = config.min_temp;
+  const float maxTemp = config.max_temp;
+
+  float temperature_c = convertLocalUnitToCelsius(temperature, config.useFahrenheit);
+  if (temperature_c < minTemp || temperature_c > maxTemp) {
+    temperature_c = (minTemp + maxTemp) / 2.0F;
+    rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, config.useFahrenheit);
   } else {
     rootInfo["temperature"] = temperature;
   }
@@ -1704,7 +1707,7 @@ void haConfig() {
   haConfigModes.add("heat_cool");  // native AUTO mode
   haConfigModes.add("cool");
   haConfigModes.add("dry");
-  if (supportHeatMode) {
+  if (config.supportHeatMode) {
     haConfigModes.add("heat");
   }
   haConfigModes.add("fan_only");  // native FAN mode
@@ -1727,32 +1730,33 @@ void haConfig() {
   String temp_stat_tpl_str =
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
-  temp_stat_tpl_str += (String)convertCelsiusToLocalUnit(min_temp, useFahrenheit) +
+  temp_stat_tpl_str += String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)) +
                        " and value_json.temperature|int <= ";
-  temp_stat_tpl_str += (String)convertCelsiusToLocalUnit(max_temp, useFahrenheit) +
+  temp_stat_tpl_str += String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)) +
                        ") %}{{ value_json.temperature }}";
-  temp_stat_tpl_str += "{% elif (value_json.temperature|int < " +
-                       (String)convertCelsiusToLocalUnit(min_temp, useFahrenheit) + ") %}" +
-                       (String)convertCelsiusToLocalUnit(min_temp, useFahrenheit) +
-                       "{% elif (value_json.temperature|int > " +
-                       (String)convertCelsiusToLocalUnit(max_temp, useFahrenheit) + ") %}" +
-                       (String)convertCelsiusToLocalUnit(max_temp, useFahrenheit) +
-                       "{% endif %}{% else %}" +
-                       (String)convertCelsiusToLocalUnit(22, useFahrenheit) + "{% endif %}";
+  temp_stat_tpl_str +=
+      "{% elif (value_json.temperature|int < " +
+      String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)) + ") %}" +
+      String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)) +
+      "{% elif (value_json.temperature|int > " +
+      String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)) + ") %}" +
+      String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)) +
+      "{% endif %}{% else %}" + String(convertCelsiusToLocalUnit(22, config.useFahrenheit)) +
+      "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
   haConfig["curr_temp_t"] = ha_state_topic;
   // NOLINTNEXTLINE(misc-const-correctness)
-  String curr_temp_tpl_str =
+  const String curr_temp_tpl_str =
       F("{{ value_json.roomTemperature if (value_json is defined and "
         "value_json.roomTemperature is defined and "
-        "value_json.roomTemperature|int > ");
-  curr_temp_tpl_str += (String)convertCelsiusToLocalUnit(1, useFahrenheit) +
-                       ") }}";  // Set default value for fix "Could not parse data for HA"
+        "value_json.roomTemperature|int > ") +
+      String(convertCelsiusToLocalUnit(1, config.useFahrenheit)) +
+      ") }}";  // Set default value for fix "Could not parse data for HA"
   haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
-  haConfig["min_temp"] = convertCelsiusToLocalUnit(min_temp, useFahrenheit);
-  haConfig["max_temp"] = convertCelsiusToLocalUnit(max_temp, useFahrenheit);
-  haConfig["temp_step"] = temp_step;
-  haConfig["temperature_unit"] = useFahrenheit ? "F" : "C";
+  haConfig["min_temp"] = convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit);
+  haConfig["max_temp"] = convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit);
+  haConfig["temp_step"] = config.temp_step;
+  haConfig["temperature_unit"] = config.useFahrenheit ? "F" : "C";
 
   JsonArray haConfigFan_modes = haConfig["fan_modes"].to<JsonArray>();
   haConfigFan_modes.add("AUTO");
@@ -1936,7 +1940,7 @@ float convertLocalUnitToCelsius(float temperature, bool isFahrenheit) {
 }
 
 String getTemperatureScale() {
-  if (useFahrenheit) {
+  if (config.useFahrenheit) {
     return "F";
   }
   return "C";
@@ -1966,7 +1970,7 @@ bool is_authenticated() {
 }
 
 bool checkLogin() {
-  if (!is_authenticated() and login_password.length() > 0) {
+  if (!is_authenticated() and config.login_password.length() > 0) {
     server.sendHeader("Location", "/login");
     server.sendHeader("Cache-Control", "no-cache");
     // use javascript in the case browser disable redirect
@@ -2009,8 +2013,8 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
     if (!hp.isConnected()) {
       // Use exponential backoff for retries, where each retry is double the
       // length of the previous one.
-      const unsigned long durationNextSync =
-          (1UL << hpConnectionRetries) * static_cast<unsigned long>(HP_RETRY_INTERVAL_MS);
+      const uint64 durationNextSync =
+          (1UL << hpConnectionRetries) * static_cast<uint64>(HP_RETRY_INTERVAL_MS);
       if (((millis() - lastHpSync > durationNextSync) or lastHpSync == 0)) {
         lastHpSync = millis();
         // If we've retried more than the max number of tries, keep retrying at
