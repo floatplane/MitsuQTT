@@ -4,9 +4,8 @@
 #include "HeatpumpSettings.hpp"
 
 String getId();
-void setDefaults();
 void loadWifi();
-bool loadOthers();
+void loadOthers();
 bool loadUnit();
 bool initWifi();
 void handleRoot();

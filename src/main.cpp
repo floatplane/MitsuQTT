@@ -93,6 +93,18 @@ struct Config {
     return accessPointSsid.length() > 0;
   }
 
+  // Others
+  bool haAutodiscovery = true;
+  String haAutodiscoveryTopic = "homeassistant";
+  // debug mode logs, when true, will send all debug messages to topic
+  // heatpump_debug_logs_topic this can also be set by sending "on" to
+  // heatpump_debug_set_topic
+  bool logToMqtt = false;
+  // debug mode packets, when true, will send all packets received from the
+  // heatpump to topic heatpump_debug_packets_topic this can also be set by
+  // sending "on" to heatpump_debug_set_topic
+  bool dumpPacketsToMqtt = false;
+
 } config;
 
 // Define global variables for network
@@ -125,10 +137,6 @@ const PROGMEM char *const mqtt_payload_available = "online";
 const PROGMEM char *const mqtt_payload_unavailable = "offline";
 const size_t maxCustomPacketLength = 20;  // max custom packet bytes is 20
 
-// Define global variables for Others settings
-bool others_haa;
-String others_haa_topic;
-
 // Define global variables for HA topics
 String ha_system_set_topic;
 String ha_mode_set_topic;
@@ -152,15 +160,6 @@ String hvac_name;
 // login
 String login_username = "admin";
 String login_password;
-
-// debug mode logs, when true, will send all debug messages to topic
-// heatpump_debug_logs_topic this can also be set by sending "on" to
-// heatpump_debug_set_topic
-bool g_debugModeLogs = false;
-// debug mode packets, when true, will send all packets received from the
-// heatpump to topic heatpump_debug_packets_topic this can also be set by
-// sending "on" to heatpump_debug_set_topic
-bool g_debugModePckts = false;
 
 // Customization
 const uint8_t defaultMinimumTemp = 16;
@@ -263,7 +262,6 @@ void setup() {
     ticker.attach(0.6, tick);
   */
 
-  setDefaults();
   loadWifi();
   loadOthers();
   loadUnit();
@@ -322,12 +320,12 @@ void setup() {
       ha_availability_topic = mqtt_topic + "/" + mqtt_fn + "/availability";
       ha_system_set_topic = mqtt_topic + "/" + mqtt_fn + "/system/set";
 
-      if (others_haa) {
-        ha_config_topic = others_haa_topic + "/climate/" + mqtt_fn + "/config";
+      if (config.haAutodiscovery) {
+        ha_config_topic = config.haAutodiscoveryTopic + "/climate/" + mqtt_fn + "/config";
       }
       // startup mqtt connection
       initMqtt();
-      if (g_debugModeLogs) {
+      if (config.logToMqtt) {
         Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
       }
     } else {
@@ -445,30 +443,15 @@ bool loadUnit() {
   return true;
 }
 
-bool loadOthers() {
+void loadOthers() {
   const JsonDocument doc = FileSystem::loadJSON(others_conf);
   if (doc.isNull()) {
-    return false;
+    return;
   }
-  // unit
-  String unit_tempUnit = doc["unit_tempUnit"].as<String>();
-  if (unit_tempUnit == "fah") {
-    useFahrenheit = true;
-  }
-  others_haa_topic = doc["haat"].as<String>();
-  String haa = doc["haa"].as<String>();
-  String debugPckts = doc["debugPckts"].as<String>();
-  String debugLogs = doc["debugLogs"].as<String>();
-  if (strcmp(haa.c_str(), "OFF") == 0) {
-    others_haa = false;
-  }
-  if (strcmp(debugPckts.c_str(), "ON") == 0) {
-    g_debugModePckts = true;
-  }
-  if (strcmp(debugLogs.c_str(), "ON") == 0) {
-    g_debugModeLogs = true;
-  }
-  return true;
+  config.haAutodiscoveryTopic = doc["haat"].as<String>();
+  config.haAutodiscovery = doc["haa"].as<String>() == "ON";
+  config.dumpPacketsToMqtt = doc["debugPckts"].as<String>() == "ON";
+  config.logToMqtt = doc["debugLogs"].as<String>() == "ON";
 }
 
 struct SaveMqttArgs {
@@ -525,18 +508,12 @@ void saveWifi(const Config &config) {
   FileSystem::saveJSON(wifi_conf, doc);
 }
 
-struct SaveOthersArgs {
-  String haa{};
-  String haat{};
-  String debugPckts{};
-  String debugLogs{};
-};
-void saveOthers(const SaveOthersArgs &args) {
+void saveOthers(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  doc["haa"] = args.haa;
-  doc["haat"] = args.haat;
-  doc["debugPckts"] = args.debugPckts;
-  doc["debugLogs"] = args.debugLogs;
+  doc["haa"] = config.haAutodiscovery ? "ON" : "OFF";
+  doc["haat"] = config.haAutodiscoveryTopic;
+  doc["debugPckts"] = config.dumpPacketsToMqtt ? "ON" : "OFF";
+  doc["debugLogs"] = config.logToMqtt ? "ON" : "OFF";
   FileSystem::saveJSON(others_conf, doc);
 }
 
@@ -555,11 +532,6 @@ void initMqtt() {
   mqtt_client.setServer(mqtt_server.c_str(), atoi(mqtt_port.c_str()));
   mqtt_client.setCallback(mqttCallback);
   mqttConnect();
-}
-
-void setDefaults() {
-  others_haa = true;
-  others_haa_topic = "homeassistant";
 }
 
 bool initWifi() {
@@ -733,12 +705,11 @@ void handleOthers() {
   LOG(F("handleOthers()"));
 
   if (server.method() == HTTP_POST) {
-    saveOthers({
-        .haa = server.arg("HAA"),
-        .haat = server.arg("haat"),
-        .debugPckts = server.arg("DebugPckts"),
-        .debugLogs = server.arg("DebugLogs"),
-    });
+    config.haAutodiscovery = server.arg("HAA") == "ON";
+    config.haAutodiscoveryTopic = server.arg("haat");
+    config.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
+    config.logToMqtt = server.arg("DebugLogs") == "ON";
+    saveOthers(config);
     rebootAndSendPage();
   } else {
     String othersPage = FPSTR(html_page_others);
@@ -752,18 +723,18 @@ void handleOthers() {
     othersPage.replace("_TXT_OTHERS_DEBUG_PCKTS_", FPSTR(txt_others_debug_packets));
     othersPage.replace("_TXT_OTHERS_DEBUG_LOGS_", FPSTR(txt_others_debug_log));
 
-    othersPage.replace("_HAA_TOPIC_", others_haa_topic);
-    if (others_haa) {
+    othersPage.replace("_HAA_TOPIC_", config.haAutodiscoveryTopic);
+    if (config.haAutodiscovery) {
       othersPage.replace("_HAA_ON_", "selected");
     } else {
       othersPage.replace("_HAA_OFF_", "selected");
     }
-    if (g_debugModePckts) {
+    if (config.dumpPacketsToMqtt) {
       othersPage.replace("_DEBUG_PCKTS_ON_", "selected");
     } else {
       othersPage.replace("_DEBUG_PCKTS_OFF_", "selected");
     }
-    if (g_debugModeLogs) {
+    if (config.logToMqtt) {
       othersPage.replace("_DEBUG_LOGS_ON_", "selected");
     } else {
       othersPage.replace("_DEBUG_LOGS_OFF_", "selected");
@@ -1521,7 +1492,7 @@ void hpCheckRemoteTemp() {
 void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
   // packetDirection should have been declared as const char *, but since hpPacketDebug is a
   // callback function, it can't be.  So we'll just have to be careful not to modify it.
-  if (g_debugModePckts) {
+  if (config.dumpPacketsToMqtt) {
     String message;  // NOLINT(misc-const-correctness)
     for (unsigned int idx = 0; idx < length; idx++) {
       if (packet[idx] < 16) {
@@ -1617,10 +1588,10 @@ void onSetCustomPacket(const char *message) {
 void onSetDebugLogs(const char *message) {
   if (strcmp(message, "on") == 0) {
     Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
-    g_debugModeLogs = true;
+    config.logToMqtt = true;
     LOG(F("Debug logs mode enabled"));
   } else if (strcmp(message, "off") == 0) {
-    g_debugModeLogs = false;
+    config.logToMqtt = false;
     LOG(F("Debug logs mode disabled"));
     Logger::disableMqttLogging();
   }
@@ -1628,10 +1599,10 @@ void onSetDebugLogs(const char *message) {
 
 void onSetDebugPackets(const char *message) {
   if (strcmp(message, "on") == 0) {
-    g_debugModePckts = true;
+    config.dumpPacketsToMqtt = true;
     mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode enabled");
   } else if (strcmp(message, "off") == 0) {
-    g_debugModePckts = false;
+    config.dumpPacketsToMqtt = false;
     mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode disabled");
   }
 }
@@ -1882,7 +1853,7 @@ void mqttConnect() {
       mqtt_client.subscribe(ha_custom_packet.c_str());
       mqtt_client.publish(ha_availability_topic.c_str(), mqtt_payload_available,
                           true);  // publish status as available
-      if (others_haa) {
+      if (config.haAutodiscovery) {
         haConfig();
       }
     }
