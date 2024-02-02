@@ -112,13 +112,13 @@ struct Config {
   bool useFahrenheit = false;
   // support heat mode settings, some model do not support heat mode
   bool supportHeatMode = true;
-  uint8_t min_temp{16};  // Minimum temperature, in your selected unit, check
-                         // value from heatpump remote control
-  uint8_t max_temp{31};  // Maximum temperature, in your selected unit, check
-                         // value from heatpump remote control
+  uint8_t minTempCelsius{16};  // Minimum temperature, check
+                               // value from heatpump remote control
+  uint8_t maxTempCelsius{31};  // Maximum temperature, check
+                               // value from heatpump remote control
   // TODO(floatplane) why isn't this a float?
-  String temp_step{"1"};  // Temperature setting step, check
-                          // value from heatpump remote control
+  String tempStep{"1"};  // Temperature setting step, check
+                         // value from heatpump remote control
   String login_password;
 
 } config;
@@ -429,9 +429,9 @@ bool loadUnit() {
   if (unit_tempUnit == "fah") {
     config.useFahrenheit = true;
   }
-  config.min_temp = doc["min_temp"].as<uint8_t>();
-  config.max_temp = doc["max_temp"].as<uint8_t>();
-  config.temp_step = doc["temp_step"].as<String>();
+  config.minTempCelsius = doc["min_temp"].as<uint8_t>();
+  config.maxTempCelsius = doc["max_temp"].as<uint8_t>();
+  config.tempStep = doc["temp_step"].as<String>();
   // mode
   config.supportHeatMode = doc["support_mode"].as<String>() == "all";
   // prevent login password is "null" if not exist key
@@ -477,9 +477,9 @@ void saveMqtt(const SaveMqttArgs &args) {
 void saveUnit(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
   doc["unit_tempUnit"] = config.useFahrenheit ? "fah" : "cel";
-  doc["min_temp"] = config.min_temp;
-  doc["max_temp"] = config.max_temp;
-  doc["temp_step"] = config.temp_step;
+  doc["min_temp"] = config.minTempCelsius;
+  doc["max_temp"] = config.maxTempCelsius;
+  doc["temp_step"] = config.tempStep;
   doc["support_mode"] = config.supportHeatMode ? "all" : "nht";
   doc["login_password"] = config.login_password;
   FileSystem::saveJSON(unit_conf, doc);
@@ -779,16 +779,17 @@ void handleUnit() {
         server.arg("md").isEmpty() ? config.supportHeatMode : server.arg("md") == "all";
     config.login_password = server.arg("lpw").isEmpty() ? config.login_password : server.arg("lpw");
     // using std::round to maintain existing behavior, though I'm not sure it's correct
-    config.min_temp = server.arg("min_temp").isEmpty()
-                          ? config.min_temp
-                          : convertLocalUnitToCelsius(std::round(server.arg("min_temp").toFloat()),
-                                                      config.useFahrenheit);
-    config.max_temp = server.arg("max_temp").isEmpty()
-                          ? config.max_temp
-                          : convertLocalUnitToCelsius(std::round(server.arg("max_temp").toFloat()),
-                                                      config.useFahrenheit);
-    config.temp_step =
-        server.arg("temp_step").isEmpty() ? config.temp_step : server.arg("temp_step");
+    config.minTempCelsius =
+        server.arg("min_temp").isEmpty()
+            ? config.minTempCelsius
+            : convertLocalUnitToCelsius(std::round(server.arg("min_temp").toFloat()),
+                                        config.useFahrenheit);
+    config.maxTempCelsius =
+        server.arg("max_temp").isEmpty()
+            ? config.maxTempCelsius
+            : convertLocalUnitToCelsius(std::round(server.arg("max_temp").toFloat()),
+                                        config.useFahrenheit);
+    config.tempStep = server.arg("temp_step").isEmpty() ? config.tempStep : server.arg("temp_step");
     saveUnit(config);
     rebootAndSendPage();
   } else {
@@ -806,11 +807,11 @@ void handleUnit() {
     unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
     unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
     unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-    unitPage.replace(F("_MIN_TEMP_"),
-                     String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)));
-    unitPage.replace(F("_MAX_TEMP_"),
-                     String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)));
-    unitPage.replace(F("_TEMP_STEP_"), String(config.temp_step));
+    unitPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(config.minTempCelsius,
+                                                                       config.useFahrenheit)));
+    unitPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(config.maxTempCelsius,
+                                                                       config.useFahrenheit)));
+    unitPage.replace(F("_TEMP_STEP_"), String(config.tempStep));
     // temp
     if (config.useFahrenheit) {
       unitPage.replace(F("_TU_FAH_"), F("selected"));
@@ -935,11 +936,11 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   controlPage.replace("_USE_FAHRENHEIT_", String(config.useFahrenheit ? 1 : 0));
   controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
   controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.supportHeatMode ? 1 : 0));
-  controlPage.replace(F("_MIN_TEMP_"),
-                      String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)));
-  controlPage.replace(F("_MAX_TEMP_"),
-                      String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)));
-  controlPage.replace(F("_TEMP_STEP_"), String(config.temp_step));
+  controlPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(config.minTempCelsius,
+                                                                        config.useFahrenheit)));
+  controlPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(config.maxTempCelsius,
+                                                                        config.useFahrenheit)));
+  controlPage.replace(F("_TEMP_STEP_"), String(config.tempStep));
   controlPage.replace("_TXT_CTRL_CTEMP_", FPSTR(txt_ctrl_ctemp));
   controlPage.replace("_TXT_CTRL_TEMP_", FPSTR(txt_ctrl_temp));
   controlPage.replace("_TXT_CTRL_TITLE_", FPSTR(txt_ctrl_title));
@@ -1645,8 +1646,8 @@ void onSetFan(const char *message) {
 
 void onSetTemp(const char *message) {
   const float temperature = strtof(message, NULL);
-  const float minTemp = config.min_temp;
-  const float maxTemp = config.max_temp;
+  const float minTemp = config.minTempCelsius;
+  const float maxTemp = config.maxTempCelsius;
 
   float temperature_c = convertLocalUnitToCelsius(temperature, config.useFahrenheit);
   if (temperature_c < minTemp || temperature_c > maxTemp) {
@@ -1730,17 +1731,19 @@ void haConfig() {
   String temp_stat_tpl_str =
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
-  temp_stat_tpl_str += String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)) +
-                       " and value_json.temperature|int <= ";
-  temp_stat_tpl_str += String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)) +
-                       ") %}{{ value_json.temperature }}";
+  temp_stat_tpl_str +=
+      String(convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit)) +
+      " and value_json.temperature|int <= ";
+  temp_stat_tpl_str +=
+      String(convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit)) +
+      ") %}{{ value_json.temperature }}";
   temp_stat_tpl_str +=
       "{% elif (value_json.temperature|int < " +
-      String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)) + ") %}" +
-      String(convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit)) +
+      String(convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit)) + ") %}" +
+      String(convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit)) +
       "{% elif (value_json.temperature|int > " +
-      String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)) + ") %}" +
-      String(convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit)) +
+      String(convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit)) + ") %}" +
+      String(convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit)) +
       "{% endif %}{% else %}" + String(convertCelsiusToLocalUnit(22, config.useFahrenheit)) +
       "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
@@ -1753,9 +1756,9 @@ void haConfig() {
       String(convertCelsiusToLocalUnit(1, config.useFahrenheit)) +
       ") }}";  // Set default value for fix "Could not parse data for HA"
   haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
-  haConfig["min_temp"] = convertCelsiusToLocalUnit(config.min_temp, config.useFahrenheit);
-  haConfig["max_temp"] = convertCelsiusToLocalUnit(config.max_temp, config.useFahrenheit);
-  haConfig["temp_step"] = config.temp_step;
+  haConfig["min_temp"] = convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit);
+  haConfig["max_temp"] = convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit);
+  haConfig["temp_step"] = config.tempStep;
   haConfig["temperature_unit"] = config.useFahrenheit ? "F" : "C";
 
   JsonArray haConfigFan_modes = haConfig["fan_modes"].to<JsonArray>();
