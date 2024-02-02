@@ -101,16 +101,22 @@ struct Config {
 
   // Others
   struct Other {  // TODO(floatplane): "other" is a terrible name
-    bool haAutodiscovery = true;
-    String haAutodiscoveryTopic = "homeassistant";
+    bool haAutodiscovery;
+    String haAutodiscoveryTopic;
     // debug mode logs, when true, will send all debug messages to topic
     // heatpump_debug_logs_topic this can also be set by sending "on" to
     // heatpump_debug_set_topic
-    bool logToMqtt = false;
+    bool logToMqtt;
     // debug mode packets, when true, will send all packets received from the
     // heatpump to topic heatpump_debug_packets_topic this can also be set by
     // sending "on" to heatpump_debug_set_topic
-    bool dumpPacketsToMqtt = false;
+    bool dumpPacketsToMqtt;
+    Other()
+        : haAutodiscovery(true),
+          haAutodiscoveryTopic(F("homeassistant")),
+          logToMqtt(false),
+          dumpPacketsToMqtt(false) {
+    }
   } other;
 
   // Unit
@@ -138,70 +144,72 @@ struct Config {
     uint32_t port{1883};
     String username;
     String password;
-    String topic = "mitsubishi2mqtt";
+    String topic;
+    MQTT() : topic(F("mitsubishi2mqtt")) {
+    }
 
     bool configured() const {
       return friendlyName.length() > 0 && server.length() > 0 && username.length() > 0 &&
              password.length() > 0 && topic.length() > 0;
     }
     const String &ha_availability_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/availability";
+      static String topicPath = topic + "/" + friendlyName + F("/availability");
       return topicPath;
     }
     const String &ha_custom_packet() const {
-      static String topicPath = topic + "/" + friendlyName + "/custom/send";
+      static String topicPath = topic + "/" + friendlyName + F("/custom/send");
       return topicPath;
     }
     const String &ha_debug_logs_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/debug/logs/set";
+      static String topicPath = topic + "/" + friendlyName + F("/debug/logs/set");
       return topicPath;
     }
     const String &ha_debug_logs_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/debug/logs";
+      static String topicPath = topic + "/" + friendlyName + F("/debug/logs");
       return topicPath;
     }
     const String &ha_debug_pckts_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/debug/packets/set";
+      static String topicPath = topic + "/" + friendlyName + F("/debug/packets/set");
       return topicPath;
     }
     const String &ha_debug_pckts_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/debug/packets";
+      static String topicPath = topic + "/" + friendlyName + F("/debug/packets");
       return topicPath;
     }
     const String &ha_fan_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/fan/set";
+      static String topicPath = topic + "/" + friendlyName + F("/fan/set");
       return topicPath;
     }
     const String &ha_mode_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/mode/set";
+      static String topicPath = topic + "/" + friendlyName + F("/mode/set");
       return topicPath;
     }
     const String &ha_remote_temp_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/remote_temp/set";
+      static String topicPath = topic + "/" + friendlyName + F("/remote_temp/set");
       return topicPath;
     }
     const String &ha_settings_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/settings";
+      static String topicPath = topic + "/" + friendlyName + F("/settings");
       return topicPath;
     }
     const String &ha_state_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/state";
+      static String topicPath = topic + "/" + friendlyName + F("/state");
       return topicPath;
     }
     const String &ha_system_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/system/set";
+      static String topicPath = topic + "/" + friendlyName + F("/system/set");
       return topicPath;
     }
     const String &ha_temp_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/temp/set";
+      static String topicPath = topic + "/" + friendlyName + F("/temp/set");
       return topicPath;
     }
     const String &ha_vane_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/vane/set";
+      static String topicPath = topic + "/" + friendlyName + F("/vane/set");
       return topicPath;
     }
     const String &ha_wideVane_set_topic() const {
-      static String topicPath = topic + "/" + friendlyName + "/wideVane/set";
+      static String topicPath = topic + "/" + friendlyName + F("/wideVane/set");
       return topicPath;
     }
   } mqtt;
@@ -361,8 +369,8 @@ void setup() {
     if (config.mqtt.configured()) {
       LOG(F("Starting MQTT"));
       if (config.other.haAutodiscovery) {
-        ha_config_topic =
-            config.other.haAutodiscoveryTopic + "/climate/" + config.mqtt.friendlyName + "/config";
+        ha_config_topic = config.other.haAutodiscoveryTopic + "/climate/" +
+                          config.mqtt.friendlyName + F("/config");
       }
       // startup mqtt connection
       initMqtt();
