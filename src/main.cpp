@@ -129,17 +129,17 @@ struct Config {
 
   // MQTT
   struct MQTT {
-    String mqtt_fn;
-    String mqtt_server;
+    String friendlyName;
+    String server;
     // TODO(floatplane) make this a uint16_t
-    String mqtt_port;
-    String mqtt_username;
-    String mqtt_password;
-    String mqtt_topic = "mitsubishi2mqtt";
+    String port;
+    String username;
+    String password;
+    String topic = "mitsubishi2mqtt";
 
     bool configured() const {
-      return mqtt_fn.length() > 0 && mqtt_server.length() > 0 && mqtt_username.length() > 0 &&
-             mqtt_password.length() > 0 && mqtt_topic.length() > 0;
+      return friendlyName.length() > 0 && server.length() > 0 && username.length() > 0 &&
+             password.length() > 0 && topic.length() > 0;
     }
   } mqtt;
 
@@ -319,28 +319,28 @@ void setup() {
     if (config.mqtt.configured()) {
       LOG(F("Starting MQTT"));
       //  setup HA topics
-      ha_mode_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/mode/set";
-      ha_temp_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/temp/set";
+      ha_mode_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/mode/set";
+      ha_temp_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/temp/set";
       ha_remote_temp_set_topic =
-          config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/remote_temp/set";
-      ha_fan_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/fan/set";
-      ha_vane_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/vane/set";
-      ha_wideVane_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/wideVane/set";
-      ha_settings_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/settings";
-      ha_state_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/state";
-      ha_debug_pckts_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/packets";
+          config.mqtt.topic + "/" + config.mqtt.friendlyName + "/remote_temp/set";
+      ha_fan_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/fan/set";
+      ha_vane_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/vane/set";
+      ha_wideVane_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/wideVane/set";
+      ha_settings_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/settings";
+      ha_state_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/state";
+      ha_debug_pckts_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/packets";
       ha_debug_pckts_set_topic =
-          config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/packets/set";
-      ha_debug_logs_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/logs";
+          config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/packets/set";
+      ha_debug_logs_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/logs";
       ha_debug_logs_set_topic =
-          config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/logs/set";
-      ha_custom_packet = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/custom/send";
-      ha_availability_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/availability";
-      ha_system_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/system/set";
+          config.mqtt.topic + "/" + config.mqtt.friendlyName + "/debug/logs/set";
+      ha_custom_packet = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/custom/send";
+      ha_availability_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/availability";
+      ha_system_set_topic = config.mqtt.topic + "/" + config.mqtt.friendlyName + "/system/set";
 
       if (config.other.haAutodiscovery) {
         ha_config_topic =
-            config.other.haAutodiscoveryTopic + "/climate/" + config.mqtt.mqtt_fn + "/config";
+            config.other.haAutodiscoveryTopic + "/climate/" + config.mqtt.friendlyName + "/config";
       }
       // startup mqtt connection
       initMqtt();
@@ -416,20 +416,20 @@ void loadMqtt() {
   if (doc.isNull()) {
     return;
   }
-  config.mqtt.mqtt_fn = doc["mqtt_fn"].as<String>();
-  config.mqtt.mqtt_server = doc["mqtt_host"].as<String>();
-  config.mqtt.mqtt_port = doc["mqtt_port"].as<String>();
-  config.mqtt.mqtt_username = doc["mqtt_user"].as<String>();
-  config.mqtt.mqtt_password = doc["mqtt_pwd"].as<String>();
-  config.mqtt.mqtt_topic = doc["mqtt_topic"].as<String>();
+  config.mqtt.friendlyName = doc["mqtt_fn"].as<String>();
+  config.mqtt.server = doc["mqtt_host"].as<String>();
+  config.mqtt.port = doc["mqtt_port"].as<String>();
+  config.mqtt.username = doc["mqtt_user"].as<String>();
+  config.mqtt.password = doc["mqtt_pwd"].as<String>();
+  config.mqtt.topic = doc["mqtt_topic"].as<String>();
 
   LOG(F("=== START DEBUG MQTT ==="));
-  LOG(F("Friendly Name") + config.mqtt.mqtt_fn);
-  LOG(F("IP Server ") + config.mqtt.mqtt_server);
-  LOG(F("IP Port ") + config.mqtt.mqtt_port);
-  LOG(F("Username ") + config.mqtt.mqtt_username);
-  LOG(F("Password ") + config.mqtt.mqtt_password);
-  LOG(F("Topic ") + config.mqtt.mqtt_topic);
+  LOG(F("Friendly Name") + config.mqtt.friendlyName);
+  LOG(F("IP Server ") + config.mqtt.server);
+  LOG(F("IP Port ") + config.mqtt.port);
+  LOG(F("Username ") + config.mqtt.username);
+  LOG(F("Password ") + config.mqtt.password);
+  LOG(F("Topic ") + config.mqtt.topic);
   LOG(F("=== END DEBUG MQTT ==="));
 }
 
@@ -469,13 +469,13 @@ void loadOthers() {
 
 void saveMqtt(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  doc["mqtt_fn"] = config.mqtt.mqtt_fn;
-  doc["mqtt_host"] = config.mqtt.mqtt_server;
+  doc["mqtt_fn"] = config.mqtt.friendlyName;
+  doc["mqtt_host"] = config.mqtt.server;
   // if mqtt port is empty, we use default port
-  doc["mqtt_port"] = config.mqtt.mqtt_port.isEmpty() ? String("1883") : config.mqtt.mqtt_port;
-  doc["mqtt_user"] = config.mqtt.mqtt_username;
-  doc["mqtt_pwd"] = config.mqtt.mqtt_password;
-  doc["mqtt_topic"] = config.mqtt.mqtt_topic;
+  doc["mqtt_port"] = config.mqtt.port.isEmpty() ? String("1883") : config.mqtt.port;
+  doc["mqtt_user"] = config.mqtt.username;
+  doc["mqtt_pwd"] = config.mqtt.password;
+  doc["mqtt_topic"] = config.mqtt.topic;
   FileSystem::saveJSON(mqtt_conf, doc);
 }
 
@@ -520,7 +520,7 @@ void initCaptivePortal() {
 }
 
 void initMqtt() {
-  mqtt_client.setServer(config.mqtt.mqtt_server.c_str(), atoi(config.mqtt.mqtt_port.c_str()));
+  mqtt_client.setServer(config.mqtt.server.c_str(), atoi(config.mqtt.port.c_str()));
   mqtt_client.setCallback(mqttCallback);
   mqttConnect();
 }
@@ -739,12 +739,12 @@ void handleMqtt() {
   LOG(F("handleMqtt()"));
 
   if (server.method() == HTTP_POST) {
-    config.mqtt.mqtt_fn = server.arg("fn");
-    config.mqtt.mqtt_server = server.arg("mh");
-    config.mqtt.mqtt_port = server.arg("ml").isEmpty() ? String("1883") : server.arg("ml");
-    config.mqtt.mqtt_username = server.arg("mu");
-    config.mqtt.mqtt_password = server.arg("mp");
-    config.mqtt.mqtt_topic = server.arg("mt");
+    config.mqtt.friendlyName = server.arg("fn");
+    config.mqtt.server = server.arg("mh");
+    config.mqtt.port = server.arg("ml").isEmpty() ? String("1883") : server.arg("ml");
+    config.mqtt.username = server.arg("mu");
+    config.mqtt.password = server.arg("mp");
+    config.mqtt.topic = server.arg("mt");
     saveMqtt(config);
     rebootAndSendPage();
   } else {
@@ -758,12 +758,12 @@ void handleMqtt() {
     mqttPage.replace("_TXT_MQTT_USER_", FPSTR(txt_mqtt_user));
     mqttPage.replace("_TXT_MQTT_PASSWORD_", FPSTR(txt_mqtt_password));
     mqttPage.replace("_TXT_MQTT_TOPIC_", FPSTR(txt_mqtt_topic));
-    mqttPage.replace(F("_MQTT_FN_"), config.mqtt.mqtt_fn);
-    mqttPage.replace(F("_MQTT_HOST_"), config.mqtt.mqtt_server);
-    mqttPage.replace(F("_MQTT_PORT_"), config.mqtt.mqtt_port);
-    mqttPage.replace(F("_MQTT_USER_"), config.mqtt.mqtt_username);
-    mqttPage.replace(F("_MQTT_PASSWORD_"), config.mqtt.mqtt_password);
-    mqttPage.replace(F("_MQTT_TOPIC_"), config.mqtt.mqtt_topic);
+    mqttPage.replace(F("_MQTT_FN_"), config.mqtt.friendlyName);
+    mqttPage.replace(F("_MQTT_HOST_"), config.mqtt.server);
+    mqttPage.replace(F("_MQTT_PORT_"), config.mqtt.port);
+    mqttPage.replace(F("_MQTT_USER_"), config.mqtt.username);
+    mqttPage.replace(F("_MQTT_PASSWORD_"), config.mqtt.password);
+    mqttPage.replace(F("_MQTT_TOPIC_"), config.mqtt.topic);
     sendWrappedHTML(mqttPage);
   }
 }
@@ -1813,8 +1813,8 @@ void haConfig() {
 
   JsonObject haConfigDevice = haConfig["device"].to<JsonObject>();
 
-  haConfigDevice["ids"] = config.mqtt.mqtt_fn;
-  haConfigDevice["name"] = config.mqtt.mqtt_fn;
+  haConfigDevice["ids"] = config.mqtt.friendlyName;
+  haConfigDevice["name"] = config.mqtt.friendlyName;
   haConfigDevice["sw"] = "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
   haConfigDevice["mdl"] = "HVAC MITSUBISHI";
   haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";
@@ -1841,8 +1841,8 @@ void mqttConnect() {
   const int maxAttempts = 5;
   while (!mqtt_client.connected()) {
     // Attempt to connect
-    mqtt_client.connect(config.network.hostname.c_str(), config.mqtt.mqtt_username.c_str(),
-                        config.mqtt.mqtt_password.c_str(), ha_availability_topic.c_str(), 1, true,
+    mqtt_client.connect(config.network.hostname.c_str(), config.mqtt.username.c_str(),
+                        config.mqtt.password.c_str(), ha_availability_topic.c_str(), 1, true,
                         mqtt_payload_unavailable);
     // If state < 0 (MQTT_CONNECTED) => network problem we retry 5 times and
     // then waiting for MQTT_RETRY_INTERVAL_MS and retry reapeatly
