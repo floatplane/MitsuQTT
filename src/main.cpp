@@ -82,13 +82,14 @@ const String defaultHostname() {
 }
 
 struct Config {
+  // WiFi
   String hostname{defaultHostname()};
-  String ap_ssid;
-  String ap_pwd;
-  String ota_pwd;
+  String accessPointSsid;
+  String accessPointPassword;
+  String otaUpdatePassword;
 
   bool wifiConfigured() const {
-    return ap_ssid.length() > 0;
+    return accessPointSsid.length() > 0;
   }
 
 } config;
@@ -352,7 +353,7 @@ void setup() {
     rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
-    initOTA(config.hostname, config.ota_pwd);
+    initOTA(config.hostname, config.otaUpdatePassword);
   } else {
     //
     // an older version of the code had a 2000ms delay in the code path with a mysterious comment:
@@ -363,7 +364,7 @@ void setup() {
     getTimer()->in(2000, []() {
       dnsServer.start(DNS_PORT, "*", apIP);
       initCaptivePortal();
-      initOTA(config.hostname, config.ota_pwd);
+      initOTA(config.hostname, config.otaUpdatePassword);
       return Timers::TimerStatus::completed;
     });
   }
@@ -371,21 +372,21 @@ void setup() {
 
 void loadWifi() {
   LOG(F("Loading WiFi configuration"));
-  config.ap_ssid = "";
-  config.ap_pwd = "";
+  config.accessPointSsid = "";
+  config.accessPointPassword = "";
 
   const JsonDocument doc = FileSystem::loadJSON(wifi_conf);
   if (doc.isNull()) {
     return;
   }
   config.hostname = doc["hostname"].as<String>();
-  config.ap_ssid = doc["ap_ssid"].as<String>();
-  config.ap_pwd = doc["ap_pwd"].as<String>();
+  config.accessPointSsid = doc["ap_ssid"].as<String>();
+  config.accessPointPassword = doc["ap_pwd"].as<String>();
   // prevent ota password is "null" if not exist key
   if (doc.containsKey("ota_pwd")) {
-    config.ota_pwd = doc["ota_pwd"].as<String>();
+    config.otaUpdatePassword = doc["ota_pwd"].as<String>();
   } else {
-    config.ota_pwd = "";
+    config.otaUpdatePassword = "";
   }
 }
 
@@ -514,18 +515,12 @@ void saveUnit(const SaveUnitArgs &args) {
   FileSystem::saveJSON(unit_conf, doc);
 }
 
-struct SaveWifiArgs {
-  String apSsid{};
-  String apPwd{};
-  String hostName{};
-  String otaPwd{};
-};
-void saveWifi(const SaveWifiArgs &args) {
+void saveWifi(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  doc["ap_ssid"] = args.apSsid;
-  doc["ap_pwd"] = args.apPwd;
-  doc["hostname"] = args.hostName;
-  doc["ota_pwd"] = args.otaPwd;
+  doc["ap_ssid"] = config.accessPointSsid;
+  doc["ap_pwd"] = config.accessPointPassword;
+  doc["hostname"] = config.hostname;
+  doc["ota_pwd"] = config.accessPointPassword;
   FileSystem::saveJSON(wifi_conf, doc);
 }
 
@@ -568,7 +563,7 @@ void setDefaults() {
 
 bool initWifi() {
   bool connectWifiSuccess = true;
-  if (config.ap_ssid.length() > 0) {
+  if (config.accessPointSsid.length() > 0) {
     connectWifiSuccess = wifi_config = connectWifi();
     if (connectWifiSuccess) {
       return true;
@@ -625,10 +620,11 @@ void handleSaveWifi() {
 
   // Serial.println(F("Saving wifi config"));
   if (server.method() == HTTP_POST) {
-    saveWifi({.apSsid = server.arg("ssid"),
-              .apPwd = server.arg("psk"),
-              .hostName = server.arg("hn"),
-              .otaPwd = server.arg("otapwd")});
+    config.accessPointSsid = server.arg("ssid");
+    config.accessPointPassword = server.arg("psk");
+    config.hostname = server.arg("hn");
+    config.otaUpdatePassword = server.arg("otapwd");
+    saveWifi(config);
   }
   String initSavePage = FPSTR(html_init_save);
   initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
@@ -872,16 +868,17 @@ void handleWifi() {
   LOG(F("handleWifi()"));
 
   if (server.method() == HTTP_POST) {
-    saveWifi({.apSsid = server.arg("ssid"),
-              .apPwd = server.arg("psk"),
-              .hostName = server.arg("hn"),
-              .otaPwd = server.arg("otapwd")});
+    config.accessPointSsid = server.arg("ssid");
+    config.accessPointPassword = server.arg("psk");
+    config.hostname = server.arg("hn");
+    config.otaUpdatePassword = server.arg("otapwd");
+    saveWifi(config);
     rebootAndSendPage();
   } else {
     String wifiPage = FPSTR(html_page_wifi);
-    String str_ap_ssid = config.ap_ssid;
-    String str_ap_pwd = config.ap_pwd;
-    String str_ota_pwd = config.ota_pwd;
+    String str_ap_ssid = config.accessPointSsid;
+    String str_ap_pwd = config.accessPointPassword;
+    String str_ota_pwd = config.otaUpdatePassword;
     str_ap_ssid.replace("'", F("&apos;"));
     str_ap_pwd.replace("'", F("&apos;"));
     str_ota_pwd.replace("'", F("&apos;"));
@@ -1905,7 +1902,7 @@ bool connectWifi() {
 #ifdef ESP32
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
 #endif
-  WiFi.begin(config.ap_ssid.c_str(), config.ap_pwd.c_str());
+  WiFi.begin(config.accessPointSsid.c_str(), config.accessPointPassword.c_str());
   // Serial.println("Connecting to " + ap_ssid);
   wifi_timeout = millis() + connectTimeoutMs;
   while (WiFi.status() != WL_CONNECTED && millis() < wifi_timeout) {
