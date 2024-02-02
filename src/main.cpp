@@ -419,10 +419,10 @@ bool loadMqtt() {
   return true;
 }
 
-bool loadUnit() {
+void loadUnit() {
   const JsonDocument doc = FileSystem::loadJSON(unit_conf);
   if (doc.isNull()) {
-    return false;
+    return;
   }
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
@@ -440,7 +440,6 @@ bool loadUnit() {
   } else {
     config.login_password = "";
   }
-  return true;
 }
 
 void loadOthers() {
@@ -782,13 +781,13 @@ void handleUnit() {
     config.minTempCelsius =
         server.arg("min_temp").isEmpty()
             ? config.minTempCelsius
-            : convertLocalUnitToCelsius(std::round(server.arg("min_temp").toFloat()),
-                                        config.useFahrenheit);
+            : static_cast<uint8_t>(convertLocalUnitToCelsius(
+                  std::round(server.arg("min_temp").toFloat()), config.useFahrenheit));
     config.maxTempCelsius =
         server.arg("max_temp").isEmpty()
             ? config.maxTempCelsius
-            : convertLocalUnitToCelsius(std::round(server.arg("max_temp").toFloat()),
-                                        config.useFahrenheit);
+            : static_cast<uint8_t>(convertLocalUnitToCelsius(
+                  std::round(server.arg("max_temp").toFloat()), config.useFahrenheit));
     config.tempStep = server.arg("temp_step").isEmpty() ? config.tempStep : server.arg("temp_step");
     saveUnit(config);
     rebootAndSendPage();
