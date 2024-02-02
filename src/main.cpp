@@ -425,23 +425,12 @@ void setup() {
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
     // END TODO
-
-    LOG(F("calling initOTA"));
-    initOTA(config.network.hostname, config.network.otaUpdatePassword);
   } else {
-    //
-    // an older version of the code had a 2000ms delay in the code path with a mysterious comment:
-    // delay(2000);  // VERY IMPORTANT
-    //
-    // I have no idea what it's for, but I'm keeping it until I do
-    //
-    getTimer()->in(2000, []() {
-      dnsServer.start(DNS_PORT, "*", apIP);
-      initCaptivePortal();
-      initOTA(config.network.hostname, config.network.otaUpdatePassword);
-      return Timers::TimerStatus::completed;
-    });
+    dnsServer.start(DNS_PORT, "*", apIP);
+    initCaptivePortal();
   }
+  LOG(F("calling initOTA"));
+  initOTA(config.network.hostname, config.network.otaUpdatePassword);
   LOG(F("Setup complete"));
   logConfig();
 }
@@ -604,6 +593,8 @@ bool initWifi() {
     // First time setup does not require password
     WiFi.softAP(config.network.hostname.c_str());
   }
+  delay(2000);  // VERY IMPORTANT to delay here while the softAP is set up; we shouldn't return from
+                // setup() and enter the loop() method until the softAP is ready
 
   // Serial.print(F("IP address: "));
   // Serial.println(WiFi.softAPIP());
