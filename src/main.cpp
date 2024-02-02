@@ -77,11 +77,6 @@ const PROGMEM uint8_t blueLedPin = LED_BUILTIN;  // Onboard LED = digital pin 2 
 #endif
 const PROGMEM uint8_t redLedPin = 0;
 
-String defaultHostname() {
-  return String(F("HVAC_")) +
-         getId();  // default hostname, will be used if no hostname is set in config
-}
-
 struct Config {
   // Note: I'm being pretty blase about alignment and padding here, since there's only
   // one instance of this struct.
@@ -96,6 +91,12 @@ struct Config {
     bool configured() const {
       return accessPointSsid.length() > 0;
     }
+
+    static String defaultHostname() {
+      return String(F("HVAC_")) +
+             getId();  // default hostname, will be used if no hostname is set in config
+    }
+
   } network;
 
   // Others
@@ -358,6 +359,9 @@ void setup() {
     hp.enableExternalUpdate();
     hp.enableAutoUpdate();
     hp.connect(&Serial);
+
+    // TODO(floatplane) not sure this is necessary, we're not using it in setup, and we'll reload in
+    // loop()
     const heatpumpStatus currentStatus = hp.getStatus();
     const HeatpumpSettings currentSettings(hp.getSettings());
     rootInfo["roomTemperature"] =
@@ -371,6 +375,8 @@ void setup() {
     rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
+    // END TODO
+
     initOTA(config.network.hostname, config.network.otaUpdatePassword);
   } else {
     //
@@ -530,7 +536,7 @@ bool initWifi() {
       return true;
     }
     // reset hostname back to default before starting AP mode for privacy
-    config.network.hostname = defaultHostname();
+    config.network.hostname = Config::Network::defaultHostname();
   }
 
   // Serial.println(F("\n\r \n\rStarting in AP mode"));
@@ -657,7 +663,7 @@ void handleSetup() {
 
   if (server.hasArg("RESET")) {
     String pageReset = FPSTR(html_page_reset);
-    const String ssid = defaultHostname();
+    const String ssid = Config::Network::defaultHostname();
     pageReset.replace("_TXT_M_RESET_", FPSTR(txt_m_reset));
     pageReset.replace("_SSID_", ssid);
     sendWrappedHTML(pageReset);
