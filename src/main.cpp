@@ -77,15 +77,25 @@ const PROGMEM uint8_t blueLedPin = LED_BUILTIN;  // Onboard LED = digital pin 2 
 #endif
 const PROGMEM uint8_t redLedPin = 0;
 
+const String defaultHostname() {
+  return F("HVAC_") + getId();  // default hostname, will be used if no hostname is set in config
+}
+
+struct Config {
+  String hostname{defaultHostname()};
+  String ap_ssid;
+  String ap_pwd;
+  String ota_pwd;
+
+  bool wifiConfigured() const {
+    return ap_ssid.length() > 0;
+  }
+
+} config;
+
 // Define global variables for network
-const PROGMEM char *const hostnamePrefix = "HVAC_";
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
 unsigned long wifi_timeout;
-bool wifi_config_exists;
-String hostname = "";
-String ap_ssid;
-String ap_pwd;
-String ota_pwd;
 
 enum HttpStatusCodes {
   httpOk = 200,
@@ -251,18 +261,15 @@ void setup() {
     ticker.attach(0.6, tick);
   */
 
-  // Define hostname
-  hostname += hostnamePrefix;
-  hostname += getId();
   setDefaults();
-  wifi_config_exists = loadWifi();
+  loadWifi();
   loadOthers();
   loadUnit();
-  mqtt_client_id = hostname;
+  mqtt_client_id = config.hostname;
 #ifdef ESP32
-  WiFi.setHostname(hostname.c_str());
+  WiFi.setHostname(config.hostname.c_str());
 #else
-  WiFi.hostname(hostname.c_str());
+  WiFi.hostname(config.hostname.c_str());
 #endif
   if (initWifi()) {
     FileSystem::deleteFile(console_file);
@@ -345,7 +352,7 @@ void setup() {
     rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
-    initOTA(hostname, ota_pwd);
+    initOTA(config.hostname, config.ota_pwd);
   } else {
     //
     // an older version of the code had a 2000ms delay in the code path with a mysterious comment:
@@ -356,30 +363,30 @@ void setup() {
     getTimer()->in(2000, []() {
       dnsServer.start(DNS_PORT, "*", apIP);
       initCaptivePortal();
-      initOTA(hostname, ota_pwd);
+      initOTA(config.hostname, config.ota_pwd);
       return Timers::TimerStatus::completed;
     });
   }
 }
 
-bool loadWifi() {
-  ap_ssid = "";
-  ap_pwd = "";
+void loadWifi() {
+  LOG(F("Loading WiFi configuration"));
+  config.ap_ssid = "";
+  config.ap_pwd = "";
 
   const JsonDocument doc = FileSystem::loadJSON(wifi_conf);
   if (doc.isNull()) {
-    return false;
+    return;
   }
-  hostname = doc["hostname"].as<String>();
-  ap_ssid = doc["ap_ssid"].as<String>();
-  ap_pwd = doc["ap_pwd"].as<String>();
+  config.hostname = doc["hostname"].as<String>();
+  config.ap_ssid = doc["ap_ssid"].as<String>();
+  config.ap_pwd = doc["ap_pwd"].as<String>();
   // prevent ota password is "null" if not exist key
   if (doc.containsKey("ota_pwd")) {
-    ota_pwd = doc["ota_pwd"].as<String>();
+    config.ota_pwd = doc["ota_pwd"].as<String>();
   } else {
-    ota_pwd = "";
+    config.ota_pwd = "";
   }
-  return true;
 }
 
 bool loadMqtt() {
@@ -555,22 +562,19 @@ void initMqtt() {
 }
 
 void setDefaults() {
-  ap_ssid = "";
-  ap_pwd = "";
   others_haa = true;
   others_haa_topic = "homeassistant";
 }
 
 bool initWifi() {
   bool connectWifiSuccess = true;
-  if (ap_ssid[0] != '\0') {
+  if (config.ap_ssid.length() > 0) {
     connectWifiSuccess = wifi_config = connectWifi();
     if (connectWifiSuccess) {
       return true;
     }
     // reset hostname back to default before starting AP mode for privacy
-    hostname = hostnamePrefix;
-    hostname += getId();
+    config.hostname = defaultHostname();
   }
 
   // Serial.println(F("\n\r \n\rStarting in AP mode"));
@@ -581,10 +585,10 @@ bool initWifi() {
   WiFi.softAPConfig(apIP, apIP, netMsk);
   if (!connectWifiSuccess and login_password != "") {  // NOLINT(bugprone-branch-clone)
     // Set AP password when falling back to AP on fail
-    WiFi.softAP(hostname.c_str(), login_password.c_str());
+    WiFi.softAP(config.hostname.c_str(), login_password.c_str());
   } else {
     // First time setup does not require password
-    WiFi.softAP(hostname.c_str());
+    WiFi.softAP(config.hostname.c_str());
   }
 
   // Serial.print(F("IP address: "));
@@ -601,7 +605,7 @@ void sendWrappedHTML(const String &content) {
   const String headerContent = FPSTR(html_common_header);
   const String footerContent = FPSTR(html_common_footer);
   String toSend = headerContent + content + footerContent;
-  toSend.replace(F("_UNIT_NAME_"), hostname);
+  toSend.replace(F("_UNIT_NAME_"), config.hostname);
   toSend.replace(F("_VERSION_"), BUILD_DATE);
   toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
   server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
@@ -697,7 +701,7 @@ void handleSetup() {
 
   if (server.hasArg("RESET")) {
     String pageReset = FPSTR(html_page_reset);
-    const String ssid = String(hostnamePrefix) + getId();
+    const String ssid = defaultHostname();
     pageReset.replace("_TXT_M_RESET_", FPSTR(txt_m_reset));
     pageReset.replace("_SSID_", ssid);
     sendWrappedHTML(pageReset);
@@ -875,9 +879,9 @@ void handleWifi() {
     rebootAndSendPage();
   } else {
     String wifiPage = FPSTR(html_page_wifi);
-    String str_ap_ssid = ap_ssid;
-    String str_ap_pwd = ap_pwd;
-    String str_ota_pwd = ota_pwd;
+    String str_ap_ssid = config.ap_ssid;
+    String str_ap_pwd = config.ap_pwd;
+    String str_ota_pwd = config.ota_pwd;
     str_ap_ssid.replace("'", F("&apos;"));
     str_ap_pwd.replace("'", F("&apos;"));
     str_ota_pwd.replace("'", F("&apos;"));
@@ -955,11 +959,11 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   String controlPage = FPSTR(html_page_control);
   String headerContent = FPSTR(html_common_header);
   String footerContent = FPSTR(html_common_footer);
-  headerContent.replace("_UNIT_NAME_", hostname);
+  headerContent.replace("_UNIT_NAME_", config.hostname);
   footerContent.replace("_VERSION_", BUILD_DATE);
   footerContent.replace("_GIT_HASH_", COMMIT_HASH);
   controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
-  controlPage.replace("_UNIT_NAME_", hostname);
+  controlPage.replace("_UNIT_NAME_", config.hostname);
   controlPage.replace("_RATE_", "60");
   controlPage.replace("_ROOMTEMP_",
                       String(convertCelsiusToLocalUnit(hp.getRoomTemperature(), useFahrenheit)));
@@ -1130,7 +1134,7 @@ void handleMetrics() {
     hpmode = "-2";
   }
 
-  metrics.replace("_UNIT_NAME_", hostname);
+  metrics.replace("_UNIT_NAME_", config.hostname);
   metrics.replace("_VERSION_", BUILD_DATE);
   metrics.replace("_GIT_HASH_", COMMIT_HASH);
   metrics.replace("_POWER_", hppower);
@@ -1890,9 +1894,9 @@ void mqttConnect() {
 bool connectWifi() {
   const int connectTimeoutMs = 30000;
 #ifdef ESP32
-  WiFi.setHostname(hostname.c_str());
+  WiFi.setHostname(config.hostname.c_str());
 #else
-  WiFi.hostname(hostname.c_str());
+  WiFi.hostname(config.hostname.c_str());
 #endif
   if (WiFi.getMode() != WIFI_STA) {
     WiFi.mode(WIFI_STA);
@@ -1901,7 +1905,7 @@ bool connectWifi() {
 #ifdef ESP32
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
 #endif
-  WiFi.begin(ap_ssid.c_str(), ap_pwd.c_str());
+  WiFi.begin(config.ap_ssid.c_str(), config.ap_pwd.c_str());
   // Serial.println("Connecting to " + ap_ssid);
   wifi_timeout = millis() + connectTimeoutMs;
   while (WiFi.status() != WL_CONNECTED && millis() < wifi_timeout) {
@@ -2027,7 +2031,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
   if (WiFi.getMode() == WIFI_STA and
       WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
     wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
-  } else if (wifi_config_exists and millis() > wifi_timeout) {
+  } else if (config.wifiConfigured() and millis() > wifi_timeout) {
     restartAfterDelay(0);
   }
 

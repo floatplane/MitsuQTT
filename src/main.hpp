@@ -5,7 +5,7 @@
 
 String getId();
 void setDefaults();
-bool loadWifi();
+void loadWifi();
 bool loadOthers();
 bool loadUnit();
 bool initWifi();
