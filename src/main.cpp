@@ -501,8 +501,8 @@ void loadUnit() {
   if (unit_tempUnit == "fah") {
     config.unit.useFahrenheit = true;
   }
-  config.unit.minTempCelsius = doc["min_temp"].as<uint8_t>();
-  config.unit.maxTempCelsius = doc["max_temp"].as<uint8_t>();
+  config.unit.minTempCelsius = static_cast<uint8_t>(doc["min_temp"].as<String>().toInt());
+  config.unit.maxTempCelsius = static_cast<uint8_t>(doc["max_temp"].as<String>().toInt());
   config.unit.tempStep = doc["temp_step"].as<String>();
   // mode
   config.unit.supportHeatMode = doc["support_mode"].as<String>() == "all";
@@ -539,8 +539,8 @@ void saveMqtt(const Config &config) {
 void saveUnit(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
   doc["unit_tempUnit"] = config.unit.useFahrenheit ? "fah" : "cel";
-  doc["min_temp"] = config.unit.minTempCelsius;
-  doc["max_temp"] = config.unit.maxTempCelsius;
+  doc["min_temp"] = String(config.unit.minTempCelsius);
+  doc["max_temp"] = String(config.unit.maxTempCelsius);
   doc["temp_step"] = config.unit.tempStep;
   doc["support_mode"] = config.unit.supportHeatMode ? "all" : "nht";
   doc["login_password"] = config.unit.login_password;
