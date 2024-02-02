@@ -4,10 +4,12 @@
 #include "HeatpumpSettings.hpp"
 
 String getId();
-void setDefaults();
-bool loadWifi();
-bool loadOthers();
-bool loadUnit();
+
+void loadWifi();
+void loadOthers();
+void loadUnit();
+void loadMqtt();
+
 bool initWifi();
 void handleRoot();
 void handleNotFound();
@@ -26,7 +28,6 @@ void handleUpgrade();
 void handleUploadDone();
 void handleUploadLoop();
 void handleControl();
-bool loadMqtt();
 void initMqtt();
 void initCaptivePortal();
 void hpSettingsChanged();

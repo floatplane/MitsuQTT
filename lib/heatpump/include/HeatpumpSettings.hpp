@@ -15,7 +15,8 @@ class HeatpumpSettings {
         vane(settings.vane),
         wideVane(settings.wideVane),
         iSee(settings.iSee),
-        connected(settings.connected) {}
+        connected(settings.connected) {
+  }
 
   heatpumpSettings getRaw() const {
     return heatpumpSettings{.power = power.c_str(),
@@ -28,7 +29,6 @@ class HeatpumpSettings {
                             .connected = connected};
   }
 
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   String power;
   String mode;
   float temperature;
@@ -37,5 +37,4 @@ class HeatpumpSettings {
   String wideVane;  // horizontal vane, left/right
   bool iSee;        // iSee sensor, at the moment can only detect it, not set it
   bool connected;
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
