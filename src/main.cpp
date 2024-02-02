@@ -125,7 +125,7 @@ struct Config {
 
 // Define global variables for network
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
-uint64 wifi_timeout;
+uint64_t wifi_timeout;
 
 enum HttpStatusCodes {
   httpOk = 200,
@@ -183,7 +183,7 @@ const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS =
     30000;  // 45 seconds (anything less may cause bouncing)
 const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000;  // 5 minutes
 const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;           // 1 second
-const PROGMEM uint32_t HP_RETRY_INTERVAL_MS = 1000;             // 1 second
+const PROGMEM uint64_t HP_RETRY_INTERVAL_MS = 1000UL;           // 1 second
 const PROGMEM uint32_t HP_MAX_RETRIES =
     10;  // Double the interval between retries up to this many times, then keep
          // retrying forever at that maximum interval.
@@ -212,12 +212,12 @@ boolean remoteTempActive = false;
 
 // HVAC
 HeatPump hp;  // NOLINT(readability-identifier-length)
-uint64 lastTempSend;
-uint64 lastMqttRetry;
-uint64 lastHpSync;
+uint64_t lastTempSend;
+uint64_t lastMqttRetry;
+uint64_t lastHpSync;
 unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
-uint64 lastRemoteTemp;
+uint64_t lastRemoteTemp;
 
 // Local state
 JsonDocument rootInfo;
@@ -1750,9 +1750,9 @@ void haConfig() {
   haConfig["curr_temp_t"] = ha_state_topic;
   // NOLINTNEXTLINE(misc-const-correctness)
   const String curr_temp_tpl_str =
-      F("{{ value_json.roomTemperature if (value_json is defined and "
-        "value_json.roomTemperature is defined and "
-        "value_json.roomTemperature|int > ") +
+      String(F("{{ value_json.roomTemperature if (value_json is defined and "
+               "value_json.roomTemperature is defined and "
+               "value_json.roomTemperature|int > ")) +
       String(convertCelsiusToLocalUnit(1, config.useFahrenheit)) +
       ") }}";  // Set default value for fix "Could not parse data for HA"
   haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
@@ -2016,8 +2016,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
     if (!hp.isConnected()) {
       // Use exponential backoff for retries, where each retry is double the
       // length of the previous one.
-      const uint64 durationNextSync =
-          (1UL << hpConnectionRetries) * static_cast<uint64>(HP_RETRY_INTERVAL_MS);
+      const uint64_t durationNextSync = (1UL << hpConnectionRetries) * HP_RETRY_INTERVAL_MS;
       if (((millis() - lastHpSync > durationNextSync) or lastHpSync == 0)) {
         lastHpSync = millis();
         // If we've retried more than the max number of tries, keep retrying at
