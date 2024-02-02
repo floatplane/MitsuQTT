@@ -8,7 +8,7 @@ String getId();
 void loadWifi();
 void loadOthers();
 void loadUnit();
-bool loadMqtt();
+void loadMqtt();
 
 bool initWifi();
 void handleRoot();

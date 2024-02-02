@@ -87,39 +87,61 @@ struct Config {
   // one instance of this struct.
 
   // WiFi
-  String hostname{defaultHostname()};
-  String accessPointSsid;
-  String accessPointPassword;
-  String otaUpdatePassword;
+  struct Network {
+    String hostname{defaultHostname()};
+    String accessPointSsid;
+    String accessPointPassword;
+    String otaUpdatePassword;
 
-  bool wifiConfigured() const {
-    return accessPointSsid.length() > 0;
-  }
+    bool configured() const {
+      return accessPointSsid.length() > 0;
+    }
+  } network;
 
   // Others
-  bool haAutodiscovery = true;
-  String haAutodiscoveryTopic = "homeassistant";
-  // debug mode logs, when true, will send all debug messages to topic
-  // heatpump_debug_logs_topic this can also be set by sending "on" to
-  // heatpump_debug_set_topic
-  bool logToMqtt = false;
-  // debug mode packets, when true, will send all packets received from the
-  // heatpump to topic heatpump_debug_packets_topic this can also be set by
-  // sending "on" to heatpump_debug_set_topic
-  bool dumpPacketsToMqtt = false;
+  struct Other {  // TODO(floatplane): "other" is a terrible name
+    bool haAutodiscovery = true;
+    String haAutodiscoveryTopic = "homeassistant";
+    // debug mode logs, when true, will send all debug messages to topic
+    // heatpump_debug_logs_topic this can also be set by sending "on" to
+    // heatpump_debug_set_topic
+    bool logToMqtt = false;
+    // debug mode packets, when true, will send all packets received from the
+    // heatpump to topic heatpump_debug_packets_topic this can also be set by
+    // sending "on" to heatpump_debug_set_topic
+    bool dumpPacketsToMqtt = false;
+  } other;
 
   // Unit
-  bool useFahrenheit = false;
-  // support heat mode settings, some model do not support heat mode
-  bool supportHeatMode = true;
-  uint8_t minTempCelsius{16};  // Minimum temperature, check
-                               // value from heatpump remote control
-  uint8_t maxTempCelsius{31};  // Maximum temperature, check
-                               // value from heatpump remote control
-  // TODO(floatplane) why isn't this a float?
-  String tempStep{"1"};  // Temperature setting step, check
-                         // value from heatpump remote control
-  String login_password;
+  struct Unit {
+    bool useFahrenheit = false;
+    // support heat mode settings, some model do not support heat mode
+    bool supportHeatMode = true;
+    uint8_t minTempCelsius{16};  // Minimum temperature, check
+                                 // value from heatpump remote control
+    uint8_t maxTempCelsius{31};  // Maximum temperature, check
+                                 // value from heatpump remote control
+    // TODO(floatplane) why isn't this a float?
+    String tempStep{"1"};  // Temperature setting step, check
+                           // value from heatpump remote control
+    String login_password;
+  } unit;
+
+  // MQTT
+  struct MQTT {
+    String mqtt_fn;
+    String mqtt_server;
+    // TODO(floatplane) make this a uint16_t
+    String mqtt_port;
+    String mqtt_username;
+    String mqtt_password;
+    String mqtt_topic = "mitsubishi2mqtt";
+
+    bool configured() const {
+      return mqtt_fn.length() > 0 && mqtt_server.length() > 0 && mqtt_username.length() > 0 &&
+             mqtt_password.length() > 0 && mqtt_topic.length() > 0;
+    }
+  } mqtt;
 
 } config;
 
@@ -142,13 +164,6 @@ enum HttpStatusCodes {
 };
 
 // Define global variables for MQTT
-String mqtt_fn;
-String mqtt_server;
-String mqtt_port;
-String mqtt_username;
-String mqtt_password;
-String mqtt_topic = "mitsubishi2mqtt";
-String mqtt_client_id;
 const PROGMEM char *const mqtt_payload_available = "online";
 const PROGMEM char *const mqtt_payload_unavailable = "offline";
 const size_t maxCustomPacketLength = 20;  // max custom packet bytes is 20
@@ -206,8 +221,6 @@ IPAddress netMsk(255, 255, 255, 0);
 DNSServer dnsServer;
 
 boolean captive = false;
-boolean mqtt_config = false;
-boolean wifi_config = false;
 boolean remoteTempActive = false;
 
 // HVAC
@@ -267,11 +280,11 @@ void setup() {
   loadWifi();
   loadOthers();
   loadUnit();
-  mqtt_client_id = config.hostname;
+  loadMqtt();
 #ifdef ESP32
-  WiFi.setHostname(config.hostname.c_str());
+  WiFi.setHostname(config.network.hostname.c_str());
 #else
-  WiFi.hostname(config.hostname.c_str());
+  WiFi.hostname(config.network.hostname.c_str());
 #endif
   if (initWifi()) {
     FileSystem::deleteFile(console_file);
@@ -287,7 +300,7 @@ void setup() {
     server.on("/others", handleOthers);
     server.on("/metrics", handleMetrics);
     server.onNotFound(handleNotFound);
-    if (config.login_password.length() > 0) {
+    if (config.unit.login_password.length() > 0) {
       server.on("/login", handleLogin);
       // here the list of headers to be recorded, use for authentication
       const char *headerkeys[] = {"User-Agent", "Cookie"};
@@ -303,31 +316,35 @@ void setup() {
     lastHpSync = 0;
     hpConnectionRetries = 0;
     hpConnectionTotalRetries = 0;
-    if (loadMqtt()) {
+    if (config.mqtt.configured()) {
       LOG(F("Starting MQTT"));
       //  setup HA topics
-      ha_mode_set_topic = mqtt_topic + "/" + mqtt_fn + "/mode/set";
-      ha_temp_set_topic = mqtt_topic + "/" + mqtt_fn + "/temp/set";
-      ha_remote_temp_set_topic = mqtt_topic + "/" + mqtt_fn + "/remote_temp/set";
-      ha_fan_set_topic = mqtt_topic + "/" + mqtt_fn + "/fan/set";
-      ha_vane_set_topic = mqtt_topic + "/" + mqtt_fn + "/vane/set";
-      ha_wideVane_set_topic = mqtt_topic + "/" + mqtt_fn + "/wideVane/set";
-      ha_settings_topic = mqtt_topic + "/" + mqtt_fn + "/settings";
-      ha_state_topic = mqtt_topic + "/" + mqtt_fn + "/state";
-      ha_debug_pckts_topic = mqtt_topic + "/" + mqtt_fn + "/debug/packets";
-      ha_debug_pckts_set_topic = mqtt_topic + "/" + mqtt_fn + "/debug/packets/set";
-      ha_debug_logs_topic = mqtt_topic + "/" + mqtt_fn + "/debug/logs";
-      ha_debug_logs_set_topic = mqtt_topic + "/" + mqtt_fn + "/debug/logs/set";
-      ha_custom_packet = mqtt_topic + "/" + mqtt_fn + "/custom/send";
-      ha_availability_topic = mqtt_topic + "/" + mqtt_fn + "/availability";
-      ha_system_set_topic = mqtt_topic + "/" + mqtt_fn + "/system/set";
+      ha_mode_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/mode/set";
+      ha_temp_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/temp/set";
+      ha_remote_temp_set_topic =
+          config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/remote_temp/set";
+      ha_fan_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/fan/set";
+      ha_vane_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/vane/set";
+      ha_wideVane_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/wideVane/set";
+      ha_settings_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/settings";
+      ha_state_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/state";
+      ha_debug_pckts_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/packets";
+      ha_debug_pckts_set_topic =
+          config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/packets/set";
+      ha_debug_logs_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/logs";
+      ha_debug_logs_set_topic =
+          config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/debug/logs/set";
+      ha_custom_packet = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/custom/send";
+      ha_availability_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/availability";
+      ha_system_set_topic = config.mqtt.mqtt_topic + "/" + config.mqtt.mqtt_fn + "/system/set";
 
-      if (config.haAutodiscovery) {
-        ha_config_topic = config.haAutodiscoveryTopic + "/climate/" + mqtt_fn + "/config";
+      if (config.other.haAutodiscovery) {
+        ha_config_topic =
+            config.other.haAutodiscoveryTopic + "/climate/" + config.mqtt.mqtt_fn + "/config";
       }
       // startup mqtt connection
       initMqtt();
-      if (config.logToMqtt) {
+      if (config.other.logToMqtt) {
         Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
       }
     } else {
@@ -345,9 +362,9 @@ void setup() {
     const heatpumpStatus currentStatus = hp.getStatus();
     const HeatpumpSettings currentSettings(hp.getSettings());
     rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.useFahrenheit);
+        convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.unit.useFahrenheit);
     rootInfo["temperature"] =
-        convertCelsiusToLocalUnit(currentSettings.temperature, config.useFahrenheit);
+        convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
     rootInfo["fan"] = currentSettings.fan;
     rootInfo["vane"] = currentSettings.vane;
     rootInfo["wideVane"] = currentSettings.wideVane;
@@ -355,7 +372,7 @@ void setup() {
     rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
     rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
-    initOTA(config.hostname, config.otaUpdatePassword);
+    initOTA(config.network.hostname, config.network.otaUpdatePassword);
   } else {
     //
     // an older version of the code had a 2000ms delay in the code path with a mysterious comment:
@@ -366,7 +383,7 @@ void setup() {
     getTimer()->in(2000, []() {
       dnsServer.start(DNS_PORT, "*", apIP);
       initCaptivePortal();
-      initOTA(config.hostname, config.otaUpdatePassword);
+      initOTA(config.network.hostname, config.network.otaUpdatePassword);
       return Timers::TimerStatus::completed;
     });
   }
@@ -374,49 +391,46 @@ void setup() {
 
 void loadWifi() {
   LOG(F("Loading WiFi configuration"));
-  config.accessPointSsid = "";
-  config.accessPointPassword = "";
+  config.network.accessPointSsid = "";
+  config.network.accessPointPassword = "";
 
   const JsonDocument doc = FileSystem::loadJSON(wifi_conf);
   if (doc.isNull()) {
     return;
   }
-  config.hostname = doc["hostname"].as<String>();
-  config.accessPointSsid = doc["ap_ssid"].as<String>();
-  config.accessPointPassword = doc["ap_pwd"].as<String>();
+  config.network.hostname = doc["hostname"].as<String>();
+  config.network.accessPointSsid = doc["ap_ssid"].as<String>();
+  config.network.accessPointPassword = doc["ap_pwd"].as<String>();
   // prevent ota password is "null" if not exist key
   if (doc.containsKey("ota_pwd")) {
-    config.otaUpdatePassword = doc["ota_pwd"].as<String>();
+    config.network.otaUpdatePassword = doc["ota_pwd"].as<String>();
   } else {
-    config.otaUpdatePassword = "";
+    config.network.otaUpdatePassword = "";
   }
 }
 
-bool loadMqtt() {
+void loadMqtt() {
   LOG(F("Loading MQTT configuration"));
 
   const JsonDocument doc = FileSystem::loadJSON(mqtt_conf);
   if (doc.isNull()) {
-    return false;
+    return;
   }
-  mqtt_fn = doc["mqtt_fn"].as<String>();
-  mqtt_server = doc["mqtt_host"].as<String>();
-  mqtt_port = doc["mqtt_port"].as<String>();
-  mqtt_username = doc["mqtt_user"].as<String>();
-  mqtt_password = doc["mqtt_pwd"].as<String>();
-  mqtt_topic = doc["mqtt_topic"].as<String>();
+  config.mqtt.mqtt_fn = doc["mqtt_fn"].as<String>();
+  config.mqtt.mqtt_server = doc["mqtt_host"].as<String>();
+  config.mqtt.mqtt_port = doc["mqtt_port"].as<String>();
+  config.mqtt.mqtt_username = doc["mqtt_user"].as<String>();
+  config.mqtt.mqtt_password = doc["mqtt_pwd"].as<String>();
+  config.mqtt.mqtt_topic = doc["mqtt_topic"].as<String>();
 
   LOG(F("=== START DEBUG MQTT ==="));
-  LOG(F("Friendly Name") + mqtt_fn);
-  LOG(F("IP Server ") + mqtt_server);
-  LOG(F("IP Port ") + mqtt_port);
-  LOG(F("Username ") + mqtt_username);
-  LOG(F("Password ") + mqtt_password);
-  LOG(F("Topic ") + mqtt_topic);
+  LOG(F("Friendly Name") + config.mqtt.mqtt_fn);
+  LOG(F("IP Server ") + config.mqtt.mqtt_server);
+  LOG(F("IP Port ") + config.mqtt.mqtt_port);
+  LOG(F("Username ") + config.mqtt.mqtt_username);
+  LOG(F("Password ") + config.mqtt.mqtt_password);
+  LOG(F("Topic ") + config.mqtt.mqtt_topic);
   LOG(F("=== END DEBUG MQTT ==="));
-
-  mqtt_config = true;
-  return true;
 }
 
 void loadUnit() {
@@ -427,18 +441,18 @@ void loadUnit() {
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
   if (unit_tempUnit == "fah") {
-    config.useFahrenheit = true;
+    config.unit.useFahrenheit = true;
   }
-  config.minTempCelsius = doc["min_temp"].as<uint8_t>();
-  config.maxTempCelsius = doc["max_temp"].as<uint8_t>();
-  config.tempStep = doc["temp_step"].as<String>();
+  config.unit.minTempCelsius = doc["min_temp"].as<uint8_t>();
+  config.unit.maxTempCelsius = doc["max_temp"].as<uint8_t>();
+  config.unit.tempStep = doc["temp_step"].as<String>();
   // mode
-  config.supportHeatMode = doc["support_mode"].as<String>() == "all";
+  config.unit.supportHeatMode = doc["support_mode"].as<String>() == "all";
   // prevent login password is "null" if not exist key
   if (doc.containsKey("login_password")) {
-    config.login_password = doc["login_password"].as<String>();
+    config.unit.login_password = doc["login_password"].as<String>();
   } else {
-    config.login_password = "";
+    config.unit.login_password = "";
   }
 }
 
@@ -447,58 +461,50 @@ void loadOthers() {
   if (doc.isNull()) {
     return;
   }
-  config.haAutodiscoveryTopic = doc["haat"].as<String>();
-  config.haAutodiscovery = doc["haa"].as<String>() == "ON";
-  config.dumpPacketsToMqtt = doc["debugPckts"].as<String>() == "ON";
-  config.logToMqtt = doc["debugLogs"].as<String>() == "ON";
+  config.other.haAutodiscoveryTopic = doc["haat"].as<String>();
+  config.other.haAutodiscovery = doc["haa"].as<String>() == "ON";
+  config.other.dumpPacketsToMqtt = doc["debugPckts"].as<String>() == "ON";
+  config.other.logToMqtt = doc["debugLogs"].as<String>() == "ON";
 }
 
-struct SaveMqttArgs {
-  String mqttFn{};
-  String mqttHost{};
-  String mqttPort{};
-  String mqttUser{};
-  String mqttPwd{};
-  String mqttTopic{};
-};
-void saveMqtt(const SaveMqttArgs &args) {
+void saveMqtt(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  doc["mqtt_fn"] = args.mqttFn;
-  doc["mqtt_host"] = args.mqttHost;
+  doc["mqtt_fn"] = config.mqtt.mqtt_fn;
+  doc["mqtt_host"] = config.mqtt.mqtt_server;
   // if mqtt port is empty, we use default port
-  doc["mqtt_port"] = args.mqttPort[0] == '\0' ? "1883" : args.mqttPort;
-  doc["mqtt_user"] = args.mqttUser;
-  doc["mqtt_pwd"] = args.mqttPwd;
-  doc["mqtt_topic"] = args.mqttTopic;
+  doc["mqtt_port"] = config.mqtt.mqtt_port.isEmpty() ? String("1883") : config.mqtt.mqtt_port;
+  doc["mqtt_user"] = config.mqtt.mqtt_username;
+  doc["mqtt_pwd"] = config.mqtt.mqtt_password;
+  doc["mqtt_topic"] = config.mqtt.mqtt_topic;
   FileSystem::saveJSON(mqtt_conf, doc);
 }
 
 void saveUnit(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  doc["unit_tempUnit"] = config.useFahrenheit ? "fah" : "cel";
-  doc["min_temp"] = config.minTempCelsius;
-  doc["max_temp"] = config.maxTempCelsius;
-  doc["temp_step"] = config.tempStep;
-  doc["support_mode"] = config.supportHeatMode ? "all" : "nht";
-  doc["login_password"] = config.login_password;
+  doc["unit_tempUnit"] = config.unit.useFahrenheit ? "fah" : "cel";
+  doc["min_temp"] = config.unit.minTempCelsius;
+  doc["max_temp"] = config.unit.maxTempCelsius;
+  doc["temp_step"] = config.unit.tempStep;
+  doc["support_mode"] = config.unit.supportHeatMode ? "all" : "nht";
+  doc["login_password"] = config.unit.login_password;
   FileSystem::saveJSON(unit_conf, doc);
 }
 
 void saveWifi(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  doc["ap_ssid"] = config.accessPointSsid;
-  doc["ap_pwd"] = config.accessPointPassword;
-  doc["hostname"] = config.hostname;
-  doc["ota_pwd"] = config.accessPointPassword;
+  doc["ap_ssid"] = config.network.accessPointSsid;
+  doc["ap_pwd"] = config.network.accessPointPassword;
+  doc["hostname"] = config.network.hostname;
+  doc["ota_pwd"] = config.network.accessPointPassword;
   FileSystem::saveJSON(wifi_conf, doc);
 }
 
 void saveOthers(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
-  doc["haa"] = config.haAutodiscovery ? "ON" : "OFF";
-  doc["haat"] = config.haAutodiscoveryTopic;
-  doc["debugPckts"] = config.dumpPacketsToMqtt ? "ON" : "OFF";
-  doc["debugLogs"] = config.logToMqtt ? "ON" : "OFF";
+  doc["haa"] = config.other.haAutodiscovery ? "ON" : "OFF";
+  doc["haat"] = config.other.haAutodiscoveryTopic;
+  doc["debugPckts"] = config.other.dumpPacketsToMqtt ? "ON" : "OFF";
+  doc["debugLogs"] = config.other.logToMqtt ? "ON" : "OFF";
   FileSystem::saveJSON(others_conf, doc);
 }
 
@@ -514,20 +520,18 @@ void initCaptivePortal() {
 }
 
 void initMqtt() {
-  mqtt_client.setServer(mqtt_server.c_str(), atoi(mqtt_port.c_str()));
+  mqtt_client.setServer(config.mqtt.mqtt_server.c_str(), atoi(config.mqtt.mqtt_port.c_str()));
   mqtt_client.setCallback(mqttCallback);
   mqttConnect();
 }
 
 bool initWifi() {
-  bool connectWifiSuccess = true;
-  if (config.accessPointSsid.length() > 0) {
-    connectWifiSuccess = wifi_config = connectWifi();
-    if (connectWifiSuccess) {
+  if (config.network.configured()) {
+    if (connectWifi()) {
       return true;
     }
     // reset hostname back to default before starting AP mode for privacy
-    config.hostname = defaultHostname();
+    config.network.hostname = defaultHostname();
   }
 
   // Serial.println(F("\n\r \n\rStarting in AP mode"));
@@ -536,19 +540,18 @@ bool initWifi() {
   WiFi.persistent(false);  // fix crash esp32
                            // https://github.com/espressif/arduino-esp32/issues/2025
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  if (!connectWifiSuccess and config.login_password != "") {  // NOLINT(bugprone-branch-clone)
+  if (config.unit.login_password != "") {  // NOLINT(bugprone-branch-clone)
     // Set AP password when falling back to AP on fail
-    WiFi.softAP(config.hostname.c_str(), config.login_password.c_str());
+    WiFi.softAP(config.network.hostname.c_str(), config.unit.login_password.c_str());
   } else {
     // First time setup does not require password
-    WiFi.softAP(config.hostname.c_str());
+    WiFi.softAP(config.network.hostname.c_str());
   }
 
   // Serial.print(F("IP address: "));
   // Serial.println(WiFi.softAPIP());
   // ticker.attach(0.2, tick); // Start LED to flash rapidly to indicate we are
   // ready for setting up the wifi-connection (entered captive portal).
-  wifi_config = false;
   return false;
 }
 
@@ -558,7 +561,7 @@ void sendWrappedHTML(const String &content) {
   const String headerContent = FPSTR(html_common_header);
   const String footerContent = FPSTR(html_common_footer);
   String toSend = headerContent + content + footerContent;
-  toSend.replace(F("_UNIT_NAME_"), config.hostname);
+  toSend.replace(F("_UNIT_NAME_"), config.network.hostname);
   toSend.replace(F("_VERSION_"), BUILD_DATE);
   toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
   server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
@@ -578,10 +581,10 @@ void handleSaveWifi() {
 
   // Serial.println(F("Saving wifi config"));
   if (server.method() == HTTP_POST) {
-    config.accessPointSsid = server.arg("ssid");
-    config.accessPointPassword = server.arg("psk");
-    config.hostname = server.arg("hn");
-    config.otaUpdatePassword = server.arg("otapwd");
+    config.network.accessPointSsid = server.arg("ssid");
+    config.network.accessPointPassword = server.arg("psk");
+    config.network.hostname = server.arg("hn");
+    config.network.otaUpdatePassword = server.arg("otapwd");
     saveWifi(config);
   }
   String initSavePage = FPSTR(html_init_save);
@@ -618,7 +621,7 @@ void handleRoot() {
     restartAfterDelay(500);
   } else {
     String menuRootPage = FPSTR(html_menu_root);
-    menuRootPage.replace("_SHOW_LOGOUT_", String(config.login_password.length() > 0 ? 1 : 0));
+    menuRootPage.replace("_SHOW_LOGOUT_", String(config.unit.login_password.length() > 0 ? 1 : 0));
     // not show control button if hp not connected
     menuRootPage.replace("_SHOW_CONTROL_", String(hp.isConnected() ? 1 : 0));
     menuRootPage.replace("_TXT_CONTROL_", FPSTR(txt_control));
@@ -690,10 +693,10 @@ void handleOthers() {
   LOG(F("handleOthers()"));
 
   if (server.method() == HTTP_POST) {
-    config.haAutodiscovery = server.arg("HAA") == "ON";
-    config.haAutodiscoveryTopic = server.arg("haat");
-    config.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
-    config.logToMqtt = server.arg("DebugLogs") == "ON";
+    config.other.haAutodiscovery = server.arg("HAA") == "ON";
+    config.other.haAutodiscoveryTopic = server.arg("haat");
+    config.other.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
+    config.other.logToMqtt = server.arg("DebugLogs") == "ON";
     saveOthers(config);
     rebootAndSendPage();
   } else {
@@ -708,18 +711,18 @@ void handleOthers() {
     othersPage.replace("_TXT_OTHERS_DEBUG_PCKTS_", FPSTR(txt_others_debug_packets));
     othersPage.replace("_TXT_OTHERS_DEBUG_LOGS_", FPSTR(txt_others_debug_log));
 
-    othersPage.replace("_HAA_TOPIC_", config.haAutodiscoveryTopic);
-    if (config.haAutodiscovery) {
+    othersPage.replace("_HAA_TOPIC_", config.other.haAutodiscoveryTopic);
+    if (config.other.haAutodiscovery) {
       othersPage.replace("_HAA_ON_", "selected");
     } else {
       othersPage.replace("_HAA_OFF_", "selected");
     }
-    if (config.dumpPacketsToMqtt) {
+    if (config.other.dumpPacketsToMqtt) {
       othersPage.replace("_DEBUG_PCKTS_ON_", "selected");
     } else {
       othersPage.replace("_DEBUG_PCKTS_OFF_", "selected");
     }
-    if (config.logToMqtt) {
+    if (config.other.logToMqtt) {
       othersPage.replace("_DEBUG_LOGS_ON_", "selected");
     } else {
       othersPage.replace("_DEBUG_LOGS_OFF_", "selected");
@@ -736,12 +739,13 @@ void handleMqtt() {
   LOG(F("handleMqtt()"));
 
   if (server.method() == HTTP_POST) {
-    saveMqtt({.mqttFn = server.arg("fn"),
-              .mqttHost = server.arg("mh"),
-              .mqttPort = server.arg("ml"),
-              .mqttUser = server.arg("mu"),
-              .mqttPwd = server.arg("mp"),
-              .mqttTopic = server.arg("mt")});
+    config.mqtt.mqtt_fn = server.arg("fn");
+    config.mqtt.mqtt_server = server.arg("mh");
+    config.mqtt.mqtt_port = server.arg("ml").isEmpty() ? String("1883") : server.arg("ml");
+    config.mqtt.mqtt_username = server.arg("mu");
+    config.mqtt.mqtt_password = server.arg("mp");
+    config.mqtt.mqtt_topic = server.arg("mt");
+    saveMqtt(config);
     rebootAndSendPage();
   } else {
     String mqttPage = FPSTR(html_page_mqtt);
@@ -754,12 +758,12 @@ void handleMqtt() {
     mqttPage.replace("_TXT_MQTT_USER_", FPSTR(txt_mqtt_user));
     mqttPage.replace("_TXT_MQTT_PASSWORD_", FPSTR(txt_mqtt_password));
     mqttPage.replace("_TXT_MQTT_TOPIC_", FPSTR(txt_mqtt_topic));
-    mqttPage.replace(F("_MQTT_FN_"), mqtt_fn);
-    mqttPage.replace(F("_MQTT_HOST_"), mqtt_server);
-    mqttPage.replace(F("_MQTT_PORT_"), String(mqtt_port));
-    mqttPage.replace(F("_MQTT_USER_"), mqtt_username);
-    mqttPage.replace(F("_MQTT_PASSWORD_"), mqtt_password);
-    mqttPage.replace(F("_MQTT_TOPIC_"), mqtt_topic);
+    mqttPage.replace(F("_MQTT_FN_"), config.mqtt.mqtt_fn);
+    mqttPage.replace(F("_MQTT_HOST_"), config.mqtt.mqtt_server);
+    mqttPage.replace(F("_MQTT_PORT_"), config.mqtt.mqtt_port);
+    mqttPage.replace(F("_MQTT_USER_"), config.mqtt.mqtt_username);
+    mqttPage.replace(F("_MQTT_PASSWORD_"), config.mqtt.mqtt_password);
+    mqttPage.replace(F("_MQTT_TOPIC_"), config.mqtt.mqtt_topic);
     sendWrappedHTML(mqttPage);
   }
 }
@@ -772,23 +776,26 @@ void handleUnit() {
   LOG(F("handleUnit()"));
 
   if (server.method() == HTTP_POST) {
-    config.useFahrenheit =
-        server.arg("tu").isEmpty() ? config.useFahrenheit : server.arg("tu") == "fah";
-    config.supportHeatMode =
-        server.arg("md").isEmpty() ? config.supportHeatMode : server.arg("md") == "all";
-    config.login_password = server.arg("lpw").isEmpty() ? config.login_password : server.arg("lpw");
-    // using std::round to maintain existing behavior, though I'm not sure it's correct
-    config.minTempCelsius =
+    config.unit.useFahrenheit =
+        server.arg("tu").isEmpty() ? config.unit.useFahrenheit : server.arg("tu") == "fah";
+    config.unit.supportHeatMode =
+        server.arg("md").isEmpty() ? config.unit.supportHeatMode : server.arg("md") == "all";
+    config.unit.login_password =
+        server.arg("lpw").isEmpty() ? config.unit.login_password : server.arg("lpw");
+    // TODO(floatplane): using std::round to maintain existing behavior, though I'm not sure it's
+    // correct
+    config.unit.minTempCelsius =
         server.arg("min_temp").isEmpty()
-            ? config.minTempCelsius
+            ? config.unit.minTempCelsius
             : static_cast<uint8_t>(convertLocalUnitToCelsius(
-                  std::round(server.arg("min_temp").toFloat()), config.useFahrenheit));
-    config.maxTempCelsius =
+                  std::round(server.arg("min_temp").toFloat()), config.unit.useFahrenheit));
+    config.unit.maxTempCelsius =
         server.arg("max_temp").isEmpty()
-            ? config.maxTempCelsius
+            ? config.unit.maxTempCelsius
             : static_cast<uint8_t>(convertLocalUnitToCelsius(
-                  std::round(server.arg("max_temp").toFloat()), config.useFahrenheit));
-    config.tempStep = server.arg("temp_step").isEmpty() ? config.tempStep : server.arg("temp_step");
+                  std::round(server.arg("max_temp").toFloat()), config.unit.useFahrenheit));
+    config.unit.tempStep =
+        server.arg("temp_step").isEmpty() ? config.unit.tempStep : server.arg("temp_step");
     saveUnit(config);
     rebootAndSendPage();
   } else {
@@ -806,24 +813,24 @@ void handleUnit() {
     unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
     unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
     unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-    unitPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(config.minTempCelsius,
-                                                                       config.useFahrenheit)));
-    unitPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(config.maxTempCelsius,
-                                                                       config.useFahrenheit)));
-    unitPage.replace(F("_TEMP_STEP_"), String(config.tempStep));
+    unitPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(config.unit.minTempCelsius,
+                                                                       config.unit.useFahrenheit)));
+    unitPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius,
+                                                                       config.unit.useFahrenheit)));
+    unitPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
     // temp
-    if (config.useFahrenheit) {
+    if (config.unit.useFahrenheit) {
       unitPage.replace(F("_TU_FAH_"), F("selected"));
     } else {
       unitPage.replace(F("_TU_CEL_"), F("selected"));
     }
     // mode
-    if (config.supportHeatMode) {
+    if (config.unit.supportHeatMode) {
       unitPage.replace(F("_MD_ALL_"), F("selected"));
     } else {
       unitPage.replace(F("_MD_NONHEAT_"), F("selected"));
     }
-    unitPage.replace(F("_LOGIN_PASSWORD_"), config.login_password);
+    unitPage.replace(F("_LOGIN_PASSWORD_"), config.unit.login_password);
     sendWrappedHTML(unitPage);
   }
 }
@@ -836,17 +843,17 @@ void handleWifi() {
   LOG(F("handleWifi()"));
 
   if (server.method() == HTTP_POST) {
-    config.accessPointSsid = server.arg("ssid");
-    config.accessPointPassword = server.arg("psk");
-    config.hostname = server.arg("hn");
-    config.otaUpdatePassword = server.arg("otapwd");
+    config.network.accessPointSsid = server.arg("ssid");
+    config.network.accessPointPassword = server.arg("psk");
+    config.network.hostname = server.arg("hn");
+    config.network.otaUpdatePassword = server.arg("otapwd");
     saveWifi(config);
     rebootAndSendPage();
   } else {
     String wifiPage = FPSTR(html_page_wifi);
-    String str_ap_ssid = config.accessPointSsid;
-    String str_ap_pwd = config.accessPointPassword;
-    String str_ota_pwd = config.otaUpdatePassword;
+    String str_ap_ssid = config.network.accessPointSsid;
+    String str_ap_pwd = config.network.accessPointPassword;
+    String str_ota_pwd = config.network.otaUpdatePassword;
     str_ap_ssid.replace("'", F("&apos;"));
     str_ap_pwd.replace("'", F("&apos;"));
     str_ota_pwd.replace("'", F("&apos;"));
@@ -924,22 +931,22 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   String controlPage = FPSTR(html_page_control);
   String headerContent = FPSTR(html_common_header);
   String footerContent = FPSTR(html_common_footer);
-  headerContent.replace("_UNIT_NAME_", config.hostname);
+  headerContent.replace("_UNIT_NAME_", config.network.hostname);
   footerContent.replace("_VERSION_", BUILD_DATE);
   footerContent.replace("_GIT_HASH_", COMMIT_HASH);
   controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
-  controlPage.replace("_UNIT_NAME_", config.hostname);
+  controlPage.replace("_UNIT_NAME_", config.network.hostname);
   controlPage.replace("_RATE_", "60");
   controlPage.replace("_ROOMTEMP_", String(convertCelsiusToLocalUnit(hp.getRoomTemperature(),
-                                                                     config.useFahrenheit)));
-  controlPage.replace("_USE_FAHRENHEIT_", String(config.useFahrenheit ? 1 : 0));
+                                                                     config.unit.useFahrenheit)));
+  controlPage.replace("_USE_FAHRENHEIT_", String(config.unit.useFahrenheit ? 1 : 0));
   controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
-  controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.supportHeatMode ? 1 : 0));
-  controlPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(config.minTempCelsius,
-                                                                        config.useFahrenheit)));
-  controlPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(config.maxTempCelsius,
-                                                                        config.useFahrenheit)));
-  controlPage.replace(F("_TEMP_STEP_"), String(config.tempStep));
+  controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.unit.supportHeatMode ? 1 : 0));
+  controlPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(
+                                           config.unit.minTempCelsius, config.unit.useFahrenheit)));
+  controlPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(
+                                           config.unit.maxTempCelsius, config.unit.useFahrenheit)));
+  controlPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
   controlPage.replace("_TXT_CTRL_CTEMP_", FPSTR(txt_ctrl_ctemp));
   controlPage.replace("_TXT_CTRL_TEMP_", FPSTR(txt_ctrl_temp));
   controlPage.replace("_TXT_CTRL_TITLE_", FPSTR(txt_ctrl_title));
@@ -1025,8 +1032,8 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   } else if (settings.wideVane == "SWING") {
     controlPage.replace("_WVANE_S_", "selected");
   }
-  controlPage.replace("_TEMP_",
-                      String(convertCelsiusToLocalUnit(hp.getTemperature(), config.useFahrenheit)));
+  controlPage.replace(
+      "_TEMP_", String(convertCelsiusToLocalUnit(hp.getTemperature(), config.unit.useFahrenheit)));
 
   // We need to send the page content in chunks to overcome
   // a limitation on the maximum size we can send at one
@@ -1101,7 +1108,7 @@ void handleMetrics() {
     hpmode = "-2";
   }
 
-  metrics.replace("_UNIT_NAME_", config.hostname);
+  metrics.replace("_UNIT_NAME_", config.network.hostname);
   metrics.replace("_VERSION_", BUILD_DATE);
   metrics.replace("_GIT_HASH_", COMMIT_HASH);
   metrics.replace("_POWER_", hppower);
@@ -1135,7 +1142,8 @@ void handleLogin() {
       loginSuccess = false;
     }
     if (server.hasArg("USERNAME") && server.hasArg("PASSWORD")) {
-      if (server.arg("USERNAME") == "admin" && server.arg("PASSWORD") == config.login_password) {
+      if (server.arg("USERNAME") == "admin" &&
+          server.arg("PASSWORD") == config.unit.login_password) {
         server.sendHeader("Cache-Control", "no-cache");
         server.sendHeader("Set-Cookie", "M2MSESSIONID=1");
         loginSuccess = true;
@@ -1156,7 +1164,7 @@ void handleLogin() {
       }
     }
   } else {
-    if (is_authenticated() or config.login_password.length() == 0) {
+    if (is_authenticated() or config.unit.login_password.length() == 0) {
       server.sendHeader("Location", "/");
       server.sendHeader("Cache-Control", "no-cache");
       // use javascript in the case browser disable redirect
@@ -1339,8 +1347,8 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
     }
     if (server.hasArg("TEMP")) {
       // using std::round to maintain existing behavior, though I'm not sure it's correct
-      newSettings.temperature =
-          convertLocalUnitToCelsius(std::round(server.arg("TEMP").toFloat()), config.useFahrenheit);
+      newSettings.temperature = convertLocalUnitToCelsius(std::round(server.arg("TEMP").toFloat()),
+                                                          config.unit.useFahrenheit);
       update = true;
     }
     if (server.hasArg("FAN")) {
@@ -1367,7 +1375,7 @@ void readHeatPumpSettings() {
 
   rootInfo.clear();
   rootInfo["temperature"] =
-      convertCelsiusToLocalUnit(currentSettings.temperature, config.useFahrenheit);
+      convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
   rootInfo["fan"] = currentSettings.fan;
   rootInfo["vane"] = currentSettings.vane;
   rootInfo["wideVane"] = currentSettings.wideVane;
@@ -1456,9 +1464,9 @@ void hpStatusChanged(heatpumpStatus newStatus) {
 
     rootInfo.clear();
     rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(newStatus.roomTemperature, config.useFahrenheit);
+        convertCelsiusToLocalUnit(newStatus.roomTemperature, config.unit.useFahrenheit);
     rootInfo["temperature"] =
-        convertCelsiusToLocalUnit(currentSettings.temperature, config.useFahrenheit);
+        convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
     rootInfo["fan"] = currentSettings.fan;
     rootInfo["vane"] = currentSettings.vane;
     rootInfo["wideVane"] = currentSettings.wideVane;
@@ -1492,7 +1500,7 @@ void hpCheckRemoteTemp() {
 void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
   // packetDirection should have been declared as const char *, but since hpPacketDebug is a
   // callback function, it can't be.  So we'll just have to be careful not to modify it.
-  if (config.dumpPacketsToMqtt) {
+  if (config.other.dumpPacketsToMqtt) {
     String message;  // NOLINT(misc-const-correctness)
     for (unsigned int idx = 0; idx < length; idx++) {
       if (packet[idx] < 16) {
@@ -1588,10 +1596,10 @@ void onSetCustomPacket(const char *message) {
 void onSetDebugLogs(const char *message) {
   if (strcmp(message, "on") == 0) {
     Logger::enableMqttLogging(mqtt_client, ha_debug_logs_topic.c_str());
-    config.logToMqtt = true;
+    config.other.logToMqtt = true;
     LOG(F("Debug logs mode enabled"));
   } else if (strcmp(message, "off") == 0) {
-    config.logToMqtt = false;
+    config.other.logToMqtt = false;
     LOG(F("Debug logs mode disabled"));
     Logger::disableMqttLogging();
   }
@@ -1599,10 +1607,10 @@ void onSetDebugLogs(const char *message) {
 
 void onSetDebugPackets(const char *message) {
   if (strcmp(message, "on") == 0) {
-    config.dumpPacketsToMqtt = true;
+    config.other.dumpPacketsToMqtt = true;
     mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode enabled");
   } else if (strcmp(message, "off") == 0) {
-    config.dumpPacketsToMqtt = false;
+    config.other.dumpPacketsToMqtt = false;
     mqtt_client.publish(ha_debug_pckts_topic.c_str(), "Debug packets mode disabled");
   }
 }
@@ -1621,7 +1629,7 @@ void onSetRemoteTemp(const char *message) {
   } else {
     remoteTempActive = true;    // Remote temp has been pushed.
     lastRemoteTemp = millis();  // Note time
-    hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, config.useFahrenheit));
+    hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, config.unit.useFahrenheit));
   }
 }
 
@@ -1645,13 +1653,13 @@ void onSetFan(const char *message) {
 
 void onSetTemp(const char *message) {
   const float temperature = strtof(message, NULL);
-  const float minTemp = config.minTempCelsius;
-  const float maxTemp = config.maxTempCelsius;
+  const float minTemp = config.unit.minTempCelsius;
+  const float maxTemp = config.unit.maxTempCelsius;
 
-  float temperature_c = convertLocalUnitToCelsius(temperature, config.useFahrenheit);
+  float temperature_c = convertLocalUnitToCelsius(temperature, config.unit.useFahrenheit);
   if (temperature_c < minTemp || temperature_c > maxTemp) {
     temperature_c = (minTemp + maxTemp) / 2.0F;
-    rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, config.useFahrenheit);
+    rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, config.unit.useFahrenheit);
   } else {
     rootInfo["temperature"] = temperature;
   }
@@ -1707,7 +1715,7 @@ void haConfig() {
   haConfigModes.add("heat_cool");  // native AUTO mode
   haConfigModes.add("cool");
   haConfigModes.add("dry");
-  if (config.supportHeatMode) {
+  if (config.unit.supportHeatMode) {
     haConfigModes.add("heat");
   }
   haConfigModes.add("fan_only");  // native FAN mode
@@ -1731,19 +1739,21 @@ void haConfig() {
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
   temp_stat_tpl_str +=
-      String(convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit)) +
+      String(convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit)) +
       " and value_json.temperature|int <= ";
   temp_stat_tpl_str +=
-      String(convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit)) +
+      String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit)) +
       ") %}{{ value_json.temperature }}";
   temp_stat_tpl_str +=
       "{% elif (value_json.temperature|int < " +
-      String(convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit)) + ") %}" +
-      String(convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit)) +
+      String(convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit)) +
+      ") %}" +
+      String(convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit)) +
       "{% elif (value_json.temperature|int > " +
-      String(convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit)) + ") %}" +
-      String(convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit)) +
-      "{% endif %}{% else %}" + String(convertCelsiusToLocalUnit(22, config.useFahrenheit)) +
+      String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit)) +
+      ") %}" +
+      String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit)) +
+      "{% endif %}{% else %}" + String(convertCelsiusToLocalUnit(22, config.unit.useFahrenheit)) +
       "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
   haConfig["curr_temp_t"] = ha_state_topic;
@@ -1752,13 +1762,15 @@ void haConfig() {
       String(F("{{ value_json.roomTemperature if (value_json is defined and "
                "value_json.roomTemperature is defined and "
                "value_json.roomTemperature|int > ")) +
-      String(convertCelsiusToLocalUnit(1, config.useFahrenheit)) +
+      String(convertCelsiusToLocalUnit(1, config.unit.useFahrenheit)) +
       ") }}";  // Set default value for fix "Could not parse data for HA"
   haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
-  haConfig["min_temp"] = convertCelsiusToLocalUnit(config.minTempCelsius, config.useFahrenheit);
-  haConfig["max_temp"] = convertCelsiusToLocalUnit(config.maxTempCelsius, config.useFahrenheit);
-  haConfig["temp_step"] = config.tempStep;
-  haConfig["temperature_unit"] = config.useFahrenheit ? "F" : "C";
+  haConfig["min_temp"] =
+      convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit);
+  haConfig["max_temp"] =
+      convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit);
+  haConfig["temp_step"] = config.unit.tempStep;
+  haConfig["temperature_unit"] = config.unit.useFahrenheit ? "F" : "C";
 
   JsonArray haConfigFan_modes = haConfig["fan_modes"].to<JsonArray>();
   haConfigFan_modes.add("AUTO");
@@ -1801,8 +1813,8 @@ void haConfig() {
 
   JsonObject haConfigDevice = haConfig["device"].to<JsonObject>();
 
-  haConfigDevice["ids"] = mqtt_fn;
-  haConfigDevice["name"] = mqtt_fn;
+  haConfigDevice["ids"] = config.mqtt.mqtt_fn;
+  haConfigDevice["name"] = config.mqtt.mqtt_fn;
   haConfigDevice["sw"] = "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
   haConfigDevice["mdl"] = "HVAC MITSUBISHI";
   haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";
@@ -1829,8 +1841,9 @@ void mqttConnect() {
   const int maxAttempts = 5;
   while (!mqtt_client.connected()) {
     // Attempt to connect
-    mqtt_client.connect(mqtt_client_id.c_str(), mqtt_username.c_str(), mqtt_password.c_str(),
-                        ha_availability_topic.c_str(), 1, true, mqtt_payload_unavailable);
+    mqtt_client.connect(config.network.hostname.c_str(), config.mqtt.mqtt_username.c_str(),
+                        config.mqtt.mqtt_password.c_str(), ha_availability_topic.c_str(), 1, true,
+                        mqtt_payload_unavailable);
     // If state < 0 (MQTT_CONNECTED) => network problem we retry 5 times and
     // then waiting for MQTT_RETRY_INTERVAL_MS and retry reapeatly
     if (mqtt_client.state() < MQTT_CONNECTED) {
@@ -1859,7 +1872,7 @@ void mqttConnect() {
       mqtt_client.subscribe(ha_custom_packet.c_str());
       mqtt_client.publish(ha_availability_topic.c_str(), mqtt_payload_available,
                           true);  // publish status as available
-      if (config.haAutodiscovery) {
+      if (config.other.haAutodiscovery) {
         haConfig();
       }
     }
@@ -1869,9 +1882,9 @@ void mqttConnect() {
 bool connectWifi() {
   const int connectTimeoutMs = 30000;
 #ifdef ESP32
-  WiFi.setHostname(config.hostname.c_str());
+  WiFi.setHostname(config.network.hostname.c_str());
 #else
-  WiFi.hostname(config.hostname.c_str());
+  WiFi.hostname(config.network.hostname.c_str());
 #endif
   if (WiFi.getMode() != WIFI_STA) {
     WiFi.mode(WIFI_STA);
@@ -1880,7 +1893,7 @@ bool connectWifi() {
 #ifdef ESP32
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
 #endif
-  WiFi.begin(config.accessPointSsid.c_str(), config.accessPointPassword.c_str());
+  WiFi.begin(config.network.accessPointSsid.c_str(), config.network.accessPointPassword.c_str());
   // Serial.println("Connecting to " + ap_ssid);
   wifi_timeout = millis() + connectTimeoutMs;
   while (WiFi.status() != WL_CONNECTED && millis() < wifi_timeout) {
@@ -1942,7 +1955,7 @@ float convertLocalUnitToCelsius(float temperature, bool isFahrenheit) {
 }
 
 String getTemperatureScale() {
-  if (config.useFahrenheit) {
+  if (config.unit.useFahrenheit) {
     return "F";
   }
   return "C";
@@ -1972,7 +1985,7 @@ bool is_authenticated() {
 }
 
 bool checkLogin() {
-  if (!is_authenticated() and config.login_password.length() > 0) {
+  if (!is_authenticated() and config.unit.login_password.length() > 0) {
     server.sendHeader("Location", "/login");
     server.sendHeader("Cache-Control", "no-cache");
     // use javascript in the case browser disable redirect
@@ -2006,7 +2019,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
   if (WiFi.getMode() == WIFI_STA and
       WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
     wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
-  } else if (config.wifiConfigured() and millis() > wifi_timeout) {
+  } else if (config.network.configured() and millis() > wifi_timeout) {
     restartAfterDelay(0);
   }
 
@@ -2029,7 +2042,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
       hp.sync();
     }
 
-    if (mqtt_config) {
+    if (config.mqtt.configured()) {
       // MQTT failed retry to connect
       if (mqtt_client.state() < MQTT_CONNECTED) {
         if ((millis() - lastMqttRetry > MQTT_RETRY_INTERVAL_MS) or lastMqttRetry == 0) {
