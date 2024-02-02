@@ -300,6 +300,7 @@ UploadError uploaderror = UploadError::noError;
 
 static bool restartPending = false;
 void restartAfterDelay(uint32_t delayMs) {
+  LOG(F("Restarting after delay of %u ms"), delayMs);
   if (restartPending) {
     return;
   }
@@ -308,6 +309,24 @@ void restartAfterDelay(uint32_t delayMs) {
     ESP.restart();
     return Timers::TimerStatus::completed;
   });
+}
+
+void logConfig() {
+  for (const auto file :
+       std::array<const char *const, 4>{wifi_conf, mqtt_conf, unit_conf, others_conf}) {
+    LOG(F("Loading ") + String(file));
+    JsonDocument doc = FileSystem::loadJSON(file);
+    if (doc.isNull()) {
+      LOG(F("File is empty"));
+      continue;
+    }
+    if (doc.containsKey("ap_pwd")) {
+      doc["ap_pwd"] = F("********");
+    }
+    String contents;
+    serializeJsonPretty(doc, contents);
+    LOG(contents);
+  }
 }
 
 void setup() {
@@ -381,7 +400,7 @@ void setup() {
       LOG(F("Not found MQTT config go to configuration page"));
     }
     // Serial.println(F("Connection to HVAC. Stop serial log."));
-    LOG(F("Connection to HVAC"));
+    LOG(F("MQTT initialized, trying to connect to HVAC"));
     hp.setSettingsChangedCallback(hpSettingsChanged);
     hp.setStatusChangedCallback(hpStatusChanged);
     hp.setPacketCallback(hpPacketDebug);
@@ -407,6 +426,7 @@ void setup() {
     lastTempSend = millis();
     // END TODO
 
+    LOG(F("calling initOTA"));
     initOTA(config.network.hostname, config.network.otaUpdatePassword);
   } else {
     //
@@ -422,6 +442,8 @@ void setup() {
       return Timers::TimerStatus::completed;
     });
   }
+  LOG(F("Setup complete"));
+  logConfig();
 }
 
 void loadWifi() {
