@@ -78,7 +78,8 @@ const PROGMEM uint8_t blueLedPin = LED_BUILTIN;  // Onboard LED = digital pin 2 
 const PROGMEM uint8_t redLedPin = 0;
 
 const String defaultHostname() {
-  return F("HVAC_") + getId();  // default hostname, will be used if no hostname is set in config
+  return String(F("HVAC_")) +
+         getId();  // default hostname, will be used if no hostname is set in config
 }
 
 struct Config {
