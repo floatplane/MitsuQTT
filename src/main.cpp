@@ -131,8 +131,7 @@ struct Config {
   struct MQTT {
     String friendlyName;
     String server;
-    // TODO(floatplane) make this a uint16_t
-    String port;
+    uint32_t port{1883};
     String username;
     String password;
     String topic = "mitsubishi2mqtt";
@@ -418,7 +417,8 @@ void loadMqtt() {
   }
   config.mqtt.friendlyName = doc["mqtt_fn"].as<String>();
   config.mqtt.server = doc["mqtt_host"].as<String>();
-  config.mqtt.port = doc["mqtt_port"].as<String>();
+  const String portString = doc["mqtt_port"].as<String>();
+  config.mqtt.port = portString.toInt();
   config.mqtt.username = doc["mqtt_user"].as<String>();
   config.mqtt.password = doc["mqtt_pwd"].as<String>();
   config.mqtt.topic = doc["mqtt_topic"].as<String>();
@@ -426,7 +426,7 @@ void loadMqtt() {
   LOG(F("=== START DEBUG MQTT ==="));
   LOG(F("Friendly Name") + config.mqtt.friendlyName);
   LOG(F("IP Server ") + config.mqtt.server);
-  LOG(F("IP Port ") + config.mqtt.port);
+  LOG(F("IP Port ") + portString);
   LOG(F("Username ") + config.mqtt.username);
   LOG(F("Password ") + config.mqtt.password);
   LOG(F("Topic ") + config.mqtt.topic);
@@ -471,8 +471,7 @@ void saveMqtt(const Config &config) {
   JsonDocument doc;  // NOLINT(misc-const-correctness)
   doc["mqtt_fn"] = config.mqtt.friendlyName;
   doc["mqtt_host"] = config.mqtt.server;
-  // if mqtt port is empty, we use default port
-  doc["mqtt_port"] = config.mqtt.port.isEmpty() ? String("1883") : config.mqtt.port;
+  doc["mqtt_port"] = String(config.mqtt.port);
   doc["mqtt_user"] = config.mqtt.username;
   doc["mqtt_pwd"] = config.mqtt.password;
   doc["mqtt_topic"] = config.mqtt.topic;
@@ -520,7 +519,7 @@ void initCaptivePortal() {
 }
 
 void initMqtt() {
-  mqtt_client.setServer(config.mqtt.server.c_str(), atoi(config.mqtt.port.c_str()));
+  mqtt_client.setServer(config.mqtt.server.c_str(), config.mqtt.port);
   mqtt_client.setCallback(mqttCallback);
   mqttConnect();
 }
@@ -741,7 +740,7 @@ void handleMqtt() {
   if (server.method() == HTTP_POST) {
     config.mqtt.friendlyName = server.arg("fn");
     config.mqtt.server = server.arg("mh");
-    config.mqtt.port = server.arg("ml").isEmpty() ? String("1883") : server.arg("ml");
+    config.mqtt.port = server.arg("ml").isEmpty() ? 1883 : server.arg("ml").toInt();
     config.mqtt.username = server.arg("mu");
     config.mqtt.password = server.arg("mp");
     config.mqtt.topic = server.arg("mt");
@@ -760,7 +759,7 @@ void handleMqtt() {
     mqttPage.replace("_TXT_MQTT_TOPIC_", FPSTR(txt_mqtt_topic));
     mqttPage.replace(F("_MQTT_FN_"), config.mqtt.friendlyName);
     mqttPage.replace(F("_MQTT_HOST_"), config.mqtt.server);
-    mqttPage.replace(F("_MQTT_PORT_"), config.mqtt.port);
+    mqttPage.replace(F("_MQTT_PORT_"), String(config.mqtt.port));
     mqttPage.replace(F("_MQTT_USER_"), config.mqtt.username);
     mqttPage.replace(F("_MQTT_PASSWORD_"), config.mqtt.password);
     mqttPage.replace(F("_MQTT_TOPIC_"), config.mqtt.topic);
