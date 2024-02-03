@@ -830,20 +830,38 @@ void handleUnit() {
         server.arg("md").isEmpty() ? config.unit.supportHeatMode : server.arg("md") == "all";
     config.unit.login_password =
         server.arg("lpw").isEmpty() ? config.unit.login_password : server.arg("lpw");
-    // TODO(floatplane): using std::round to maintain existing behavior, though I'm not sure it's
-    // correct
-    config.unit.minTempCelsius =
-        server.arg("min_temp").isEmpty()
-            ? config.unit.minTempCelsius
-            : static_cast<uint8_t>(convertLocalUnitToCelsius(
-                  std::round(server.arg("min_temp").toFloat()), config.unit.useFahrenheit));
-    config.unit.maxTempCelsius =
-        server.arg("max_temp").isEmpty()
-            ? config.unit.maxTempCelsius
-            : static_cast<uint8_t>(convertLocalUnitToCelsius(
-                  std::round(server.arg("max_temp").toFloat()), config.unit.useFahrenheit));
     config.unit.tempStep =
         server.arg("temp_step").isEmpty() ? config.unit.tempStep : server.arg("temp_step");
+
+    // In this POST handler, it's not entirely clear whether the min and max temp should be
+    // interpreted as celsius or fahrenheit. If you change the unit on the web page, the web page
+    // isn't smart enough to adjust the numeric values, so if the user just submits then there will
+    // be a mismatch. On the other hand, the user might be careful and adjust the values at the same
+    // time, in which case the values match the current value of useFahrenheit.
+    //
+    // We'll assume a dumb heuristic: get the values from the form, and try to figure out if they're
+    // both valid celsius temps or valid fahrenheit temps.
+    if (!server.arg("min_temp").isEmpty() && !server.arg("max_temp").isEmpty()) {
+      // if both are non-empty, we're changing something
+      const auto nextMinTemp = server.arg("min_temp").toFloat();
+      const auto nextMaxTemp = server.arg("max_temp").toFloat();
+      // TODO(floatplane): using std::round to maintain behavior from the code I forked, though I'm
+      // not sure it's correct
+      // TODO(floatplane): should probably be clamping these to reasonable numbers
+      // TODO(floatplane): there's no form validation, a user can submit min > max or negative temps
+      // or whatever.
+      if (nextMinTemp < 50 && nextMaxTemp < 50) {
+        // almost certainly celsius
+        config.unit.minTempCelsius = static_cast<uint8_t>(std::round(nextMinTemp));
+        config.unit.maxTempCelsius = static_cast<uint8_t>(std::round(nextMaxTemp));
+      } else {
+        // almost certainly fahrenheit
+        config.unit.minTempCelsius =
+            static_cast<uint8_t>(std::round(convertLocalUnitToCelsius(nextMinTemp, true)));
+        config.unit.maxTempCelsius =
+            static_cast<uint8_t>(std::round(convertLocalUnitToCelsius(nextMaxTemp, true)));
+      }
+    }
     saveUnit(config);
     rebootAndSendPage();
   } else {
