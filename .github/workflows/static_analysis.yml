@@ -8,6 +8,10 @@ on:
 
 jobs:
   analyze:
+    strategy:
+      matrix:
+        platform: [ESP8266-ESP01, WEMOS_D1_Mini, ESP32DEV]
+
     runs-on: ubuntu-latest
 
     steps:
@@ -28,14 +32,6 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
 
-      - name: Check Generic8266(ESP-01)
+      - name: Check ${{ matrix.platform }}
         run: |
-          pio check -e ESP8266-ESP01 --fail-on-defect medium
-
-      - name: Check WEMOS_D1_Mini
-        run: |
-          pio check -e WEMOS_D1_Mini --fail-on-defect medium
-
-      - name: Check ESP32DEV
-        run: |
-          pio check -e ESP32DEV --fail-on-defect medium
+          pio check -e ${{ matrix.platform }} --fail-on-defect medium
