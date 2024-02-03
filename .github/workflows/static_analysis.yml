@@ -1,5 +1,11 @@
 name: Static Analysis
 
+# The concurrency spec means that we'll only run one set of jobs per pull request or push to main.
+# If a new push or pull request comes in while a job is running, all jobs in the concurrency group will be cancelled.
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
