@@ -157,59 +157,59 @@ struct Config {
       return topicPath;
     }
     const String &ha_custom_packet() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/custom/send");
+      static const String topicPath = topic + F("/") + friendlyName + F("/custom/send");
       return topicPath;
     }
     const String &ha_debug_logs_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/debug/logs/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/debug/logs/set");
       return topicPath;
     }
     const String &ha_debug_logs_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/debug/logs");
+      static const String topicPath = topic + F("/") + friendlyName + F("/debug/logs");
       return topicPath;
     }
     const String &ha_debug_pckts_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/debug/packets/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/debug/packets/set");
       return topicPath;
     }
     const String &ha_debug_pckts_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/debug/packets");
+      static const String topicPath = topic + F("/") + friendlyName + F("/debug/packets");
       return topicPath;
     }
     const String &ha_fan_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/fan/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/fan/set");
       return topicPath;
     }
     const String &ha_mode_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/mode/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/mode/set");
       return topicPath;
     }
     const String &ha_remote_temp_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/remote_temp/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/remote_temp/set");
       return topicPath;
     }
     const String &ha_settings_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/settings");
+      static const String topicPath = topic + F("/") + friendlyName + F("/settings");
       return topicPath;
     }
     const String &ha_state_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/state");
+      static const String topicPath = topic + F("/") + friendlyName + F("/state");
       return topicPath;
     }
     const String &ha_system_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/system/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/system/set");
       return topicPath;
     }
     const String &ha_temp_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/temp/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/temp/set");
       return topicPath;
     }
     const String &ha_vane_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/vane/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/vane/set");
       return topicPath;
     }
     const String &ha_wideVane_set_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/wideVane/set");
+      static const String topicPath = topic + F("/") + friendlyName + F("/wideVane/set");
       return topicPath;
     }
   } mqtt;
@@ -359,26 +359,26 @@ void setup() {
     FileSystem::deleteFile(console_file);
     LOG(F("Starting Mitsubishi2MQTT"));
     // Web interface
-    server.on("/", handleRoot);
-    server.on("/control", handleControl);
-    server.on("/setup", handleSetup);
-    server.on("/mqtt", handleMqtt);
-    server.on("/wifi", handleWifi);
-    server.on("/unit", handleUnit);
-    server.on("/status", handleStatus);
-    server.on("/others", handleOthers);
-    server.on("/metrics", handleMetrics);
+    server.on(F("/"), handleRoot);
+    server.on(F("/control"), handleControl);
+    server.on(F("/setup"), handleSetup);
+    server.on(F("/mqtt"), handleMqtt);
+    server.on(F("/wifi"), handleWifi);
+    server.on(F("/unit"), handleUnit);
+    server.on(F("/status"), handleStatus);
+    server.on(F("/others"), handleOthers);
+    server.on(F("/metrics"), handleMetrics);
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
-      server.on("/login", handleLogin);
+      server.on(F("/login"), handleLogin);
       // here the list of headers to be recorded, use for authentication
       const char *headerkeys[] = {"User-Agent", "Cookie"};
       const size_t headerkeyssize = sizeof(headerkeys) / sizeof(char *);
       // ask server to track these headers
       server.collectHeaders(headerkeys, headerkeyssize);
     }
-    server.on("/upgrade", handleUpgrade);
-    server.on("/upload", HTTP_POST, handleUploadDone, handleUploadLoop);
+    server.on(F("/upgrade"), handleUpgrade);
+    server.on(F("/upload"), HTTP_POST, handleUploadDone, handleUploadLoop);
 
     server.begin();
     lastMqttRetry = 0;
@@ -388,7 +388,7 @@ void setup() {
     if (config.mqtt.configured()) {
       LOG(F("Starting MQTT"));
       if (config.other.haAutodiscovery) {
-        ha_config_topic = config.other.haAutodiscoveryTopic + "/climate/" +
+        ha_config_topic = config.other.haAutodiscoveryTopic + F("/climate/") +
                           config.mqtt.friendlyName + F("/config");
       }
       // startup mqtt connection
@@ -557,9 +557,9 @@ void saveOthers(const Config &config) {
 // Initialize captive portal page
 void initCaptivePortal() {
   // Serial.println(F("Starting captive portal"));
-  server.on("/", handleInitSetup);
-  server.on("/save", handleSaveWifi);
-  server.on("/reboot", handleReboot);
+  server.on(F("/"), handleInitSetup);
+  server.on(F("/save"), handleSaveWifi);
+  server.on(F("/reboot"), handleReboot);
   server.onNotFound(handleNotFound);
   server.begin();
   captive = true;
