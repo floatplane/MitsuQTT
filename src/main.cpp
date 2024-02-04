@@ -144,72 +144,72 @@ struct Config {
     uint32_t port{1883};
     String username;
     String password;
-    String topic;
-    MQTT() : topic(F("mitsubishi2mqtt")) {
+    String rootTopic;
+    MQTT() : rootTopic(F("mitsubishi2mqtt")) {
     }
 
     bool configured() const {
       return friendlyName.length() > 0 && server.length() > 0 && username.length() > 0 &&
-             password.length() > 0 && topic.length() > 0;
+             password.length() > 0 && rootTopic.length() > 0;
     }
     const String &ha_availability_topic() const {
-      static const String topicPath = topic + "/" + friendlyName + F("/availability");
+      static const String topicPath{rootTopic + "/" + friendlyName + F("/availability")};
       return topicPath;
     }
     const String &ha_custom_packet() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/custom/send");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/custom/send")};
       return topicPath;
     }
     const String &ha_debug_logs_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/debug/logs/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/debug/logs/set")};
       return topicPath;
     }
     const String &ha_debug_logs_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/debug/logs");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/debug/logs")};
       return topicPath;
     }
     const String &ha_debug_pckts_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/debug/packets/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/debug/packets/set")};
       return topicPath;
     }
     const String &ha_debug_pckts_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/debug/packets");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/debug/packets")};
       return topicPath;
     }
     const String &ha_fan_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/fan/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/fan/set")};
       return topicPath;
     }
     const String &ha_mode_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/mode/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/mode/set")};
       return topicPath;
     }
     const String &ha_remote_temp_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/remote_temp/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/remote_temp/set")};
       return topicPath;
     }
     const String &ha_settings_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/settings");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/settings")};
       return topicPath;
     }
     const String &ha_state_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/state");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/state")};
       return topicPath;
     }
     const String &ha_system_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/system/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/system/set")};
       return topicPath;
     }
     const String &ha_temp_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/temp/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/temp/set")};
       return topicPath;
     }
     const String &ha_vane_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/vane/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/vane/set")};
       return topicPath;
     }
     const String &ha_wideVane_set_topic() const {
-      static const String topicPath = topic + F("/") + friendlyName + F("/wideVane/set");
+      static const String topicPath{rootTopic + F("/") + friendlyName + F("/wideVane/set")};
       return topicPath;
     }
   } mqtt;
@@ -468,7 +468,7 @@ void loadMqtt() {
   config.mqtt.port = portString.toInt();
   config.mqtt.username = doc["mqtt_user"].as<String>();
   config.mqtt.password = doc["mqtt_pwd"].as<String>();
-  config.mqtt.topic = doc["mqtt_topic"].as<String>();
+  config.mqtt.rootTopic = doc["mqtt_topic"].as<String>();
 
   LOG(F("=== START DEBUG MQTT ==="));
   LOG(F("Friendly Name") + config.mqtt.friendlyName);
@@ -476,7 +476,7 @@ void loadMqtt() {
   LOG(F("IP Port ") + portString);
   LOG(F("Username ") + config.mqtt.username);
   LOG(F("Password ") + config.mqtt.password);
-  LOG(F("Topic ") + config.mqtt.topic);
+  LOG(F("Root topic ") + config.mqtt.rootTopic);
   LOG(F("=== END DEBUG MQTT ==="));
 }
 
@@ -521,7 +521,7 @@ void saveMqtt(const Config &config) {
   doc["mqtt_port"] = String(config.mqtt.port);
   doc["mqtt_user"] = config.mqtt.username;
   doc["mqtt_pwd"] = config.mqtt.password;
-  doc["mqtt_topic"] = config.mqtt.topic;
+  doc["mqtt_topic"] = config.mqtt.rootTopic;
   FileSystem::saveJSON(mqtt_conf, doc);
 }
 
@@ -792,7 +792,7 @@ void handleMqtt() {
     config.mqtt.port = server.arg("ml").isEmpty() ? 1883 : server.arg("ml").toInt();
     config.mqtt.username = server.arg("mu");
     config.mqtt.password = server.arg("mp");
-    config.mqtt.topic = server.arg("mt");
+    config.mqtt.rootTopic = server.arg("mt");
     saveMqtt(config);
     rebootAndSendPage();
   } else {
@@ -811,7 +811,7 @@ void handleMqtt() {
     mqttPage.replace(F("_MQTT_PORT_"), String(config.mqtt.port));
     mqttPage.replace(F("_MQTT_USER_"), config.mqtt.username);
     mqttPage.replace(F("_MQTT_PASSWORD_"), config.mqtt.password);
-    mqttPage.replace(F("_MQTT_TOPIC_"), config.mqtt.topic);
+    mqttPage.replace(F("_MQTT_TOPIC_"), config.mqtt.rootTopic);
     sendWrappedHTML(mqttPage);
   }
 }
