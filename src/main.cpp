@@ -2081,12 +2081,14 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
       WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
     wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
   } else if (config.network.configured() and millis() > wifi_timeout) {
+    LOG(F("Lost network connection, restarting..."));
     restartAfterDelay(0);
   }
 
   if (!captive) {
     // Sync HVAC UNIT
     if (!hp.isConnected()) {
+      LOG(F("HVAC not connected"));
       // Use exponential backoff for retries, where each retry is double the
       // length of the previous one.
       const uint64_t durationNextSync = (1UL << hpConnectionRetries) * HP_RETRY_INTERVAL_MS;
@@ -2096,6 +2098,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
         // that fixed interval, which is several minutes.
         hpConnectionRetries = min(hpConnectionRetries + 1U, HP_MAX_RETRIES);
         hpConnectionTotalRetries++;
+        LOG(F("Trying to reconnect to HVAC"));
         hp.sync();
       }
     } else {
