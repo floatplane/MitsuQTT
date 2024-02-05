@@ -282,9 +282,6 @@ unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
 uint64_t lastRemoteTemp;
 
-// Local state
-JsonDocument rootInfo;
-
 // Web OTA
 enum UploadError {
   noError = 0,
@@ -411,22 +408,7 @@ void setup() {
     hp.enableAutoUpdate();
     hp.connect(&Serial);
 
-    // TODO(floatplane) not sure this is necessary, we're not using it in setup, and we'll reload in
-    // loop()
-    const heatpumpStatus currentStatus = hp.getStatus();
-    const HeatpumpSettings currentSettings(hp.getSettings());
-    rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.unit.useFahrenheit);
-    rootInfo["temperature"] =
-        convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
-    rootInfo["fan"] = currentSettings.fan;
-    rootInfo["vane"] = currentSettings.vane;
-    rootInfo["wideVane"] = currentSettings.wideVane;
-    rootInfo["mode"] = hpGetMode(currentSettings);
-    rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
-    rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
-    // END TODO
   } else {
     dnsServer.start(DNS_PORT, "*", apIP);
     initCaptivePortal();
@@ -1481,24 +1463,33 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
   return newSettings;
 }
 
-void readHeatPumpSettings() {
+JsonDocument getHeatPumpStatusJson() {
+  const heatpumpStatus currentStatus = hp.getStatus();
   const HeatpumpSettings currentSettings(hp.getSettings());
 
-  rootInfo.clear();
-  rootInfo["temperature"] =
+  JsonDocument doc;  // NOLINT(misc-const-correctness)
+
+  doc["operating"] = currentStatus.operating;
+  doc["roomTemperature"] =
+      convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.unit.useFahrenheit);
+  doc["temperature"] =
       convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
-  rootInfo["fan"] = currentSettings.fan;
-  rootInfo["vane"] = currentSettings.vane;
-  rootInfo["wideVane"] = currentSettings.wideVane;
-  rootInfo["mode"] = hpGetMode(currentSettings);
+  doc["fan"] = currentSettings.fan;
+  doc["vane"] = currentSettings.vane;
+  doc["wideVane"] = currentSettings.wideVane;
+  doc["mode"] = hpGetMode(currentSettings);
+  doc["action"] = hpGetAction(currentStatus, currentSettings);
+  doc["compressorFrequency"] = currentStatus.compressorFrequency;
+
+  return doc;
 }
 
 void hpSettingsChanged() {
   // send room temp, operating info and all information
-  readHeatPumpSettings();
+  JsonDocument status(getHeatPumpStatusJson());
 
   String mqttOutput;  // NOLINT(misc-const-correctness)
-  serializeJson(rootInfo, mqttOutput);
+  serializeJson(status, mqttOutput);
 
   if (!mqtt_client.publish(config.mqtt.ha_settings_topic().c_str(), mqttOutput.c_str(), true)) {
     LOG(F("Failed to publish hp settings"));
@@ -1566,26 +1557,14 @@ void hpStatusChanged(heatpumpStatus newStatus) {
     hpCheckRemoteTemp();  // if the remote temperature feed from mqtt is stale,
                           // disable it and revert to the internal thermometer.
 
-    // send room temp, operating info and all information
-    HeatpumpSettings const currentSettings(hp.getSettings());
+    // TODO(floatplane): what? why?
+    // if (newStatus.roomTemperature == 0) {
+    //   return;
+    // }
+    JsonDocument status(getHeatPumpStatusJson());
 
-    if (newStatus.roomTemperature == 0) {
-      return;
-    }
-
-    rootInfo.clear();
-    rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(newStatus.roomTemperature, config.unit.useFahrenheit);
-    rootInfo["temperature"] =
-        convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
-    rootInfo["fan"] = currentSettings.fan;
-    rootInfo["vane"] = currentSettings.vane;
-    rootInfo["wideVane"] = currentSettings.wideVane;
-    rootInfo["mode"] = hpGetMode(currentSettings);
-    rootInfo["action"] = hpGetAction(newStatus, currentSettings);
-    rootInfo["compressorFrequency"] = newStatus.compressorFrequency;
     String mqttOutput;  // NOLINT(misc-const-correctness)
-    serializeJson(rootInfo, mqttOutput);
+    serializeJson(status, mqttOutput);
 
     if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
       LOG(F("Failed to publish hp status change"));
@@ -1632,11 +1611,16 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
   }
 }
 
-// Used to send a dummy packet in state topic to validate action in HA interface
-// HA change GUI appareance before having a valid state from the unit
-void hpSendLocalState() {
+// This is used to send an optimistic state update to MQTT, which in turn causes the Home Assistant
+// UI to update without waiting to apply a setting and read it back.
+void hpSendLocalState(JsonDocument &override) {
+  JsonDocument status(getHeatPumpStatusJson());
+  auto override2 = override.as<JsonObject>();
+  for (auto pair : override2) {
+    status[pair.key()] = pair.value();
+  }
   String mqttOutput;  // NOLINT(misc-const-correctness)
-  serializeJson(rootInfo, mqttOutput);
+  serializeJson(status, mqttOutput);
   mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str(), false);
   if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
     LOG(F("Failed to publish dummy hp status change"));
@@ -1736,24 +1720,28 @@ void onSetRemoteTemp(const char *message) {
 }
 
 void onSetWideVane(const char *message) {
-  rootInfo["wideVane"] = String(message);
-  hpSendLocalState();
+  JsonDocument stateOverride;
+  stateOverride["wideVane"] = String(message);
+  hpSendLocalState(stateOverride);
   hp.setWideVaneSetting(message);
 }
 
 void onSetVane(const char *message) {
-  rootInfo["vane"] = String(message);
-  hpSendLocalState();
+  JsonDocument stateOverride;
+  stateOverride["vane"] = String(message);
+  hpSendLocalState(stateOverride);
   hp.setVaneSetting(message);
 }
 
 void onSetFan(const char *message) {
-  rootInfo["fan"] = String(message);
-  hpSendLocalState();
+  JsonDocument stateOverride;
+  stateOverride["fan"] = String(message);
+  hpSendLocalState(stateOverride);
   hp.setFanSpeed(message);
 }
 
 void onSetTemp(const char *message) {
+  JsonDocument stateOverride;
   const float temperature = strtof(message, NULL);
   const float minTemp = config.unit.minTempCelsius;
   const float maxTemp = config.unit.maxTempCelsius;
@@ -1761,45 +1749,47 @@ void onSetTemp(const char *message) {
   float temperature_c = convertLocalUnitToCelsius(temperature, config.unit.useFahrenheit);
   if (temperature_c < minTemp || temperature_c > maxTemp) {
     temperature_c = (minTemp + maxTemp) / 2.0F;
-    rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, config.unit.useFahrenheit);
+    stateOverride["temperature"] =
+        convertCelsiusToLocalUnit(temperature_c, config.unit.useFahrenheit);
   } else {
-    rootInfo["temperature"] = temperature;
+    stateOverride["temperature"] = temperature;
   }
-  hpSendLocalState();
+  hpSendLocalState(stateOverride);
   hp.setTemperature(temperature_c);
 }
 
 void onSetMode(const char *message) {
+  JsonDocument stateOverride;
   String modeUpper = message;
   modeUpper.toUpperCase();
   if (modeUpper == "OFF") {
-    rootInfo["mode"] = "off";
-    rootInfo["action"] = "off";
-    hpSendLocalState();
+    stateOverride["mode"] = "off";
+    stateOverride["action"] = "off";
+    hpSendLocalState(stateOverride);
     hp.setPowerSetting("OFF");
   } else {
     if (modeUpper == "HEAT_COOL") {
-      rootInfo["mode"] = "heat_cool";
-      rootInfo["action"] = "idle";
+      stateOverride["mode"] = "heat_cool";
+      stateOverride["action"] = "idle";
       modeUpper = "AUTO";
       // NOLINTNEXTLINE(bugprone-branch-clone) why is the next branch getting flagged as a clone?
     } else if (modeUpper == "HEAT") {
-      rootInfo["mode"] = "heat";
-      rootInfo["action"] = "heating";
+      stateOverride["mode"] = "heat";
+      stateOverride["action"] = "heating";
     } else if (modeUpper == "COOL") {
-      rootInfo["mode"] = "cool";
-      rootInfo["action"] = "cooling";
+      stateOverride["mode"] = "cool";
+      stateOverride["action"] = "cooling";
     } else if (modeUpper == "DRY") {
-      rootInfo["mode"] = "dry";
-      rootInfo["action"] = "drying";
+      stateOverride["mode"] = "dry";
+      stateOverride["action"] = "drying";
     } else if (modeUpper == "FAN_ONLY") {
-      rootInfo["mode"] = "fan_only";
-      rootInfo["action"] = "fan";
+      stateOverride["mode"] = "fan_only";
+      stateOverride["action"] = "fan";
       modeUpper = "FAN";
     } else {
       return;
     }
-    hpSendLocalState();
+    hpSendLocalState(stateOverride);
     hp.setPowerSetting("ON");
     hp.setModeSetting(modeUpper.c_str());
   }
