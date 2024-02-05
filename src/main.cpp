@@ -305,6 +305,7 @@ void restartAfterDelay(uint32_t delayMs) {
     return;
   }
   restartPending = true;
+  // TODO(floatplane): optionally power down the heat pump to prevent runaways
   getTimer()->in(delayMs, []() {
     ESP.restart();
     return Timers::TimerStatus::completed;
@@ -2082,6 +2083,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
     wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
   } else if (config.network.configured() and millis() > wifi_timeout) {
     LOG(F("Lost network connection, restarting..."));
+    // TODO(floatplane) do we really need to reboot here? Can we just try to reconnect?
     restartAfterDelay(0);
   }
 
