@@ -23,6 +23,7 @@ void handleWifi();
 void handleStatus();
 void handleOthers();
 void handleMetrics();
+void handleMetricsJson();
 void handleLogin();
 void handleUpgrade();
 void handleUploadDone();
