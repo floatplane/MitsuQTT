@@ -1194,7 +1194,7 @@ void handleMetrics() {
 void handleMetricsJson() {
   LOG(F("handleMetricsJson()"));
 
-  JsonDocument doc;
+  JsonDocument doc;  // NOLINT(misc-const-correctness)
   doc[F("hostname")] = config.network.hostname;
   doc[F("version")] = BUILD_DATE;
   doc[F("git_hash")] = COMMIT_HASH;
@@ -1229,7 +1229,7 @@ void handleMetricsJson() {
     settings[F("wideVane")] = currentSettings.wideVane;
   }
 
-  String response;
+  String response;  // NOLINT(misc-const-correctness)
   serializeJsonPretty(doc, response);
   server.send(HttpStatusCodes::httpOk, F("application/json"), response);
 }
