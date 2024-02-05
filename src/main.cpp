@@ -499,7 +499,7 @@ void loadOthers() {
 }
 
 void saveMqtt(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["mqtt_fn"] = config.mqtt.friendlyName;
   doc["mqtt_host"] = config.mqtt.server;
   doc["mqtt_port"] = String(config.mqtt.port);
@@ -510,7 +510,7 @@ void saveMqtt(const Config &config) {
 }
 
 void saveUnit(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["unit_tempUnit"] = config.unit.useFahrenheit ? "fah" : "cel";
   doc["min_temp"] = String(config.unit.minTempCelsius);
   doc["max_temp"] = String(config.unit.maxTempCelsius);
@@ -521,7 +521,7 @@ void saveUnit(const Config &config) {
 }
 
 void saveWifi(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["ap_ssid"] = config.network.accessPointSsid;
   doc["ap_pwd"] = config.network.accessPointPassword;
   doc["hostname"] = config.network.hostname;
@@ -530,7 +530,7 @@ void saveWifi(const Config &config) {
 }
 
 void saveOthers(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["haa"] = config.other.haAutodiscovery ? "ON" : "OFF";
   doc["haat"] = config.other.haAutodiscoveryTopic;
   doc["debugPckts"] = config.other.dumpPacketsToMqtt ? "ON" : "OFF";
@@ -1176,7 +1176,7 @@ void handleMetrics() {
 void handleMetricsJson() {
   LOG(F("handleMetricsJson()"));
 
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc[F("hostname")] = config.network.hostname;
   doc[F("version")] = BUILD_DATE;
   doc[F("git_hash")] = COMMIT_HASH;
@@ -1211,7 +1211,7 @@ void handleMetricsJson() {
     settings[F("wideVane")] = currentSettings.wideVane;
   }
 
-  String response;  // NOLINT(misc-const-correctness)
+  String response;
   serializeJsonPretty(doc, response);
   server.send(HttpStatusCodes::httpOk, F("application/json"), response);
 }
@@ -1301,7 +1301,7 @@ void handleUploadDone() {
   // Serial.printl(PSTR("HTTP: Firmware upload done"));
   bool restartflag = false;
   String uploadDonePage = FPSTR(html_page_upload);
-  // NOLINTNEXTLINE(misc-const-correctness)
+
   String content = F("<div style='text-align:center;'><b>Upload ");
   if (uploaderror != UploadError::noError) {
     content += F("<span style='color:#d43535'>failed</span></b><br/><br/>");
@@ -1467,7 +1467,7 @@ JsonDocument getHeatPumpStatusJson() {
   const heatpumpStatus currentStatus = hp.getStatus();
   const HeatpumpSettings currentSettings(hp.getSettings());
 
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
 
   doc["operating"] = currentStatus.operating;
   doc["roomTemperature"] =
@@ -1488,7 +1488,7 @@ void hpSettingsChanged() {
   // send room temp, operating info and all information
   JsonDocument status(getHeatPumpStatusJson());
 
-  String mqttOutput;  // NOLINT(misc-const-correctness)
+  String mqttOutput;
   serializeJson(status, mqttOutput);
 
   if (!mqtt_client.publish(config.mqtt.ha_settings_topic().c_str(), mqttOutput.c_str(), true)) {
@@ -1550,7 +1550,7 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
   return hpmode;  // unknown
 }
 
-void hpStatusChanged(heatpumpStatus newStatus) {
+void hpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS
                                                                // (millis rollover tolerant)
@@ -1563,7 +1563,7 @@ void hpStatusChanged(heatpumpStatus newStatus) {
     // }
     JsonDocument status(getHeatPumpStatusJson());
 
-    String mqttOutput;  // NOLINT(misc-const-correctness)
+    String mqttOutput;
     serializeJson(status, mqttOutput);
 
     if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
@@ -1591,7 +1591,7 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
   // packetDirection should have been declared as const char *, but since hpPacketDebug is a
   // callback function, it can't be.  So we'll just have to be careful not to modify it.
   if (config.other.dumpPacketsToMqtt) {
-    String message;  // NOLINT(misc-const-correctness)
+    String message;
     for (unsigned int idx = 0; idx < length; idx++) {
       if (packet[idx] < 16) {
         message += "0";  // pad single hex digits with a 0
@@ -1599,10 +1599,10 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
       message += String(packet[idx], HEX) + " ";
     }
 
-    JsonDocument root;  // NOLINT(misc-const-correctness)
+    JsonDocument root;
 
     root[packetDirection] = message;
-    String mqttOutput;  // NOLINT(misc-const-correctness)
+    String mqttOutput;
     serializeJson(root, mqttOutput);
     if (!mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str())) {
       mqtt_client.publish(config.mqtt.ha_debug_logs_topic().c_str(),
@@ -1613,13 +1613,13 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
 
 // This is used to send an optimistic state update to MQTT, which in turn causes the Home Assistant
 // UI to update without waiting to apply a setting and read it back.
-void hpSendLocalState(JsonDocument &override) {
+void publishOptimisticStateChange(JsonDocument &override) {
   JsonDocument status(getHeatPumpStatusJson());
   auto override2 = override.as<JsonObject>();
   for (auto pair : override2) {
     status[pair.key()] = pair.value();
   }
-  String mqttOutput;  // NOLINT(misc-const-correctness)
+  String mqttOutput;
   serializeJson(status, mqttOutput);
   mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str(), false);
   if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
@@ -1722,21 +1722,21 @@ void onSetRemoteTemp(const char *message) {
 void onSetWideVane(const char *message) {
   JsonDocument stateOverride;
   stateOverride["wideVane"] = String(message);
-  hpSendLocalState(stateOverride);
+  publishOptimisticStateChange(stateOverride);
   hp.setWideVaneSetting(message);
 }
 
 void onSetVane(const char *message) {
   JsonDocument stateOverride;
   stateOverride["vane"] = String(message);
-  hpSendLocalState(stateOverride);
+  publishOptimisticStateChange(stateOverride);
   hp.setVaneSetting(message);
 }
 
 void onSetFan(const char *message) {
   JsonDocument stateOverride;
   stateOverride["fan"] = String(message);
-  hpSendLocalState(stateOverride);
+  publishOptimisticStateChange(stateOverride);
   hp.setFanSpeed(message);
 }
 
@@ -1754,7 +1754,7 @@ void onSetTemp(const char *message) {
   } else {
     stateOverride["temperature"] = temperature;
   }
-  hpSendLocalState(stateOverride);
+  publishOptimisticStateChange(stateOverride);
   hp.setTemperature(temperature_c);
 }
 
@@ -1765,7 +1765,7 @@ void onSetMode(const char *message) {
   if (modeUpper == "OFF") {
     stateOverride["mode"] = "off";
     stateOverride["action"] = "off";
-    hpSendLocalState(stateOverride);
+    publishOptimisticStateChange(stateOverride);
     hp.setPowerSetting("OFF");
   } else {
     if (modeUpper == "HEAT_COOL") {
@@ -1789,7 +1789,7 @@ void onSetMode(const char *message) {
     } else {
       return;
     }
-    hpSendLocalState(stateOverride);
+    publishOptimisticStateChange(stateOverride);
     hp.setPowerSetting("ON");
     hp.setModeSetting(modeUpper.c_str());
   }
@@ -1798,7 +1798,7 @@ void onSetMode(const char *message) {
 void haConfig() {
   // send HA config packet
   // setup HA payload device
-  JsonDocument haConfig;  // NOLINT(misc-const-correctness)
+  JsonDocument haConfig;
 
   haConfig["name"] = config.network.hostname;
   haConfig["unique_id"] = getId();
@@ -1826,8 +1826,8 @@ void haConfig() {
       config.mqtt.ha_availability_topic();              // MQTT last will (status) messages topic
   haConfig["pl_not_avail"] = mqtt_payload_unavailable;  // MQTT offline message payload
   haConfig["pl_avail"] = mqtt_payload_available;        // MQTT online message payload
+
   // Set default value for fix "Could not parse data for HA"
-  // NOLINTNEXTLINE(misc-const-correctness)
   String temp_stat_tpl_str =
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
@@ -1850,7 +1850,7 @@ void haConfig() {
       "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
   haConfig["curr_temp_t"] = config.mqtt.ha_state_topic();
-  // NOLINTNEXTLINE(misc-const-correctness)
+
   const String curr_temp_tpl_str =
       String(F("{{ value_json.roomTemperature if (value_json is defined and "
                "value_json.roomTemperature is defined and "
@@ -1921,7 +1921,7 @@ void haConfig() {
         "(value_json is defined "
         "and value_json.compressorFrequency is defined) else '-1' } | tojson }}");
 
-  String mqttOutput;  // NOLINT(misc-const-correctness)
+  String mqttOutput;
   serializeJson(haConfig, mqttOutput);
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);
