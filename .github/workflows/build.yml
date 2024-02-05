@@ -38,11 +38,14 @@ jobs:
         run: pip install --upgrade platformio
 
       - name: Build ${{ matrix.platform }}
+        id: build
         run: |
           pio run -e ${{ matrix.platform }}
+          echo "FIRMWARE_PATH=$(ls .pio/build/${{ matrix.platform }}/mitsubishi2mqtt-${{ matrix.platform }}-*.bin)" >> $GITHUB_OUTPUT
+          echo "FIRMWARE_NAME=$(basename $(ls .pio/build/${{ matrix.platform }}/mitsubishi2mqtt-${{ matrix.platform }}-*.bin))" >> $GITHUB_OUTPUT
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: mitsubishi2MQTT_${{ matrix.platform }}.bin
-          path: .pio/build/${{ matrix.platform }}/mitsubishi2mqtt-${{ matrix.platform }}-*.bin
+          name: ${{ steps.build.outputs.FIRMWARE_NAME }}
+          path: ${{ steps.build.outputs.FIRMWARE_PATH }}
