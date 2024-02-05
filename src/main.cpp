@@ -282,9 +282,6 @@ unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
 uint64_t lastRemoteTemp;
 
-// Local state
-JsonDocument rootInfo;
-
 // Web OTA
 enum UploadError {
   noError = 0,
@@ -411,22 +408,7 @@ void setup() {
     hp.enableAutoUpdate();
     hp.connect(&Serial);
 
-    // TODO(floatplane) not sure this is necessary, we're not using it in setup, and we'll reload in
-    // loop()
-    const heatpumpStatus currentStatus = hp.getStatus();
-    const HeatpumpSettings currentSettings(hp.getSettings());
-    rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.unit.useFahrenheit);
-    rootInfo["temperature"] =
-        convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
-    rootInfo["fan"] = currentSettings.fan;
-    rootInfo["vane"] = currentSettings.vane;
-    rootInfo["wideVane"] = currentSettings.wideVane;
-    rootInfo["mode"] = hpGetMode(currentSettings);
-    rootInfo["action"] = hpGetAction(currentStatus, currentSettings);
-    rootInfo["compressorFrequency"] = currentStatus.compressorFrequency;
     lastTempSend = millis();
-    // END TODO
   } else {
     dnsServer.start(DNS_PORT, "*", apIP);
     initCaptivePortal();
@@ -517,7 +499,7 @@ void loadOthers() {
 }
 
 void saveMqtt(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["mqtt_fn"] = config.mqtt.friendlyName;
   doc["mqtt_host"] = config.mqtt.server;
   doc["mqtt_port"] = String(config.mqtt.port);
@@ -528,7 +510,7 @@ void saveMqtt(const Config &config) {
 }
 
 void saveUnit(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["unit_tempUnit"] = config.unit.useFahrenheit ? "fah" : "cel";
   doc["min_temp"] = String(config.unit.minTempCelsius);
   doc["max_temp"] = String(config.unit.maxTempCelsius);
@@ -539,7 +521,7 @@ void saveUnit(const Config &config) {
 }
 
 void saveWifi(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["ap_ssid"] = config.network.accessPointSsid;
   doc["ap_pwd"] = config.network.accessPointPassword;
   doc["hostname"] = config.network.hostname;
@@ -548,7 +530,7 @@ void saveWifi(const Config &config) {
 }
 
 void saveOthers(const Config &config) {
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc["haa"] = config.other.haAutodiscovery ? "ON" : "OFF";
   doc["haat"] = config.other.haAutodiscoveryTopic;
   doc["debugPckts"] = config.other.dumpPacketsToMqtt ? "ON" : "OFF";
@@ -1194,7 +1176,7 @@ void handleMetrics() {
 void handleMetricsJson() {
   LOG(F("handleMetricsJson()"));
 
-  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  JsonDocument doc;
   doc[F("hostname")] = config.network.hostname;
   doc[F("version")] = BUILD_DATE;
   doc[F("git_hash")] = COMMIT_HASH;
@@ -1229,7 +1211,7 @@ void handleMetricsJson() {
     settings[F("wideVane")] = currentSettings.wideVane;
   }
 
-  String response;  // NOLINT(misc-const-correctness)
+  String response;
   serializeJsonPretty(doc, response);
   server.send(HttpStatusCodes::httpOk, F("application/json"), response);
 }
@@ -1319,7 +1301,7 @@ void handleUploadDone() {
   // Serial.printl(PSTR("HTTP: Firmware upload done"));
   bool restartflag = false;
   String uploadDonePage = FPSTR(html_page_upload);
-  // NOLINTNEXTLINE(misc-const-correctness)
+
   String content = F("<div style='text-align:center;'><b>Upload ");
   if (uploaderror != UploadError::noError) {
     content += F("<span style='color:#d43535'>failed</span></b><br/><br/>");
@@ -1481,24 +1463,33 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
   return newSettings;
 }
 
-void readHeatPumpSettings() {
+JsonDocument getHeatPumpStatusJson() {
+  const heatpumpStatus currentStatus = hp.getStatus();
   const HeatpumpSettings currentSettings(hp.getSettings());
 
-  rootInfo.clear();
-  rootInfo["temperature"] =
+  JsonDocument doc;
+
+  doc["operating"] = currentStatus.operating;
+  doc["roomTemperature"] =
+      convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.unit.useFahrenheit);
+  doc["temperature"] =
       convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
-  rootInfo["fan"] = currentSettings.fan;
-  rootInfo["vane"] = currentSettings.vane;
-  rootInfo["wideVane"] = currentSettings.wideVane;
-  rootInfo["mode"] = hpGetMode(currentSettings);
+  doc["fan"] = currentSettings.fan;
+  doc["vane"] = currentSettings.vane;
+  doc["wideVane"] = currentSettings.wideVane;
+  doc["mode"] = hpGetMode(currentSettings);
+  doc["action"] = hpGetAction(currentStatus, currentSettings);
+  doc["compressorFrequency"] = currentStatus.compressorFrequency;
+
+  return doc;
 }
 
 void hpSettingsChanged() {
   // send room temp, operating info and all information
-  readHeatPumpSettings();
+  JsonDocument status(getHeatPumpStatusJson());
 
-  String mqttOutput;  // NOLINT(misc-const-correctness)
-  serializeJson(rootInfo, mqttOutput);
+  String mqttOutput;
+  serializeJson(status, mqttOutput);
 
   if (!mqtt_client.publish(config.mqtt.ha_settings_topic().c_str(), mqttOutput.c_str(), true)) {
     LOG(F("Failed to publish hp settings"));
@@ -1559,33 +1550,21 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
   return hpmode;  // unknown
 }
 
-void hpStatusChanged(heatpumpStatus newStatus) {
+void hpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS
                                                                // (millis rollover tolerant)
     hpCheckRemoteTemp();  // if the remote temperature feed from mqtt is stale,
                           // disable it and revert to the internal thermometer.
 
-    // send room temp, operating info and all information
-    HeatpumpSettings const currentSettings(hp.getSettings());
+    // TODO(floatplane): what? why?
+    // if (newStatus.roomTemperature == 0) {
+    //   return;
+    // }
+    JsonDocument status(getHeatPumpStatusJson());
 
-    if (newStatus.roomTemperature == 0) {
-      return;
-    }
-
-    rootInfo.clear();
-    rootInfo["roomTemperature"] =
-        convertCelsiusToLocalUnit(newStatus.roomTemperature, config.unit.useFahrenheit);
-    rootInfo["temperature"] =
-        convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
-    rootInfo["fan"] = currentSettings.fan;
-    rootInfo["vane"] = currentSettings.vane;
-    rootInfo["wideVane"] = currentSettings.wideVane;
-    rootInfo["mode"] = hpGetMode(currentSettings);
-    rootInfo["action"] = hpGetAction(newStatus, currentSettings);
-    rootInfo["compressorFrequency"] = newStatus.compressorFrequency;
-    String mqttOutput;  // NOLINT(misc-const-correctness)
-    serializeJson(rootInfo, mqttOutput);
+    String mqttOutput;
+    serializeJson(status, mqttOutput);
 
     if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
       LOG(F("Failed to publish hp status change"));
@@ -1612,7 +1591,7 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
   // packetDirection should have been declared as const char *, but since hpPacketDebug is a
   // callback function, it can't be.  So we'll just have to be careful not to modify it.
   if (config.other.dumpPacketsToMqtt) {
-    String message;  // NOLINT(misc-const-correctness)
+    String message;
     for (unsigned int idx = 0; idx < length; idx++) {
       if (packet[idx] < 16) {
         message += "0";  // pad single hex digits with a 0
@@ -1620,10 +1599,10 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
       message += String(packet[idx], HEX) + " ";
     }
 
-    JsonDocument root;  // NOLINT(misc-const-correctness)
+    JsonDocument root;
 
     root[packetDirection] = message;
-    String mqttOutput;  // NOLINT(misc-const-correctness)
+    String mqttOutput;
     serializeJson(root, mqttOutput);
     if (!mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str())) {
       mqtt_client.publish(config.mqtt.ha_debug_logs_topic().c_str(),
@@ -1632,11 +1611,16 @@ void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
   }
 }
 
-// Used to send a dummy packet in state topic to validate action in HA interface
-// HA change GUI appareance before having a valid state from the unit
-void hpSendLocalState() {
-  String mqttOutput;  // NOLINT(misc-const-correctness)
-  serializeJson(rootInfo, mqttOutput);
+// This is used to send an optimistic state update to MQTT, which in turn causes the Home Assistant
+// UI to update without waiting to apply a setting and read it back.
+void publishOptimisticStateChange(JsonDocument &override) {
+  JsonDocument status(getHeatPumpStatusJson());
+  auto override2 = override.as<JsonObject>();
+  for (auto pair : override2) {
+    status[pair.key()] = pair.value();
+  }
+  String mqttOutput;
+  serializeJson(status, mqttOutput);
   mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str(), false);
   if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
     LOG(F("Failed to publish dummy hp status change"));
@@ -1736,24 +1720,28 @@ void onSetRemoteTemp(const char *message) {
 }
 
 void onSetWideVane(const char *message) {
-  rootInfo["wideVane"] = String(message);
-  hpSendLocalState();
+  JsonDocument stateOverride;
+  stateOverride["wideVane"] = String(message);
+  publishOptimisticStateChange(stateOverride);
   hp.setWideVaneSetting(message);
 }
 
 void onSetVane(const char *message) {
-  rootInfo["vane"] = String(message);
-  hpSendLocalState();
+  JsonDocument stateOverride;
+  stateOverride["vane"] = String(message);
+  publishOptimisticStateChange(stateOverride);
   hp.setVaneSetting(message);
 }
 
 void onSetFan(const char *message) {
-  rootInfo["fan"] = String(message);
-  hpSendLocalState();
+  JsonDocument stateOverride;
+  stateOverride["fan"] = String(message);
+  publishOptimisticStateChange(stateOverride);
   hp.setFanSpeed(message);
 }
 
 void onSetTemp(const char *message) {
+  JsonDocument stateOverride;
   const float temperature = strtof(message, NULL);
   const float minTemp = config.unit.minTempCelsius;
   const float maxTemp = config.unit.maxTempCelsius;
@@ -1761,45 +1749,47 @@ void onSetTemp(const char *message) {
   float temperature_c = convertLocalUnitToCelsius(temperature, config.unit.useFahrenheit);
   if (temperature_c < minTemp || temperature_c > maxTemp) {
     temperature_c = (minTemp + maxTemp) / 2.0F;
-    rootInfo["temperature"] = convertCelsiusToLocalUnit(temperature_c, config.unit.useFahrenheit);
+    stateOverride["temperature"] =
+        convertCelsiusToLocalUnit(temperature_c, config.unit.useFahrenheit);
   } else {
-    rootInfo["temperature"] = temperature;
+    stateOverride["temperature"] = temperature;
   }
-  hpSendLocalState();
+  publishOptimisticStateChange(stateOverride);
   hp.setTemperature(temperature_c);
 }
 
 void onSetMode(const char *message) {
+  JsonDocument stateOverride;
   String modeUpper = message;
   modeUpper.toUpperCase();
   if (modeUpper == "OFF") {
-    rootInfo["mode"] = "off";
-    rootInfo["action"] = "off";
-    hpSendLocalState();
+    stateOverride["mode"] = "off";
+    stateOverride["action"] = "off";
+    publishOptimisticStateChange(stateOverride);
     hp.setPowerSetting("OFF");
   } else {
     if (modeUpper == "HEAT_COOL") {
-      rootInfo["mode"] = "heat_cool";
-      rootInfo["action"] = "idle";
+      stateOverride["mode"] = "heat_cool";
+      stateOverride["action"] = "idle";
       modeUpper = "AUTO";
       // NOLINTNEXTLINE(bugprone-branch-clone) why is the next branch getting flagged as a clone?
     } else if (modeUpper == "HEAT") {
-      rootInfo["mode"] = "heat";
-      rootInfo["action"] = "heating";
+      stateOverride["mode"] = "heat";
+      stateOverride["action"] = "heating";
     } else if (modeUpper == "COOL") {
-      rootInfo["mode"] = "cool";
-      rootInfo["action"] = "cooling";
+      stateOverride["mode"] = "cool";
+      stateOverride["action"] = "cooling";
     } else if (modeUpper == "DRY") {
-      rootInfo["mode"] = "dry";
-      rootInfo["action"] = "drying";
+      stateOverride["mode"] = "dry";
+      stateOverride["action"] = "drying";
     } else if (modeUpper == "FAN_ONLY") {
-      rootInfo["mode"] = "fan_only";
-      rootInfo["action"] = "fan";
+      stateOverride["mode"] = "fan_only";
+      stateOverride["action"] = "fan";
       modeUpper = "FAN";
     } else {
       return;
     }
-    hpSendLocalState();
+    publishOptimisticStateChange(stateOverride);
     hp.setPowerSetting("ON");
     hp.setModeSetting(modeUpper.c_str());
   }
@@ -1808,7 +1798,7 @@ void onSetMode(const char *message) {
 void haConfig() {
   // send HA config packet
   // setup HA payload device
-  JsonDocument haConfig;  // NOLINT(misc-const-correctness)
+  JsonDocument haConfig;
 
   haConfig["name"] = config.network.hostname;
   haConfig["unique_id"] = getId();
@@ -1836,8 +1826,8 @@ void haConfig() {
       config.mqtt.ha_availability_topic();              // MQTT last will (status) messages topic
   haConfig["pl_not_avail"] = mqtt_payload_unavailable;  // MQTT offline message payload
   haConfig["pl_avail"] = mqtt_payload_available;        // MQTT online message payload
+
   // Set default value for fix "Could not parse data for HA"
-  // NOLINTNEXTLINE(misc-const-correctness)
   String temp_stat_tpl_str =
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
@@ -1860,7 +1850,7 @@ void haConfig() {
       "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
   haConfig["curr_temp_t"] = config.mqtt.ha_state_topic();
-  // NOLINTNEXTLINE(misc-const-correctness)
+
   const String curr_temp_tpl_str =
       String(F("{{ value_json.roomTemperature if (value_json is defined and "
                "value_json.roomTemperature is defined and "
@@ -1931,7 +1921,7 @@ void haConfig() {
         "(value_json is defined "
         "and value_json.compressorFrequency is defined) else '-1' } | tojson }}");
 
-  String mqttOutput;  // NOLINT(misc-const-correctness)
+  String mqttOutput;
   serializeJson(haConfig, mqttOutput);
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);
