@@ -1211,22 +1211,22 @@ void handleMetricsJson() {
   if (hp.isConnected()) {
     const heatpumpStatus currentStatus = hp.getStatus();
     auto status = heatpump[F("status")].to<JsonObject>();
-    status[F("operating")] = currentStatus.operating;
-    status[F("roomTemperature")] = currentStatus.roomTemperature;
-    status[F("roomTemperature_F")] = convertCelsiusToLocalUnit(currentStatus.roomTemperature, true);
     status[F("compressorFrequency")] = currentStatus.compressorFrequency;
+    status[F("operating")] = currentStatus.operating;
+    status[F("roomTemperature_F")] = convertCelsiusToLocalUnit(currentStatus.roomTemperature, true);
+    status[F("roomTemperature")] = currentStatus.roomTemperature;
 
     const HeatpumpSettings currentSettings(hp.getSettings());
     auto settings = heatpump[F("settings")].to<JsonObject>();
-    settings[F("power")] = currentSettings.power;
-    settings[F("temperature")] = currentSettings.temperature;
-    settings[F("temperature_F")] = convertCelsiusToLocalUnit(currentSettings.temperature, true);
+    settings[F("connected")] = currentSettings.connected;
     settings[F("fan")] = currentSettings.fan;
+    settings[F("iSee")] = currentSettings.iSee;
+    settings[F("mode")] = currentSettings.mode;
+    settings[F("power")] = currentSettings.power;
+    settings[F("temperature_F")] = convertCelsiusToLocalUnit(currentSettings.temperature, true);
+    settings[F("temperature")] = currentSettings.temperature;
     settings[F("vane")] = currentSettings.vane;
     settings[F("wideVane")] = currentSettings.wideVane;
-    settings[F("mode")] = currentSettings.mode;
-    settings[F("iSee")] = currentSettings.iSee;
-    settings[F("connected")] = currentSettings.connected;
   }
 
   String response;
