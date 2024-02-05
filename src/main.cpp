@@ -369,6 +369,7 @@ void setup() {
     server.on(F("/status"), handleStatus);
     server.on(F("/others"), handleOthers);
     server.on(F("/metrics"), handleMetrics);
+    server.on(F("/metrics.json"), handleMetricsJson);
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
       server.on(F("/login"), handleLogin);
@@ -1188,6 +1189,49 @@ void handleMetrics() {
   metrics.replace("_OPER_", String(currentStatus.operating ? 1 : 0));
   metrics.replace("_COMPFREQ_", String(currentStatus.compressorFrequency));
   server.send(HttpStatusCodes::httpOk, F("text/plain"), metrics);
+}
+
+void handleMetricsJson() {
+  LOG(F("handleMetricsJson()"));
+
+  JsonDocument doc;  // NOLINT(misc-const-correctness)
+  doc[F("hostname")] = config.network.hostname;
+  doc[F("version")] = BUILD_DATE;
+  doc[F("git_hash")] = COMMIT_HASH;
+
+  // auto mallocStats = mallinfo();
+  // doc[F("memory")] = JsonObject();
+  // doc[F("memory")][F("free")] = mallocStats.fordblks;
+  // doc[F("memory")][F("used")] = mallocStats.uordblks;
+  // doc[F("memory")][F("percent")] = mallocStats.uordblks / (mallocStats.uordblks +
+  // mallocStats.fordblks);
+
+  auto heatpump = doc[F("heatpump")].to<JsonObject>();
+  heatpump[F("connected")] = hp.isConnected();
+  if (hp.isConnected()) {
+    const heatpumpStatus currentStatus = hp.getStatus();
+    auto status = heatpump[F("status")].to<JsonObject>();
+    status[F("compressorFrequency")] = currentStatus.compressorFrequency;
+    status[F("operating")] = currentStatus.operating;
+    status[F("roomTemperature_F")] = convertCelsiusToLocalUnit(currentStatus.roomTemperature, true);
+    status[F("roomTemperature")] = currentStatus.roomTemperature;
+
+    const HeatpumpSettings currentSettings(hp.getSettings());
+    auto settings = heatpump[F("settings")].to<JsonObject>();
+    settings[F("connected")] = currentSettings.connected;
+    settings[F("fan")] = currentSettings.fan;
+    settings[F("iSee")] = currentSettings.iSee;
+    settings[F("mode")] = currentSettings.mode;
+    settings[F("power")] = currentSettings.power;
+    settings[F("temperature_F")] = convertCelsiusToLocalUnit(currentSettings.temperature, true);
+    settings[F("temperature")] = currentSettings.temperature;
+    settings[F("vane")] = currentSettings.vane;
+    settings[F("wideVane")] = currentSettings.wideVane;
+  }
+
+  String response;  // NOLINT(misc-const-correctness)
+  serializeJsonPretty(doc, response);
+  server.send(HttpStatusCodes::httpOk, F("application/json"), response);
 }
 
 // login page, also called for logout
