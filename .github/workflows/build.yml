@@ -40,10 +40,9 @@ jobs:
       - name: Build ${{ matrix.platform }}
         run: |
           pio run -e ${{ matrix.platform }}
-          mv .pio/build/${{ matrix.platform }}/firmware.bin mitsubishi2MQTT_${{ matrix.platform }}.bin
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: mitsubishi2MQTT_${{ matrix.platform }}.bin
-          path: mitsubishi2MQTT_${{ matrix.platform }}.bin
+          path: .pio/build/${{ matrix.platform }}/mitsubishi2mqtt-${{ matrix.platform }}-*.bin
