@@ -15,6 +15,16 @@ TEST_CASE("testing contentLength with string substitution") {
   CHECK(Template("{{name}} is a name").contentLength(values) == 20);
   CHECK(Template("a name is {{name}}").contentLength(values) == 20);
   CHECK(Template("a name is {{name}} is a name").contentLength(values) == 30);
+  CHECK(Template("test: {{name}} == {{name}} is true").contentLength(values) == 38);
+}
+
+TEST_CASE("testing contentLength with missing values") {
+  ArduinoJson::JsonDocument values;
+  CHECK(Template("{{name}}").contentLength(values) == 0);
+  CHECK(Template("{{name}} is a name").contentLength(values) == 10);
+  CHECK(Template("a name is {{name}}").contentLength(values) == 10);
+  CHECK(Template("a name is {{name}} is a name").contentLength(values) == 20);
+  CHECK(Template("test: {{name}} == {{name}} is true").contentLength(values) == 18);
 }
 
 int main(int argc, char **argv) {

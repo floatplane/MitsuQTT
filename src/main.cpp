@@ -37,6 +37,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include <map>
 #include <temperature.hpp>
+#include <template.hpp>
 
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
