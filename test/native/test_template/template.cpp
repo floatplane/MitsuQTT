@@ -14,7 +14,7 @@ TEST_CASE("testing render with no substitutions") {
 
 TEST_CASE("testing render with string substitution") {
   StringDataMap values;
-  values["name"] = "floatplane";
+  values.insert({"name", "floatplane"});
   CHECK(StringTemplate("{{name}}").render(values) == "floatplane");
   CHECK(StringTemplate("{{name}} is a name").render(values) == "floatplane is a name");
   CHECK(StringTemplate("a name is {{name}}").render(values) == "a name is floatplane");
@@ -36,8 +36,8 @@ TEST_CASE("testing render with missing values") {
 
 TEST_CASE("testing render with malformed values") {
   StringDataMap values;
-  values["name"] = "floatplane";
-  values["  name  "] = "Brian";
+  values.insert({"name", "floatplane"});
+  values.insert({"  name  ", "Brian"});
   CHECK(StringTemplate("{{tag is unclosed at start!").render(values) == "");
   CHECK(StringTemplate("tag is unclosed at end!{{").render(values) == "tag is unclosed at end!");
   CHECK(StringTemplate("tag is unclosed {{in middle").render(values) == "tag is unclosed ");

@@ -1,35 +1,41 @@
 
 #include <cassert>
-#include <unordered_map>
 #include <vector>
 
 template <typename StringType>
 class Template {
  public:
-  typedef std::unordered_map<StringType, StringType> DataMap;
+  struct DataMap {
+    std::vector<std::pair<StringType, StringType>> data;
+    StringType emptyString;
+    DataMap() = default;
+    DataMap(std::initializer_list<std::pair<StringType, StringType>> list) : data(list){};
+    void insert(const std::pair<StringType, StringType>& pair) {
+      data.push_back(pair);
+    }
+    const StringType& at(const StringType& key) const {
+      for (const auto& pair : data) {
+        if (pair.first == key) {
+          return pair.second;
+        }
+      }
+      return emptyString;
+    }
+  };
 
   Template(const StringType& templateContents) : templateContents(templateContents){};
 
   StringType render(const DataMap& data) const {
     StringType result;
-    std::unordered_map<StringType, StringType> tokenCache;
     const char* t = this->templateContents.c_str();
     while (*t != '\0') {
       const char* nextToken = strstr(t, "{{");
       if (nextToken) {
-        result += StringType(t, nextToken - t);
+        result += constructStringType(t, nextToken - t);
         // get the name of the token
         const auto parsedToken = parseTokenAtPoint(nextToken);
         const StringType tokenName = parsedToken.first;
-        // check if we've already rendered this token
-        const auto cacheIter = tokenCache.find(tokenName);
-        if (cacheIter != tokenCache.end()) {
-          result += cacheIter->second;
-        } else {
-          const StringType renderedToken = renderToken(data, tokenName);
-          result += renderedToken;
-          tokenCache[tokenName] = renderedToken;
-        }
+        result += data.at(tokenName);
         // set t to the end of the token (accounting for the "}}" characters)
         t = parsedToken.second;
       } else {
@@ -48,14 +54,6 @@ class Template {
  private:
   StringType templateContents;
 
-  StringType renderToken(const DataMap& data, const StringType& tokenName) const {
-    const auto iter = data.find(tokenName);
-    if (iter == data.end()) {
-      return StringType();
-    }
-    return iter->second;
-  }
-
   // Given a const char * at the start of a token sequence "{{", extract the token name and return a
   // pair of the token name and the const char * at the end of the token sequence
   std::pair<StringType, const char*> parseTokenAtPoint(const char* tokenStart) const {
@@ -68,6 +66,27 @@ class Template {
       return std::make_pair(StringType(), tokenStart + strlen(tokenStart));
     }
     const auto tokenLength = tokenEnd - tokenStart;
-    return std::make_pair(StringType(tokenStart, tokenLength), tokenEnd + 2);
+    return std::make_pair(constructStringType(tokenStart, tokenLength), tokenEnd + 2);
+  }
+
+  static StringType constructStringType(const char* cString, size_t length) {
+    return StringType(cString, length);
   }
 };
+
+#ifdef String_class_h  // Arduino String class is defined
+template <>
+String Template<String>::constructStringType(const char* cString, size_t length) {
+  auto result = String();
+  result.concat(cString, length);
+  return result;
+}
+namespace std {
+template <>
+struct hash<String> {
+  size_t operator()(const String& s) const {
+    return std::hash<const char*>()(s.c_str());
+  }
+};
+};  // namespace std
+#endif

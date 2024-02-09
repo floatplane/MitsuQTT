@@ -1154,19 +1154,22 @@ void handleMetrics() {
     hpmode = "-2";
   }
 
-  metrics.replace("_UNIT_NAME_", config.network.hostname);
-  metrics.replace("_VERSION_", BUILD_DATE);
-  metrics.replace("_GIT_HASH_", COMMIT_HASH);
-  metrics.replace("_POWER_", hppower);
-  metrics.replace("_ROOMTEMP_", currentStatus.roomTemperature.toString(TempUnit::C));
-  metrics.replace("_TEMP_", currentSettings.temperature.toString(TempUnit::C));
-  metrics.replace("_FAN_", hpfan);
-  metrics.replace("_VANE_", hpvane);
-  metrics.replace("_WIDEVANE_", hpwidevane);
-  metrics.replace("_MODE_", hpmode);
-  metrics.replace("_OPER_", String(currentStatus.operating ? 1 : 0));
-  metrics.replace("_COMPFREQ_", String(currentStatus.compressorFrequency));
-  server.send(HttpStatusCodes::httpOk, F("text/plain"), metrics);
+  Template<String> metricsTemplate(metrics);
+  server.send(HttpStatusCodes::httpOk, F("text/plain"),
+              metricsTemplate.render({
+                  {"unit_name", config.network.hostname},
+                  {"version", BUILD_DATE},
+                  {"git_hash", COMMIT_HASH},
+                  {"power", hppower},
+                  {"roomtemp", currentStatus.roomTemperature.toString(TempUnit::C)},
+                  {"temp", currentSettings.temperature.toString(TempUnit::C)},
+                  {"fan", hpfan},
+                  {"vane", hpvane},
+                  {"widevane", hpwidevane},
+                  {"mode", hpmode},
+                  {"oper", String(currentStatus.operating ? 1 : 0)},
+                  {"compfreq", String(currentStatus.compressorFrequency)},
+              }));
 }
 
 void handleMetricsJson() {

@@ -19,32 +19,32 @@
 const char html_metrics[] PROGMEM = R"====(
 # HELP mitsubishi2mqtt_version Mitsubishi2MQTT version
 # TYPE mitsubishi2mqtt_version gauge
-mitsubishi2mqtt_version{hostname="_UNIT_NAME_",version="_VERSION_"} 1
+mitsubishi2mqtt_version{hostname="{{unit_name}}",version="{{version}}"} 1
 # HELP mitsubishi_power Heat pump power setting
 # TYPE mitsubishi_power gauge
-mitsubishi_power{hostname="_UNIT_NAME_"} _POWER_
+mitsubishi_power{hostname="{{unit_name}}"} {{power}}
 # HELP mitsubishi_temperature_room_celsius Current room temperature
 # TYPE mitsubishi_temperature_room_celsius gauge
-mitsubishi_temperature_room_celsius{hostname="_UNIT_NAME_"} _ROOMTEMP_
+mitsubishi_temperature_room_celsius{hostname="{{unit_name}}"} {{roomtemp}}
 # HELP mitsubishi_temperature_target_celsius Target room temperature
 # TYPE mitsubishi_temperature_target_celsius gauge
-mitsubishi_temperature_target_celsius{hostname="_UNIT_NAME_"} _TEMP_
+mitsubishi_temperature_target_celsius{hostname="{{unit_name}}"} {{temp}}
 # HELP mitsubishi_fan_speed Heat pump fan speed
 # TYPE mitsubishi_fan_speed gauge
-mitsubishi_fan_speed{hostname="_UNIT_NAME_"} _FAN_
+mitsubishi_fan_speed{hostname="{{unit_name}}"} {{fan}}
 # HELP mitsubishi_vane Heat pump vane setting
 # TYPE mitsubishi_vane gauge
-mitsubishi_vane{hostname="_UNIT_NAME_"} _VANE_
+mitsubishi_vane{hostname="{{unit_name}}"} {{vane}}
 # HELP mitsubishi_widevane Heat pump wide vane setting
 # TYPE mitsubishi_widevane gauge
-mitsubishi_widevane{hostname="_UNIT_NAME_"} _WIDEVANE_
+mitsubishi_widevane{hostname="{{unit_name}}"} {{widevane}}
 # HELP mitsubishi_mode Heat pump operating mode
 # TYPE mitsubishi_mode gauge
-mitsubishi_mode{hostname="_UNIT_NAME_"} _MODE_
+mitsubishi_mode{hostname="{{unit_name}}"} {{mode}}
 # HELP mitsubishi_operating Heat pump operational status
 # TYPE mitsubishi_operating gauge
-mitsubishi_operating{hostname="_UNIT_NAME_"} _OPER_
+mitsubishi_operating{hostname="{{unit_name}}"} {{oper}}
 # HELP mitsubishi_compressor_frequency Heat pump compressor frequency
 # TYPE mitsubishi_compressor_frequency gauge
-mitsubishi_compressor_frequency{hostname="_UNIT_NAME_"} _COMPFREQ_
+mitsubishi_compressor_frequency{hostname="{{unit_name}}"} {{compfreq}}
 )====";
