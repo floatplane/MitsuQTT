@@ -1,67 +1,73 @@
-#include <ArduinoJson.h>
 
 #include <cassert>
+#include <unordered_map>
+#include <vector>
 
-template <typename CharPtr = const char*>
+template <typename StringType>
 class Template {
  public:
-  Template(CharPtr templateContents) : templateContents(templateContents){};
+  typedef std::unordered_map<StringType, StringType> DataMap;
 
-  template <typename Destination>
-  Destination render(const ArduinoJson::JsonDocument& data) const {
-    const auto length = this->contentLength(data);
-    // TODO: not actually rendering yet
-    Destination result;
-    serializeJson(data, result);
-    return result;
-  }
+  Template(const StringType& templateContents) : templateContents(templateContents){};
 
-  size_t contentLength(const ArduinoJson::JsonDocument& data) const {
-    auto t = this->templateContents;
-    size_t length = 0;
+  StringType render(const DataMap& data) const {
+    StringType result;
+    std::unordered_map<StringType, StringType> tokenCache;
+    const char* t = this->templateContents.c_str();
     while (*t != '\0') {
-      const auto nextToken = strstr(t, "{{");
+      const char* nextToken = strstr(t, "{{");
       if (nextToken) {
-        length += nextToken - t;
+        result += StringType(t, nextToken - t);
         // get the name of the token
         const auto parsedToken = parseTokenAtPoint(nextToken);
-        const auto tokenName = parsedToken.first;
-        // figure out the length of the token, rendered
-        const auto renderedSize = renderToken(data, tokenName).size();
-        // add the token length to the total length
-        length += renderedSize;
+        const StringType tokenName = parsedToken.first;
+        // check if we've already rendered this token
+        const auto cacheIter = tokenCache.find(tokenName);
+        if (cacheIter != tokenCache.end()) {
+          result += cacheIter->second;
+        } else {
+          const StringType renderedToken = renderToken(data, tokenName);
+          result += renderedToken;
+          tokenCache[tokenName] = renderedToken;
+        }
         // set t to the end of the token (accounting for the "}}" characters)
         t = parsedToken.second;
       } else {
-        length += strlen(t);
+        result += t;
         break;
       }
     }
-    return length;
+    return result;
+  }
+
+  size_t contentLength(const DataMap& data) const {
+    const auto rendered = render(data);
+    return rendered.size();
   }
 
  private:
-  CharPtr templateContents;
+  StringType templateContents;
 
-  static std::string renderToken(const ArduinoJson::JsonDocument& data,
-                                 const std::string& tokenName) {
-    const auto variant = data[tokenName];
-    if (variant.is<const char*>()) {
-      return std::string(variant.as<const char*>());
-    } else {
-      return std::string();
+  StringType renderToken(const DataMap& data, const StringType& tokenName) const {
+    const auto iter = data.find(tokenName);
+    if (iter == data.end()) {
+      return StringType();
     }
+    return iter->second;
   }
 
-  // Given a CharPtr at the start of a token sequence "{{", extract the token name and return a pair
-  // of the token name and the CharPtr at the end of the token sequence
-  static std::pair<std::string, CharPtr> parseTokenAtPoint(CharPtr tokenStart) {
+  // Given a const char * at the start of a token sequence "{{", extract the token name and return a
+  // pair of the token name and the const char * at the end of the token sequence
+  std::pair<StringType, const char*> parseTokenAtPoint(const char* tokenStart) const {
     assert(tokenStart[0] == '{' && tokenStart[1] == '{');
 
     // figure out the token name
     tokenStart += 2;
     const auto tokenEnd = strstr(tokenStart, "}}");
+    if (tokenEnd == nullptr) {
+      return std::make_pair(StringType(), tokenStart + strlen(tokenStart));
+    }
     const auto tokenLength = tokenEnd - tokenStart;
-    return std::make_pair(std::string(tokenStart, tokenLength), tokenEnd + 2);
+    return std::make_pair(StringType(tokenStart, tokenLength), tokenEnd + 2);
   }
 };

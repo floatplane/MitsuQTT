@@ -1,30 +1,51 @@
 #define DOCTEST_CONFIG_IMPLEMENT  // REQUIRED: Enable custom main()
 #include <doctest.h>
 
+#include <string>
 #include <template.hpp>
 
-TEST_CASE("testing contentLength with no substitutions") {
-  CHECK(Template("Hello, world!").contentLength(ArduinoJson::JsonDocument()) == 13);
-  CHECK(Template("").contentLength(ArduinoJson::JsonDocument()) == 0);
+typedef Template<std::string> StringTemplate;
+typedef StringTemplate::DataMap StringDataMap;
+
+TEST_CASE("testing render with no substitutions") {
+  CHECK(StringTemplate("Hello, world!").render({}) == "Hello, world!");
+  CHECK(StringTemplate("").render({}) == "");
 }
 
-TEST_CASE("testing contentLength with string substitution") {
-  ArduinoJson::JsonDocument values;
+TEST_CASE("testing render with string substitution") {
+  StringDataMap values;
   values["name"] = "floatplane";
-  CHECK(Template("{{name}}").contentLength(values) == 10);
-  CHECK(Template("{{name}} is a name").contentLength(values) == 20);
-  CHECK(Template("a name is {{name}}").contentLength(values) == 20);
-  CHECK(Template("a name is {{name}} is a name").contentLength(values) == 30);
-  CHECK(Template("test: {{name}} == {{name}} is true").contentLength(values) == 38);
+  CHECK(StringTemplate("{{name}}").render(values) == "floatplane");
+  CHECK(StringTemplate("{{name}} is a name").render(values) == "floatplane is a name");
+  CHECK(StringTemplate("a name is {{name}}").render(values) == "a name is floatplane");
+  CHECK(StringTemplate("a name is {{name}} is a name").render(values) ==
+        "a name is floatplane is a name");
+  CHECK(StringTemplate("test: {{name}} == {{name}} is true").render(values) ==
+        "test: floatplane == floatplane is true");
 }
 
-TEST_CASE("testing contentLength with missing values") {
-  ArduinoJson::JsonDocument values;
-  CHECK(Template("{{name}}").contentLength(values) == 0);
-  CHECK(Template("{{name}} is a name").contentLength(values) == 10);
-  CHECK(Template("a name is {{name}}").contentLength(values) == 10);
-  CHECK(Template("a name is {{name}} is a name").contentLength(values) == 20);
-  CHECK(Template("test: {{name}} == {{name}} is true").contentLength(values) == 18);
+TEST_CASE("testing render with missing values") {
+  StringDataMap values;
+  CHECK(StringTemplate("{{name}}").render(values) == "");
+  CHECK(StringTemplate("{{name}} is a name").render(values) == " is a name");
+  CHECK(StringTemplate("a name is {{name}}").render(values) == "a name is ");
+  CHECK(StringTemplate("a name is {{name}} is a name").render(values) == "a name is  is a name");
+  CHECK(StringTemplate("test: {{name}} == {{name}} is true").render(values) ==
+        "test:  ==  is true");
+}
+
+TEST_CASE("testing render with malformed values") {
+  StringDataMap values;
+  values["name"] = "floatplane";
+  values["  name  "] = "Brian";
+  CHECK(StringTemplate("{{tag is unclosed at start!").render(values) == "");
+  CHECK(StringTemplate("tag is unclosed at end!{{").render(values) == "tag is unclosed at end!");
+  CHECK(StringTemplate("tag is unclosed {{in middle").render(values) == "tag is unclosed ");
+  CHECK(StringTemplate("Hello, {{name!").render(values) == "Hello, ");
+  CHECK(StringTemplate("Hello, {{ name}}!").render(values) == "Hello, !");
+  CHECK(StringTemplate("Hello, {{ name}}!").render(values) == "Hello, !");
+  CHECK(StringTemplate("Hello, {{  name  }}!").render(values) == "Hello, Brian!");
+  CHECK(StringTemplate("Hello, {name}}{{name}}!").render(values) == "Hello, {name}}floatplane!");
 }
 
 int main(int argc, char **argv) {
