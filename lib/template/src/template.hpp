@@ -14,32 +14,33 @@ class Template {
       data.push_back(pair);
     }
     const StringType& at(const StringType& key) const {
-      for (const auto& pair : data) {
-        if (pair.first == key) {
-          return pair.second;
-        }
+      const auto pair = std::find_if(
+          data.begin(), data.end(),
+          [&key](const std::pair<StringType, StringType>& pair) { return pair.first == key; });
+      if (pair != data.end()) {
+        return pair->second;
       }
       return emptyString;
     }
   };
 
-  Template(const StringType& templateContents) : templateContents(templateContents){};
+  explicit Template(const StringType& templateContents) : templateContents(templateContents){};
 
   StringType render(const DataMap& data) const {
     StringType result;
-    const char* t = this->templateContents.c_str();
-    while (*t != '\0') {
-      const char* nextToken = strstr(t, "{{");
-      if (nextToken) {
-        result += constructStringType(t, nextToken - t);
+    const char* currentLocation = this->templateContents.c_str();
+    while (*currentLocation != '\0') {
+      const char* nextToken = strstr(currentLocation, "{{");
+      if (nextToken != nullptr) {
+        result += constructStringOfLength(currentLocation, nextToken - currentLocation);
         // get the name of the token
         const auto parsedToken = parseTokenAtPoint(nextToken);
         const StringType tokenName = parsedToken.first;
         result += data.at(tokenName);
-        // set t to the end of the token (accounting for the "}}" characters)
-        t = parsedToken.second;
+        // set currentLocation to the end of the token (accounting for the "}}" characters)
+        currentLocation = parsedToken.second;
       } else {
-        result += t;
+        result += currentLocation;
         break;
       }
     }
@@ -66,27 +67,19 @@ class Template {
       return std::make_pair(StringType(), tokenStart + strlen(tokenStart));
     }
     const auto tokenLength = tokenEnd - tokenStart;
-    return std::make_pair(constructStringType(tokenStart, tokenLength), tokenEnd + 2);
+    return std::make_pair(constructStringOfLength(tokenStart, tokenLength), tokenEnd + 2);
   }
 
-  static StringType constructStringType(const char* cString, size_t length) {
+  static StringType constructStringOfLength(const char* cString, size_t length) {
     return StringType(cString, length);
   }
 };
 
 #ifdef String_class_h  // Arduino String class is defined
 template <>
-String Template<String>::constructStringType(const char* cString, size_t length) {
+String Template<String>::constructStringOfLength(const char* cString, size_t length) {
   auto result = String();
   result.concat(cString, length);
   return result;
 }
-namespace std {
-template <>
-struct hash<String> {
-  size_t operator()(const String& s) const {
-    return std::hash<const char*>()(s.c_str());
-  }
-};
-};  // namespace std
 #endif
