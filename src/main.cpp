@@ -585,12 +585,15 @@ bool initWifi() {
 // Handler webserver response
 
 void sendWrappedHTML(const String &content) {
-  const String headerContent = FPSTR(html_common_header);
-  const String footerContent = FPSTR(html_common_footer);
-  String toSend = headerContent + content + footerContent;
-  toSend.replace(F("_UNIT_NAME_"), config.network.hostname);
-  toSend.replace(F("_VERSION_"), BUILD_DATE);
-  toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
+  const Template<String> headerContent(FPSTR(html_common_header));
+  const Template<String> footerContent(FPSTR(html_common_footer));
+  const Template<String>::DataMap data = {
+      {"unit_name", config.network.hostname},
+      {"version", BUILD_DATE},
+      {"git_hash", COMMIT_HASH},
+  };
+
+  String toSend = headerContent.render(data) + content + footerContent.render(data);
   server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
 }
 
