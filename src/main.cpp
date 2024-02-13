@@ -34,10 +34,9 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <DNSServer.h>     // DNS for captive portal
 #include <HeatPump.h>      // SwiCago library: https://github.com/SwiCago/HeatPump
 #include <PubSubClient.h>  // MQTT: PubSubClient 2.8.0
-#include <math.h>          // for rounding to Fahrenheit values
-// #include <Ticker.h>     // for LED status (Using a Wemos D1-Mini)
 
 #include <map>
+#include <temperature.hpp>
 
 #include "HeatpumpSettings.hpp"
 #include "filesystem.hpp"
@@ -76,6 +75,8 @@ const PROGMEM uint8_t blueLedPin = LED_BUILTIN;  // Onboard LED = digital pin 2 
                                                  // WEMOS D1-Mini)
 #endif
 const PROGMEM uint8_t redLedPin = 0;
+
+typedef Temperature::Unit TempUnit;
 
 struct Config {
   // Note: I'm being pretty blase about alignment and padding here, since there's only
@@ -121,13 +122,15 @@ struct Config {
 
   // Unit
   struct Unit {
-    bool useFahrenheit = false;
+    TempUnit tempUnit = TempUnit::C;
     // support heat mode settings, some model do not support heat mode
     bool supportHeatMode = true;
-    uint8_t minTempCelsius{16};  // Minimum temperature, check
-                                 // value from heatpump remote control
-    uint8_t maxTempCelsius{31};  // Maximum temperature, check
-                                 // value from heatpump remote control
+    Temperature minTemp = Temperature(16.0f,
+                                      TempUnit::C);  // Minimum temperature, check
+                                                     // value from heatpump remote control
+    Temperature maxTemp = Temperature(31.0f,
+                                      TempUnit::C);  // Maximum temperature, check
+                                                     // value from heatpump remote control
 
     // TODO(floatplane) why isn't this a float?
     // TODO(floatplane) more importantly...why isn't this even used? unreal 🙄
@@ -471,11 +474,9 @@ void loadUnit() {
   }
   // unit
   String unit_tempUnit = doc["unit_tempUnit"].as<String>();
-  if (unit_tempUnit == "fah") {
-    config.unit.useFahrenheit = true;
-  }
-  config.unit.minTempCelsius = static_cast<uint8_t>(doc["min_temp"].as<String>().toInt());
-  config.unit.maxTempCelsius = static_cast<uint8_t>(doc["max_temp"].as<String>().toInt());
+  config.unit.tempUnit = unit_tempUnit == "fah" ? TempUnit::F : TempUnit::C;
+  config.unit.minTemp = Temperature(doc["min_temp"].as<String>().toFloat(), TempUnit::C);
+  config.unit.maxTemp = Temperature(doc["max_temp"].as<String>().toFloat(), TempUnit::C);
   config.unit.tempStep = doc["temp_step"].as<String>();
   // mode
   config.unit.supportHeatMode = doc["support_mode"].as<String>() == "all";
@@ -511,9 +512,9 @@ void saveMqtt(const Config &config) {
 
 void saveUnit(const Config &config) {
   JsonDocument doc;
-  doc["unit_tempUnit"] = config.unit.useFahrenheit ? "fah" : "cel";
-  doc["min_temp"] = String(config.unit.minTempCelsius);
-  doc["max_temp"] = String(config.unit.maxTempCelsius);
+  doc["unit_tempUnit"] = config.unit.tempUnit == TempUnit::F ? "fah" : "cel";
+  doc["min_temp"] = String(config.unit.minTemp.getCelsius());
+  doc["max_temp"] = String(config.unit.maxTemp.getCelsius());
   doc["temp_step"] = config.unit.tempStep;
   doc["support_mode"] = config.unit.supportHeatMode ? "all" : "nht";
   doc["login_password"] = config.unit.login_password;
@@ -808,14 +809,18 @@ void handleUnit() {
   LOG(F("handleUnit()"));
 
   if (server.method() == HTTP_POST) {
-    config.unit.useFahrenheit =
-        server.arg("tu").isEmpty() ? config.unit.useFahrenheit : server.arg("tu") == "fah";
-    config.unit.supportHeatMode =
-        server.arg("md").isEmpty() ? config.unit.supportHeatMode : server.arg("md") == "all";
-    config.unit.login_password =
-        server.arg("lpw").isEmpty() ? config.unit.login_password : server.arg("lpw");
-    config.unit.tempStep =
-        server.arg("temp_step").isEmpty() ? config.unit.tempStep : server.arg("temp_step");
+    if (!server.arg("tu").isEmpty()) {
+      config.unit.tempUnit = server.arg("tu") == "fah" ? TempUnit::F : TempUnit::C;
+    }
+    if (!server.arg("md").isEmpty()) {
+      config.unit.supportHeatMode = server.arg("md") == "all";
+    }
+    if (!server.arg("lpw").isEmpty()) {
+      config.unit.login_password = server.arg("lpw");
+    }
+    if (!server.arg("temp_step").isEmpty()) {
+      config.unit.tempStep = server.arg("temp_step");
+    }
 
     // In this POST handler, it's not entirely clear whether the min and max temp should be
     // interpreted as celsius or fahrenheit. If you change the unit on the web page, the web page
@@ -829,22 +834,16 @@ void handleUnit() {
       // if both are non-empty, we're changing something
       const auto nextMinTemp = server.arg("min_temp").toFloat();
       const auto nextMaxTemp = server.arg("max_temp").toFloat();
-      // TODO(floatplane): using std::round to maintain behavior from the code I forked, though I'm
-      // not sure it's correct
-      // TODO(floatplane): should probably be clamping these to reasonable numbers
-      // TODO(floatplane): there's no form validation, a user can submit min > max or negative temps
-      // or whatever.
-      if (nextMinTemp < 50 && nextMaxTemp < 50) {
-        // almost certainly celsius
-        config.unit.minTempCelsius = static_cast<uint8_t>(std::round(nextMinTemp));
-        config.unit.maxTempCelsius = static_cast<uint8_t>(std::round(nextMaxTemp));
-      } else {
-        // almost certainly fahrenheit
-        config.unit.minTempCelsius =
-            static_cast<uint8_t>(std::round(convertLocalUnitToCelsius(nextMinTemp, true)));
-        config.unit.maxTempCelsius =
-            static_cast<uint8_t>(std::round(convertLocalUnitToCelsius(nextMaxTemp, true)));
+      if (nextMaxTemp < nextMinTemp) {
+        LOG(F("ERROR: min_temp > max_temp, not saving (min_temp: %f, max_temp: %f)"), nextMinTemp,
+            nextMaxTemp);
+        return;
       }
+      // Both temperatures under 50 would be expected for Celsius, and not at all expected for
+      // Fahrenheit
+      TempUnit unit = (nextMinTemp < 50.0f && nextMaxTemp < 50.0f) ? TempUnit::C : TempUnit::F;
+      config.unit.minTemp = Temperature(nextMinTemp, unit);
+      config.unit.maxTemp = Temperature(nextMaxTemp, unit);
     }
     saveUnit(config);
     rebootAndSendPage();
@@ -863,13 +862,13 @@ void handleUnit() {
     unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
     unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
     unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-    unitPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(config.unit.minTempCelsius,
-                                                                       config.unit.useFahrenheit)));
-    unitPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius,
-                                                                       config.unit.useFahrenheit)));
+    unitPage.replace(F("_MIN_TEMP_"),
+                     String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()));
+    unitPage.replace(F("_MAX_TEMP_"),
+                     String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()));
     unitPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
     // temp
-    if (config.unit.useFahrenheit) {
+    if (config.unit.tempUnit == TempUnit::F) {
       unitPage.replace(F("_TU_FAH_"), F("selected"));
     } else {
       unitPage.replace(F("_TU_CEL_"), F("selected"));
@@ -987,15 +986,14 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
   controlPage.replace("_UNIT_NAME_", config.network.hostname);
   controlPage.replace("_RATE_", "60");
-  controlPage.replace("_ROOMTEMP_", String(convertCelsiusToLocalUnit(hp.getRoomTemperature(),
-                                                                     config.unit.useFahrenheit)));
-  controlPage.replace("_USE_FAHRENHEIT_", String(config.unit.useFahrenheit ? 1 : 0));
+  controlPage.replace("_ROOMTEMP_", String(Temperature(hp.getRoomTemperature(), TempUnit::C)
+                                               .toString(config.unit.tempUnit)
+                                               .c_str()));
+  controlPage.replace("_USE_FAHRENHEIT_", String(config.unit.tempUnit == TempUnit::F ? 1 : 0));
   controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
   controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.unit.supportHeatMode ? 1 : 0));
-  controlPage.replace(F("_MIN_TEMP_"), String(convertCelsiusToLocalUnit(
-                                           config.unit.minTempCelsius, config.unit.useFahrenheit)));
-  controlPage.replace(F("_MAX_TEMP_"), String(convertCelsiusToLocalUnit(
-                                           config.unit.maxTempCelsius, config.unit.useFahrenheit)));
+  controlPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit).c_str());
+  controlPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit).c_str());
   controlPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
   controlPage.replace("_TXT_CTRL_CTEMP_", FPSTR(txt_ctrl_ctemp));
   controlPage.replace("_TXT_CTRL_TEMP_", FPSTR(txt_ctrl_temp));
@@ -1083,7 +1081,8 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
     controlPage.replace("_WVANE_S_", "selected");
   }
   controlPage.replace(
-      "_TEMP_", String(convertCelsiusToLocalUnit(hp.getTemperature(), config.unit.useFahrenheit)));
+      "_TEMP_",
+      Temperature(hp.getTemperature(), TempUnit::C).toString(config.unit.tempUnit).c_str());
 
   // We need to send the page content in chunks to overcome
   // a limitation on the maximum size we can send at one
@@ -1195,8 +1194,10 @@ void handleMetricsJson() {
     auto status = heatpump[F("status")].to<JsonObject>();
     status[F("compressorFrequency")] = currentStatus.compressorFrequency;
     status[F("operating")] = currentStatus.operating;
-    status[F("roomTemperature_F")] = convertCelsiusToLocalUnit(currentStatus.roomTemperature, true);
-    status[F("roomTemperature")] = currentStatus.roomTemperature;
+    status[F("roomTemperature_F")] =
+        Temperature(currentStatus.roomTemperature, TempUnit::C).toString(TempUnit::F, 0.1f);
+    status[F("roomTemperature")] =
+        Temperature(currentStatus.roomTemperature, TempUnit::C).toString(TempUnit::C, 0.1f);
 
     const HeatpumpSettings currentSettings(hp.getSettings());
     auto settings = heatpump[F("settings")].to<JsonObject>();
@@ -1205,8 +1206,10 @@ void handleMetricsJson() {
     settings[F("iSee")] = currentSettings.iSee;
     settings[F("mode")] = currentSettings.mode;
     settings[F("power")] = currentSettings.power;
-    settings[F("temperature_F")] = convertCelsiusToLocalUnit(currentSettings.temperature, true);
-    settings[F("temperature")] = currentSettings.temperature;
+    settings[F("temperature_F")] =
+        Temperature(currentSettings.temperature, TempUnit::C).toString(TempUnit::F, 0.1f);
+    settings[F("temperature")] =
+        Temperature(currentSettings.temperature, TempUnit::C).toString(TempUnit::C, 0.1f);
     settings[F("vane")] = currentSettings.vane;
     settings[F("wideVane")] = currentSettings.wideVane;
   }
@@ -1439,9 +1442,8 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
       update = true;
     }
     if (server.hasArg("TEMP")) {
-      // using std::round to maintain existing behavior, though I'm not sure it's correct
-      newSettings.temperature = convertLocalUnitToCelsius(std::round(server.arg("TEMP").toFloat()),
-                                                          config.unit.useFahrenheit);
+      newSettings.temperature =
+          Temperature(server.arg("TEMP").toFloat(), config.unit.tempUnit).getCelsius();
       update = true;
     }
     if (server.hasArg("FAN")) {
@@ -1470,10 +1472,11 @@ JsonDocument getHeatPumpStatusJson() {
   JsonDocument doc;
 
   doc["operating"] = currentStatus.operating;
-  doc["roomTemperature"] =
-      convertCelsiusToLocalUnit(currentStatus.roomTemperature, config.unit.useFahrenheit);
+  doc["roomTemperature"] = Temperature(currentStatus.roomTemperature, TempUnit::C)
+                               .toString(config.unit.tempUnit)
+                               .c_str();
   doc["temperature"] =
-      convertCelsiusToLocalUnit(currentSettings.temperature, config.unit.useFahrenheit);
+      Temperature(currentSettings.temperature, TempUnit::C).toString(config.unit.tempUnit).c_str();
   doc["fan"] = currentSettings.fan;
   doc["vane"] = currentSettings.vane;
   doc["wideVane"] = currentSettings.wideVane;
@@ -1580,8 +1583,7 @@ void hpCheckRemoteTemp() {
                                                               // remote_temp message, revert back
                                                               // to HP internal temp sensor
     remoteTempActive = false;
-    float const temperature = 0;
-    hp.setRemoteTemperature(temperature);
+    hp.setRemoteTemperature(0.0f);
     hp.update();
   }
 }
@@ -1715,7 +1717,7 @@ void onSetRemoteTemp(const char *message) {
   } else {
     remoteTempActive = true;    // Remote temp has been pushed.
     lastRemoteTemp = millis();  // Note time
-    hp.setRemoteTemperature(convertLocalUnitToCelsius(temperature, config.unit.useFahrenheit));
+    hp.setRemoteTemperature(Temperature(temperature, config.unit.tempUnit).getCelsius());
   }
 }
 
@@ -1742,20 +1744,14 @@ void onSetFan(const char *message) {
 
 void onSetTemp(const char *message) {
   JsonDocument stateOverride;
-  const float temperature = strtof(message, NULL);
-  const float minTemp = config.unit.minTempCelsius;
-  const float maxTemp = config.unit.maxTempCelsius;
+  const float value = strtof(message, NULL);
+  const Temperature temperature =
+      Temperature(value, config.unit.tempUnit).clamp(config.unit.minTemp, config.unit.maxTemp);
 
-  float temperature_c = convertLocalUnitToCelsius(temperature, config.unit.useFahrenheit);
-  if (temperature_c < minTemp || temperature_c > maxTemp) {
-    temperature_c = (minTemp + maxTemp) / 2.0F;
-    stateOverride["temperature"] =
-        convertCelsiusToLocalUnit(temperature_c, config.unit.useFahrenheit);
-  } else {
-    stateOverride["temperature"] = temperature;
-  }
+  stateOverride["temperature"] = temperature.get(config.unit.tempUnit);
+
   publishOptimisticStateChange(stateOverride);
-  hp.setTemperature(temperature_c);
+  hp.setTemperature(temperature.getCelsius());
 }
 
 void onSetMode(const char *message) {
@@ -1831,23 +1827,18 @@ void haConfig() {
   String temp_stat_tpl_str =
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
-  temp_stat_tpl_str +=
-      String(convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit)) +
-      " and value_json.temperature|int <= ";
-  temp_stat_tpl_str +=
-      String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit)) +
-      ") %}{{ value_json.temperature }}";
+  temp_stat_tpl_str += String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) +
+                       " and value_json.temperature|int <= ";
+  temp_stat_tpl_str += String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) +
+                       ") %}{{ value_json.temperature }}";
   temp_stat_tpl_str +=
       "{% elif (value_json.temperature|int < " +
-      String(convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit)) +
-      ") %}" +
-      String(convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit)) +
+      String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) + ") %}" +
+      String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) +
       "{% elif (value_json.temperature|int > " +
-      String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit)) +
-      ") %}" +
-      String(convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit)) +
-      "{% endif %}{% else %}" + String(convertCelsiusToLocalUnit(22, config.unit.useFahrenheit)) +
-      "{% endif %}";
+      String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) + ") %}" +
+      String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) + "{% endif %}{% else %}" +
+      String(Temperature(22.f, TempUnit::C).toString(config.unit.tempUnit).c_str()) + "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
   haConfig["curr_temp_t"] = config.mqtt.ha_state_topic();
 
@@ -1855,15 +1846,13 @@ void haConfig() {
       String(F("{{ value_json.roomTemperature if (value_json is defined and "
                "value_json.roomTemperature is defined and "
                "value_json.roomTemperature|int > ")) +
-      String(convertCelsiusToLocalUnit(1, config.unit.useFahrenheit)) +
+      String(Temperature(1.f, TempUnit::C).toString(config.unit.tempUnit).c_str()) +
       ") }}";  // Set default value for fix "Could not parse data for HA"
   haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
-  haConfig["min_temp"] =
-      convertCelsiusToLocalUnit(config.unit.minTempCelsius, config.unit.useFahrenheit);
-  haConfig["max_temp"] =
-      convertCelsiusToLocalUnit(config.unit.maxTempCelsius, config.unit.useFahrenheit);
+  haConfig["min_temp"] = config.unit.minTemp.get(config.unit.tempUnit);
+  haConfig["max_temp"] = config.unit.maxTemp.get(config.unit.tempUnit);
   haConfig["temp_step"] = config.unit.tempStep;
-  haConfig["temperature_unit"] = config.unit.useFahrenheit ? "F" : "C";
+  haConfig["temperature_unit"] = getTemperatureScale();
 
   JsonArray haConfigFan_modes = haConfig["fan_modes"].to<JsonArray>();
   haConfigFan_modes.add("AUTO");
@@ -2027,31 +2016,8 @@ bool connectWifi() {
   return true;
 }
 
-// temperature helper functions
-float toFahrenheit(float fromCelsius) {
-  return round(1.8F * fromCelsius + 32.0F);
-}
-
-float toCelsius(float fromFahrenheit) {
-  return (fromFahrenheit - 32.0F) / 1.8F;
-}
-
-float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit) {
-  if (isFahrenheit) {
-    return toFahrenheit(temperature);
-  }
-  return temperature;
-}
-
-float convertLocalUnitToCelsius(float temperature, bool isFahrenheit) {
-  if (isFahrenheit) {
-    return toCelsius(temperature);
-  }
-  return temperature;
-}
-
 String getTemperatureScale() {
-  if (config.unit.useFahrenheit) {
+  if (config.unit.tempUnit == TempUnit::F) {
     return "F";
   }
   return "C";
