@@ -994,7 +994,7 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   controlPage.replace("_UNIT_NAME_", config.network.hostname);
   controlPage.replace("_RATE_", "60");
   controlPage.replace("_ROOMTEMP_", String(Temperature(hp.getRoomTemperature(), TempUnit::C)
-                                               .toString(config.unit.tempUnit)
+                                               .toString(config.unit.tempUnit, 0.1f)
                                                .c_str()));
   controlPage.replace("_USE_FAHRENHEIT_", String(config.unit.tempUnit == TempUnit::F ? 1 : 0));
   controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
