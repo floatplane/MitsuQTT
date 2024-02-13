@@ -365,7 +365,8 @@ void setup() {
     server.on(F("/setup"), handleSetup);
     server.on(F("/mqtt"), handleMqtt);
     server.on(F("/wifi"), handleWifi);
-    server.on(F("/unit"), handleUnit);
+    server.on(F("/unit"), HTTPMethod::HTTP_GET, handleUnitGet);
+    server.on(F("/unit"), HTTPMethod::HTTP_POST, handleUnitPost);
     server.on(F("/status"), handleStatus);
     server.on(F("/others"), handleOthers);
     server.on(F("/metrics"), handleMetrics);
@@ -801,87 +802,93 @@ void handleMqtt() {
   }
 }
 
-void handleUnit() {
+void handleUnitGet() {
   if (!checkLogin()) {
     return;
   }
 
-  LOG(F("handleUnit()"));
+  LOG(F("handleUnitGet()"));
 
-  if (server.method() == HTTP_POST) {
-    if (!server.arg("tu").isEmpty()) {
-      config.unit.tempUnit = server.arg("tu") == "fah" ? TempUnit::F : TempUnit::C;
-    }
-    if (!server.arg("md").isEmpty()) {
-      config.unit.supportHeatMode = server.arg("md") == "all";
-    }
-    if (!server.arg("lpw").isEmpty()) {
-      config.unit.login_password = server.arg("lpw");
-    }
-    if (!server.arg("temp_step").isEmpty()) {
-      config.unit.tempStep = server.arg("temp_step");
-    }
-
-    // In this POST handler, it's not entirely clear whether the min and max temp should be
-    // interpreted as celsius or fahrenheit. If you change the unit on the web page, the web page
-    // isn't smart enough to adjust the numeric values, so if the user just submits then there will
-    // be a mismatch. On the other hand, the user might be careful and adjust the values at the same
-    // time, in which case the values match the current value of useFahrenheit.
-    //
-    // We'll assume a dumb heuristic: get the values from the form, and try to figure out if they're
-    // both valid celsius temps or valid fahrenheit temps.
-    if (!server.arg("min_temp").isEmpty() && !server.arg("max_temp").isEmpty()) {
-      // if both are non-empty, we're changing something
-      const auto nextMinTemp = server.arg("min_temp").toFloat();
-      const auto nextMaxTemp = server.arg("max_temp").toFloat();
-      if (nextMaxTemp < nextMinTemp) {
-        LOG(F("ERROR: min_temp > max_temp, not saving (min_temp: %f, max_temp: %f)"), nextMinTemp,
-            nextMaxTemp);
-        return;
-      }
-      // Both temperatures under 50 would be expected for Celsius, and not at all expected for
-      // Fahrenheit
-      TempUnit unit = (nextMinTemp < 50.0f && nextMaxTemp < 50.0f) ? TempUnit::C : TempUnit::F;
-      config.unit.minTemp = Temperature(nextMinTemp, unit);
-      config.unit.maxTemp = Temperature(nextMaxTemp, unit);
-    }
-    saveUnit(config);
-    rebootAndSendPage();
+  String unitPage = FPSTR(html_page_unit);
+  unitPage.replace("_TXT_SAVE_", FPSTR(txt_save));
+  unitPage.replace("_TXT_BACK_", FPSTR(txt_back));
+  unitPage.replace("_TXT_UNIT_TITLE_", FPSTR(txt_unit_title));
+  unitPage.replace("_TXT_UNIT_TEMP_", FPSTR(txt_unit_temp));
+  unitPage.replace("_TXT_UNIT_MINTEMP_", FPSTR(txt_unit_mintemp));
+  unitPage.replace("_TXT_UNIT_MAXTEMP_", FPSTR(txt_unit_maxtemp));
+  unitPage.replace("_TXT_UNIT_STEPTEMP_", FPSTR(txt_unit_steptemp));
+  unitPage.replace("_TXT_UNIT_MODES_", FPSTR(txt_unit_modes));
+  unitPage.replace("_TXT_UNIT_PASSWORD_", FPSTR(txt_unit_password));
+  unitPage.replace("_TXT_F_CELSIUS_", FPSTR(txt_f_celsius));
+  unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
+  unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
+  unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
+  unitPage.replace(F("_MIN_TEMP_"),
+                   String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()));
+  unitPage.replace(F("_MAX_TEMP_"),
+                   String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()));
+  unitPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
+  // temp
+  if (config.unit.tempUnit == TempUnit::F) {
+    unitPage.replace(F("_TU_FAH_"), F("selected"));
   } else {
-    String unitPage = FPSTR(html_page_unit);
-    unitPage.replace("_TXT_SAVE_", FPSTR(txt_save));
-    unitPage.replace("_TXT_BACK_", FPSTR(txt_back));
-    unitPage.replace("_TXT_UNIT_TITLE_", FPSTR(txt_unit_title));
-    unitPage.replace("_TXT_UNIT_TEMP_", FPSTR(txt_unit_temp));
-    unitPage.replace("_TXT_UNIT_MINTEMP_", FPSTR(txt_unit_mintemp));
-    unitPage.replace("_TXT_UNIT_MAXTEMP_", FPSTR(txt_unit_maxtemp));
-    unitPage.replace("_TXT_UNIT_STEPTEMP_", FPSTR(txt_unit_steptemp));
-    unitPage.replace("_TXT_UNIT_MODES_", FPSTR(txt_unit_modes));
-    unitPage.replace("_TXT_UNIT_PASSWORD_", FPSTR(txt_unit_password));
-    unitPage.replace("_TXT_F_CELSIUS_", FPSTR(txt_f_celsius));
-    unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
-    unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
-    unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-    unitPage.replace(F("_MIN_TEMP_"),
-                     String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()));
-    unitPage.replace(F("_MAX_TEMP_"),
-                     String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()));
-    unitPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
-    // temp
-    if (config.unit.tempUnit == TempUnit::F) {
-      unitPage.replace(F("_TU_FAH_"), F("selected"));
-    } else {
-      unitPage.replace(F("_TU_CEL_"), F("selected"));
-    }
-    // mode
-    if (config.unit.supportHeatMode) {
-      unitPage.replace(F("_MD_ALL_"), F("selected"));
-    } else {
-      unitPage.replace(F("_MD_NONHEAT_"), F("selected"));
-    }
-    unitPage.replace(F("_LOGIN_PASSWORD_"), config.unit.login_password);
-    sendWrappedHTML(unitPage);
+    unitPage.replace(F("_TU_CEL_"), F("selected"));
   }
+  // mode
+  if (config.unit.supportHeatMode) {
+    unitPage.replace(F("_MD_ALL_"), F("selected"));
+  } else {
+    unitPage.replace(F("_MD_NONHEAT_"), F("selected"));
+  }
+  unitPage.replace(F("_LOGIN_PASSWORD_"), config.unit.login_password);
+  sendWrappedHTML(unitPage);
+}
+
+void handleUnitPost() {
+  if (!checkLogin()) {
+    return;
+  }
+
+  LOG(F("handleUnitPost()"));
+
+  if (!server.arg("tu").isEmpty()) {
+    config.unit.tempUnit = server.arg("tu") == "fah" ? TempUnit::F : TempUnit::C;
+  }
+  if (!server.arg("md").isEmpty()) {
+    config.unit.supportHeatMode = server.arg("md") == "all";
+  }
+  if (!server.arg("lpw").isEmpty()) {
+    config.unit.login_password = server.arg("lpw");
+  }
+  if (!server.arg("temp_step").isEmpty()) {
+    config.unit.tempStep = server.arg("temp_step");
+  }
+
+  // In this POST handler, it's not entirely clear whether the min and max temp should be
+  // interpreted as celsius or fahrenheit. If you change the unit on the web page, the web page
+  // isn't smart enough to adjust the numeric values, so if the user just submits then there will
+  // be a mismatch. On the other hand, the user might be careful and adjust the values at the same
+  // time, in which case the values match the current value of useFahrenheit.
+  //
+  // We'll assume a dumb heuristic: get the values from the form, and try to figure out if they're
+  // both valid celsius temps or valid fahrenheit temps.
+  if (!server.arg("min_temp").isEmpty() && !server.arg("max_temp").isEmpty()) {
+    // if both are non-empty, we're changing something
+    const auto nextMinTemp = server.arg("min_temp").toFloat();
+    const auto nextMaxTemp = server.arg("max_temp").toFloat();
+    if (nextMaxTemp < nextMinTemp) {
+      LOG(F("ERROR: min_temp > max_temp, not saving (min_temp: %f, max_temp: %f)"), nextMinTemp,
+          nextMaxTemp);
+      return;
+    }
+    // Both temperatures under 50 would be expected for Celsius, and not at all expected for
+    // Fahrenheit
+    TempUnit unit = (nextMinTemp < 50.0f && nextMaxTemp < 50.0f) ? TempUnit::C : TempUnit::F;
+    config.unit.minTemp = Temperature(nextMinTemp, unit);
+    config.unit.maxTemp = Temperature(nextMaxTemp, unit);
+  }
+  saveUnit(config);
+  rebootAndSendPage();
 }
 
 void handleWifi() {

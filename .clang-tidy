@@ -187,4 +187,4 @@ CheckOptions:
   readability-suspicious-call-argument.SuffixSimilarAbove: '30'
   readability-uniqueptr-delete-release.PreferResetCall: 'false'
   readability-uppercase-literal-suffix.IgnoreMacros: 'true'
-  readability-uppercase-literal-suffix.NewSuffixes: ''
+  readability-uppercase-literal-suffix.NewSuffixes: 'L;UL;ULL'
