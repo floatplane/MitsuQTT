@@ -30,13 +30,17 @@ TEST_CASE("test construction of temperature") {
 }
 
 TEST_CASE("test rendering celsius with temperature step") {
-  Temperature t(37.56f, Temperature::Unit::C);
+  Temperature t(37.560001f, Temperature::Unit::C);
 
   // Can't do exact comparisons with floating point numbers - 37.6f ends up being 37.600002 or
   // something like that. So, round to 1 decimal place and compare.
+  CHECK(std::round(t.getCelsius(25.0f) * 10.0f) == 500.f);
+  CHECK(std::round(t.getCelsius(5.0f) * 10.0f) == 400.f);
   CHECK(std::round(t.getCelsius(1.0f) * 10.0f) == 380.f);
   CHECK(std::round(t.getCelsius(0.5f) * 10.0f) == 375.f);
   CHECK(std::round(t.getCelsius(0.1f) * 10.0f) == 376.f);
+  CHECK(std::round(t.getCelsius(0.0f) * 10.0f) == 376.f);
+  CHECK(std::round(t.getCelsius(-0.1f) * 10.0f) == 376.f);
 
   CHECK(std::round(t.getFahrenheit(1.0f) * 10.0f) == 1000.f);
   CHECK(std::round(t.getFahrenheit(0.5f) * 10.0f) == 995.f);
