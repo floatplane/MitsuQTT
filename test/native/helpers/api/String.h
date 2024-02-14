@@ -11,16 +11,29 @@ class String {
  public:
   String() = default;
   String(const char* s) {
-    if (s)
+    if (s) {
       str_.assign(s);
+    }
   }
 
   void limitCapacityTo(size_t maxCapacity) {
     maxCapacity_ = maxCapacity;
   }
 
+  unsigned char concat(const String& s) {
+    return concat(s.c_str(), s.length());
+  }
+
   unsigned char concat(const char* s) {
     return concat(s, strlen(s));
+  }
+
+  unsigned char concat(const char* s, size_t n) {
+    if (str_.size() + n > maxCapacity_) {
+      return 0;
+    }
+    str_.append(s, n);
+    return 1;
   }
 
   size_t length() const {
@@ -35,32 +48,29 @@ class String {
     return str_ == s;
   }
 
+  bool operator==(const String& s) const {
+    return str_ == s.str_;
+  }
+
   String& operator=(const char* s) {
-    if (s)
+    if (s) {
       str_.assign(s);
-    else
+    } else {
       str_.clear();
+    }
     return *this;
   }
 
   char operator[](unsigned int index) const {
-    if (index >= str_.size())
+    if (index >= str_.size()) {
       return 0;
+    }
     return str_[index];
   }
 
   friend std::ostream& operator<<(std::ostream& lhs, const ::String& rhs) {
     lhs << rhs.str_;
     return lhs;
-  }
-
- protected:
-  // This function is protected in most Arduino cores
-  unsigned char concat(const char* s, size_t n) {
-    if (str_.size() + n > maxCapacity_)
-      return 0;
-    str_.append(s, n);
-    return 1;
   }
 
  private:
