@@ -1,33 +1,15 @@
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 
 #include <cassert>
 #include <vector>
 
 class Template {
  public:
-  struct DataMap {
-    std::vector<std::pair<String, String>> data;
-    String emptyString;
-    DataMap() = default;
-    DataMap(std::initializer_list<std::pair<String, String>> list) : data(list){};
-    void insert(const std::pair<String, String>& pair) {
-      data.push_back(pair);
-    }
-    const String& at(const String& key) const {
-      const auto pair =
-          std::find_if(data.begin(), data.end(),
-                       [&key](const std::pair<String, String>& pair) { return pair.first == key; });
-      if (pair != data.end()) {
-        return pair->second;
-      }
-      return emptyString;
-    }
-  };
-
   explicit Template(const String& templateContents) : templateContents(templateContents){};
 
-  String render(const DataMap& data) const {
+  String render(const ArduinoJson::JsonDocument& data) const {
     String result;
     const char* currentLocation = this->templateContents.c_str();
     while (*currentLocation != '\0') {
@@ -37,7 +19,9 @@ class Template {
         // get the name of the token
         const auto parsedToken = parseTokenAtPoint(nextToken);
         const String tokenName = parsedToken.first;
-        result.concat(data.at(tokenName));
+        if (data.containsKey(tokenName)) {
+          result.concat(data[tokenName].as<String>());
+        }
         // set currentLocation to the end of the token (accounting for the "}}" characters)
         currentLocation = parsedToken.second;
       } else {
@@ -48,7 +32,7 @@ class Template {
     return result;
   }
 
-  size_t contentLength(const DataMap& data) const {
+  size_t contentLength(const ArduinoJson::JsonDocument& data) const {
     const auto rendered = render(data);
     return rendered.length();
   }

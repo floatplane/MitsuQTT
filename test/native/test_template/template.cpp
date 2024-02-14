@@ -1,17 +1,19 @@
 #define DOCTEST_CONFIG_IMPLEMENT  // REQUIRED: Enable custom main()
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <doctest.h>
 
 #include <template.hpp>
 
 TEST_CASE("testing render with no substitutions") {
-  CHECK(Template("Hello, world!").render({}) == "Hello, world!");
-  CHECK(Template("").render({}) == "");
+  ArduinoJson::JsonDocument values;
+  CHECK(Template("Hello, world!").render(values) == "Hello, world!");
+  CHECK(Template("").render(values) == "");
 }
 
 TEST_CASE("testing render with string substitution") {
-  Template::DataMap values;
-  values.insert({"name", "floatplane"});
+  ArduinoJson::JsonDocument values;
+  values["name"] = "floatplane";
   CHECK(Template("{{name}}").render(values) == "floatplane");
   CHECK(Template("{{name}} is a name").render(values) == "floatplane is a name");
   CHECK(Template("a name is {{name}}").render(values) == "a name is floatplane");
@@ -22,7 +24,7 @@ TEST_CASE("testing render with string substitution") {
 }
 
 TEST_CASE("testing render with missing values") {
-  Template::DataMap values;
+  ArduinoJson::JsonDocument values;
   CHECK(Template("{{name}}").render(values) == "");
   CHECK(Template("{{name}} is a name").render(values) == " is a name");
   CHECK(Template("a name is {{name}}").render(values) == "a name is ");
@@ -31,9 +33,9 @@ TEST_CASE("testing render with missing values") {
 }
 
 TEST_CASE("testing render with malformed values") {
-  Template::DataMap values;
-  values.insert({"name", "floatplane"});
-  values.insert({"  name  ", "Brian"});
+  ArduinoJson::JsonDocument values;
+  values["name"] = "floatplane";
+  values["  name  "] = "Brian";
   CHECK(Template("{{tag is unclosed at start!").render(values) == "");
   CHECK(Template("tag is unclosed at end!{{").render(values) == "tag is unclosed at end!");
   CHECK(Template("tag is unclosed {{in middle").render(values) == "tag is unclosed ");
