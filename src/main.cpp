@@ -1162,7 +1162,7 @@ void handleMetrics() {
   metrics.replace("_GIT_HASH_", COMMIT_HASH);
   metrics.replace("_POWER_", hppower);
   metrics.replace("_ROOMTEMP_", String(currentStatus.roomTemperature));
-  metrics.replace("_TEMP_", String(currentSettings.temperature));
+  metrics.replace("_TEMP_", currentSettings.temperature.toString(TempUnit::C));
   metrics.replace("_FAN_", hpfan);
   metrics.replace("_VANE_", hpvane);
   metrics.replace("_WIDEVANE_", hpwidevane);
@@ -1206,10 +1206,8 @@ void handleMetricsJson() {
     settings[F("iSee")] = currentSettings.iSee;
     settings[F("mode")] = currentSettings.mode;
     settings[F("power")] = currentSettings.power;
-    settings[F("temperature_F")] =
-        Temperature(currentSettings.temperature, TempUnit::C).toString(TempUnit::F, 0.1f);
-    settings[F("temperature")] =
-        Temperature(currentSettings.temperature, TempUnit::C).toString(TempUnit::C, 0.1f);
+    settings[F("temperature_F")] = currentSettings.temperature.toString(TempUnit::F, 0.1f);
+    settings[F("temperature")] = currentSettings.temperature.toString(TempUnit::C, 0.1f);
     settings[F("vane")] = currentSettings.vane;
     settings[F("wideVane")] = currentSettings.wideVane;
   }
@@ -1442,8 +1440,7 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
       update = true;
     }
     if (server.hasArg("TEMP")) {
-      newSettings.temperature =
-          Temperature(server.arg("TEMP").toFloat(), config.unit.tempUnit).getCelsius();
+      newSettings.temperature = Temperature(server.arg("TEMP").toFloat(), config.unit.tempUnit);
       update = true;
     }
     if (server.hasArg("FAN")) {
@@ -1474,8 +1471,7 @@ JsonDocument getHeatPumpStatusJson() {
   doc["operating"] = currentStatus.operating;
   doc["roomTemperature"] =
       Temperature(currentStatus.roomTemperature, TempUnit::C).toString(config.unit.tempUnit);
-  doc["temperature"] =
-      Temperature(currentSettings.temperature, TempUnit::C).toString(config.unit.tempUnit);
+  doc["temperature"] = currentSettings.temperature.toString(config.unit.tempUnit);
   doc["fan"] = currentSettings.fan;
   doc["vane"] = currentSettings.vane;
   doc["wideVane"] = currentSettings.wideVane;

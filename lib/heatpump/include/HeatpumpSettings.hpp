@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <HeatPump.h>
 
+#include "Temperature.hpp"
+
 class HeatpumpSettings {
  public:
   HeatpumpSettings() = delete;
@@ -10,7 +12,7 @@ class HeatpumpSettings {
   explicit HeatpumpSettings(const heatpumpSettings& settings)
       : power(settings.power),
         mode(settings.mode),
-        temperature(settings.temperature),
+        temperature(settings.temperature, Temperature::Unit::C),
         fan(settings.fan),
         vane(settings.vane),
         wideVane(settings.wideVane),
@@ -21,7 +23,7 @@ class HeatpumpSettings {
   heatpumpSettings getRaw() const {
     return heatpumpSettings{.power = power.c_str(),
                             .mode = mode.c_str(),
-                            .temperature = temperature,
+                            .temperature = temperature.getCelsius(),
                             .fan = fan.c_str(),
                             .vane = vane.c_str(),
                             .wideVane = wideVane.c_str(),
@@ -31,7 +33,7 @@ class HeatpumpSettings {
 
   String power;
   String mode;
-  float temperature;
+  Temperature temperature;
   String fan;
   String vane;      // vertical vane, up/down
   String wideVane;  // horizontal vane, left/right
