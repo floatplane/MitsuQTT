@@ -1468,8 +1468,8 @@ JsonDocument getHeatPumpStatusJson() {
   JsonDocument doc;
 
   doc["operating"] = currentStatus.operating;
-  doc["roomTemperature"] = currentStatus.roomTemperature.toString(config.unit.tempUnit);
-  doc["temperature"] = currentSettings.temperature.toString(config.unit.tempUnit);
+  doc["roomTemperature"] = currentStatus.roomTemperature.get(config.unit.tempUnit, 0.5f);
+  doc["temperature"] = currentSettings.temperature.get(config.unit.tempUnit, 0.5f);
   doc["fan"] = currentSettings.fan;
   doc["vane"] = currentSettings.vane;
   doc["wideVane"] = currentSettings.wideVane;
