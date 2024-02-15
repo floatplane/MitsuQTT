@@ -2,6 +2,7 @@
 #include <HeatPump.h>
 
 #include "HeatpumpSettings.hpp"
+#include "HeatpumpStatus.hpp"
 
 String getId();
 
@@ -38,7 +39,7 @@ void hpPacketDebug(byte *packet_, unsigned int length, char *packetDirection_);
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit);
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit);
 String hpGetMode(const HeatpumpSettings &hpSettings);
-String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings);
+String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSettings);
 void mqttCallback(const char *topic, const byte *payload, unsigned int length);
 void onSetCustomPacket(const char *message);
 void onSetDebugLogs(const char *message);

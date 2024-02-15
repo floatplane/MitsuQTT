@@ -39,6 +39,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <temperature.hpp>
 
 #include "HeatpumpSettings.hpp"
+#include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
 #include "html_common.hpp"        // common code HTML (like header, footer)
 #include "html_init.hpp"          // code html for initial config
@@ -1101,7 +1102,7 @@ void handleMetrics() {
   String metrics = FPSTR(html_metrics);
 
   const HeatpumpSettings currentSettings(hp.getSettings());
-  const heatpumpStatus currentStatus = hp.getStatus();
+  const HeatpumpStatus currentStatus(hp.getStatus());
 
   const String hppower = currentSettings.power == "ON" ? "1" : "0";
 
@@ -1161,7 +1162,7 @@ void handleMetrics() {
   metrics.replace("_VERSION_", BUILD_DATE);
   metrics.replace("_GIT_HASH_", COMMIT_HASH);
   metrics.replace("_POWER_", hppower);
-  metrics.replace("_ROOMTEMP_", String(currentStatus.roomTemperature));
+  metrics.replace("_ROOMTEMP_", currentStatus.roomTemperature.toString(TempUnit::C));
   metrics.replace("_TEMP_", currentSettings.temperature.toString(TempUnit::C));
   metrics.replace("_FAN_", hpfan);
   metrics.replace("_VANE_", hpvane);
@@ -1190,14 +1191,12 @@ void handleMetricsJson() {
   auto heatpump = doc[F("heatpump")].to<JsonObject>();
   heatpump[F("connected")] = hp.isConnected();
   if (hp.isConnected()) {
-    const heatpumpStatus currentStatus = hp.getStatus();
+    const HeatpumpStatus currentStatus(hp.getStatus());
     auto status = heatpump[F("status")].to<JsonObject>();
     status[F("compressorFrequency")] = currentStatus.compressorFrequency;
     status[F("operating")] = currentStatus.operating;
-    status[F("roomTemperature_F")] =
-        Temperature(currentStatus.roomTemperature, TempUnit::C).toString(TempUnit::F, 0.1f);
-    status[F("roomTemperature")] =
-        Temperature(currentStatus.roomTemperature, TempUnit::C).toString(TempUnit::C, 0.1f);
+    status[F("roomTemperature_F")] = currentStatus.roomTemperature.toString(TempUnit::F, 0.1f);
+    status[F("roomTemperature")] = currentStatus.roomTemperature.toString(TempUnit::C, 0.1f);
 
     const HeatpumpSettings currentSettings(hp.getSettings());
     auto settings = heatpump[F("settings")].to<JsonObject>();
@@ -1463,14 +1462,13 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
 }
 
 JsonDocument getHeatPumpStatusJson() {
-  const heatpumpStatus currentStatus = hp.getStatus();
+  const HeatpumpStatus currentStatus(hp.getStatus());
   const HeatpumpSettings currentSettings(hp.getSettings());
 
   JsonDocument doc;
 
   doc["operating"] = currentStatus.operating;
-  doc["roomTemperature"] =
-      Temperature(currentStatus.roomTemperature, TempUnit::C).toString(config.unit.tempUnit);
+  doc["roomTemperature"] = currentStatus.roomTemperature.toString(config.unit.tempUnit);
   doc["temperature"] = currentSettings.temperature.toString(config.unit.tempUnit);
   doc["fan"] = currentSettings.fan;
   doc["vane"] = currentSettings.vane;
@@ -1514,7 +1512,7 @@ String hpGetMode(const HeatpumpSettings &hpSettings) {
   return hpmode;  // cool, heat, dry
 }
 
-String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) {
+String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSettings) {
   // Map heat pump state to one of HA's CURRENT_HVAC_* values.
   // https://github.com/home-assistant/core/blob/master/homeassistant/components/climate/const.py#L80-L86
 
@@ -1550,7 +1548,7 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
 // state changes. Also invoked synchronously every time through `loop`, *and* from
 // onHeatPumpSettingsChanged every time a setting is changed.
 // TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
-void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
+void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS
                                                                // (millis rollover tolerant)
@@ -1562,6 +1560,8 @@ void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
     //   return;
     // }
 
+    // TODO(floatplane): let's separate the job of periodically pushing latest state to MQTT from
+    // the job of figuring out whether to use the remote temp sensor or the internal one.
     String mqttOutput;
     serializeJson(getHeatPumpStatusJson(), mqttOutput);
 
