@@ -5,6 +5,8 @@
 
 #include <template.hpp>
 
+#include "mustache_specs/interpolation.hpp"
+
 TEST_CASE("testing render with no substitutions") {
   ArduinoJson::JsonDocument values;
   CHECK(Template("Hello, world!").render(values) == "Hello, world!");

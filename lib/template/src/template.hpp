@@ -19,9 +19,7 @@ class Template {
         // get the name of the token
         const auto parsedToken = parseTokenAtPoint(nextToken);
         const String tokenName = parsedToken.first;
-        if (data.containsKey(tokenName)) {
-          result.concat(data[tokenName].as<String>());
-        }
+        result.concat(renderToken(tokenName, data));
         // set currentLocation to the end of the token (accounting for the "}}" characters)
         currentLocation = parsedToken.second;
       } else {
@@ -39,6 +37,22 @@ class Template {
 
  private:
   String templateContents;
+
+  String renderToken(const String& tokenName, const ArduinoJson::JsonDocument& data) const {
+    if (data.containsKey(tokenName)) {
+      const auto variant = data[tokenName];
+      if (variant.is<String>()) {
+        return variant.as<String>();
+      } else if (variant.is<int>()) {
+        return String(variant.as<int>());
+      } else if (variant.is<float>()) {
+        return String(variant.as<float>());
+      } else if (variant.is<double>()) {
+        return String(variant.as<double>());
+      }
+    }
+    return String();
+  }
 
   // Given a const char * at the start of a token sequence "{{", extract the token name and return a
   // pair of the token name and the const char * at the end of the token sequence

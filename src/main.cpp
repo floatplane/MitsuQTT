@@ -585,15 +585,12 @@ bool initWifi() {
 // Handler webserver response
 
 void sendWrappedHTML(const String &content) {
-  const Template<String> headerContent(FPSTR(html_common_header));
-  const Template<String> footerContent(FPSTR(html_common_footer));
-  const Template<String>::DataMap data = {
-      {"unit_name", config.network.hostname},
-      {"version", BUILD_DATE},
-      {"git_hash", COMMIT_HASH},
-  };
-
-  String toSend = headerContent.render(data) + content + footerContent.render(data);
+  const String headerContent = FPSTR(html_common_header);
+  const String footerContent = FPSTR(html_common_footer);
+  String toSend = headerContent + content + footerContent;
+  toSend.replace(F("_UNIT_NAME_"), config.network.hostname);
+  toSend.replace(F("_VERSION_"), BUILD_DATE);
+  toSend.replace(F("_GIT_HASH_"), COMMIT_HASH);
   server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
 }
 
@@ -1098,8 +1095,6 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
 void handleMetrics() {
   LOG(F("handleMetrics()"));
 
-  String metrics = FPSTR(html_metrics);
-
   const HeatpumpSettings currentSettings(hp.getSettings());
   const HeatpumpStatus currentStatus(hp.getStatus());
 
@@ -1157,22 +1152,21 @@ void handleMetrics() {
     hpmode = "-2";
   }
 
-  Template<String> metricsTemplate(metrics);
-  server.send(HttpStatusCodes::httpOk, F("text/plain"),
-              metricsTemplate.render({
-                  {"unit_name", config.network.hostname},
-                  {"version", BUILD_DATE},
-                  {"git_hash", COMMIT_HASH},
-                  {"power", hppower},
-                  {"roomtemp", currentStatus.roomTemperature.toString(TempUnit::C)},
-                  {"temp", currentSettings.temperature.toString(TempUnit::C)},
-                  {"fan", hpfan},
-                  {"vane", hpvane},
-                  {"widevane", hpwidevane},
-                  {"mode", hpmode},
-                  {"oper", String(currentStatus.operating ? 1 : 0)},
-                  {"compfreq", String(currentStatus.compressorFrequency)},
-              }));
+  Template metricsTemplate(FPSTR(html_metrics));
+  ArduinoJson::JsonDocument data;
+  data["unit_name"] = config.network.hostname;
+  data["version"] = BUILD_DATE;
+  data["git_hash"] = COMMIT_HASH;
+  data["power"] = hppower;
+  data["roomtemp"] = currentStatus.roomTemperature.toString(TempUnit::C);
+  data["temp"] = currentSettings.temperature.toString(TempUnit::C);
+  data["fan"] = hpfan;
+  data["vane"] = hpvane;
+  data["widevane"] = hpwidevane;
+  data["mode"] = hpmode;
+  data["oper"] = currentStatus.operating ? 1 : 0;
+  data["compfreq"] = currentStatus.compressorFrequency;
+  server.send(HttpStatusCodes::httpOk, F("text/plain"), metricsTemplate.render(data));
 }
 
 void handleMetricsJson() {
