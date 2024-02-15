@@ -192,10 +192,6 @@ struct Config {
       static const String topicPath{rootTopic + F("/") + friendlyName + F("/remote_temp/set")};
       return topicPath;
     }
-    const String &ha_settings_topic() const {
-      static const String topicPath{rootTopic + F("/") + friendlyName + F("/settings")};
-      return topicPath;
-    }
     const String &ha_state_topic() const {
       static const String topicPath{rootTopic + F("/") + friendlyName + F("/state")};
       return topicPath;
@@ -405,7 +401,6 @@ void setup() {
     }
     // Serial.println(F("Connection to HVAC. Stop serial log."));
     LOG(F("MQTT initialized, trying to connect to HVAC"));
-    hp.setSettingsChangedCallback(onHeatPumpSettingsChanged);
     hp.setStatusChangedCallback(onHeatPumpStatusChanged);
     hp.setPacketCallback(hpPacketDebug);
 
@@ -1480,18 +1475,6 @@ JsonDocument getHeatPumpStatusJson() {
   return doc;
 }
 
-void onHeatPumpSettingsChanged() {
-  // send room temp, operating info and all information
-  String mqttOutput;
-  serializeJson(getHeatPumpStatusJson(), mqttOutput);
-
-  if (!mqtt_client.publish(config.mqtt.ha_settings_topic().c_str(), mqttOutput.c_str(), true)) {
-    LOG(F("Failed to publish hp settings"));
-  }
-
-  onHeatPumpStatusChanged(hp.getStatus());
-}
-
 String hpGetMode(const HeatpumpSettings &hpSettings) {
   // Map the heat pump state to one of HA's HVAC_MODE_* values.
   // https://github.com/home-assistant/core/blob/master/homeassistant/components/climate/const.py#L3-L23
@@ -1545,8 +1528,7 @@ String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSet
 }
 
 // Invoked async when the heatpump's room temperature changes, or when the heatpump's operating
-// state changes. Also invoked synchronously every time through `loop`, *and* from
-// onHeatPumpSettingsChanged every time a setting is changed.
+// state changes. Also invoked synchronously every time through `loop`.
 // TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
 void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
