@@ -1587,9 +1587,12 @@ void hpCheckRemoteTemp() {
 }
 
 // NOLINTNEXTLINE(readability-non-const-parameter)
-void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
-  // packetDirection should have been declared as const char *, but since hpPacketDebug is a
-  // callback function, it can't be.  So we'll just have to be careful not to modify it.
+void hpPacketDebug(byte *packet_, unsigned int length, char *packetDirection_) {
+  // `packet_` & `packetDirection_` should be const, but we don't control the signature of the
+  // callback function, so we stuff them into more restrictive pointers before moving on.
+  const byte *const packet = packet_;
+  const char *const packetDirection = packetDirection_;
+
   if (config.other.dumpPacketsToMqtt) {
     String message;
     for (unsigned int idx = 0; idx < length; idx++) {
