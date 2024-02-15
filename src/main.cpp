@@ -404,12 +404,17 @@ void setup() {
     }
     // Serial.println(F("Connection to HVAC. Stop serial log."));
     LOG(F("MQTT initialized, trying to connect to HVAC"));
-    hp.setSettingsChangedCallback(hpSettingsChanged);
-    hp.setStatusChangedCallback(hpStatusChanged);
+    hp.setSettingsChangedCallback(onHeatPumpSettingsChanged);
+    hp.setStatusChangedCallback(onHeatPumpStatusChanged);
     hp.setPacketCallback(hpPacketDebug);
-    // Allow Remote/Panel
+
+    // Merge settings from remote control with settings driven from MQTT
     hp.enableExternalUpdate();
+
+    // Automatically send new settings to heat pump when `sync()` is called
+    // Without this, you need to call update() after every state change
     hp.enableAutoUpdate();
+
     hp.connect(&Serial);
 
     lastTempSend = millis();
@@ -1481,18 +1486,16 @@ JsonDocument getHeatPumpStatusJson() {
   return doc;
 }
 
-void hpSettingsChanged() {
+void onHeatPumpSettingsChanged() {
   // send room temp, operating info and all information
-  JsonDocument status(getHeatPumpStatusJson());
-
   String mqttOutput;
-  serializeJson(status, mqttOutput);
+  serializeJson(getHeatPumpStatusJson(), mqttOutput);
 
   if (!mqtt_client.publish(config.mqtt.ha_settings_topic().c_str(), mqttOutput.c_str(), true)) {
     LOG(F("Failed to publish hp settings"));
   }
 
-  hpStatusChanged(hp.getStatus());
+  onHeatPumpStatusChanged(hp.getStatus());
 }
 
 String hpGetMode(const HeatpumpSettings &hpSettings) {
@@ -1547,7 +1550,11 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
   return hpmode;  // unknown
 }
 
-void hpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
+// Invoked async when the heatpump's room temperature changes, or when the heatpump's operating
+// state changes. Also invoked synchronously every time through `loop`, *and* from
+// onHeatPumpSettingsChanged every time a setting is changed.
+// TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
+void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS
                                                                // (millis rollover tolerant)
@@ -1558,10 +1565,9 @@ void hpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
     // if (newStatus.roomTemperature == 0) {
     //   return;
     // }
-    JsonDocument status(getHeatPumpStatusJson());
 
     String mqttOutput;
-    serializeJson(status, mqttOutput);
+    serializeJson(getHeatPumpStatusJson(), mqttOutput);
 
     if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
       LOG(F("Failed to publish hp status change"));
@@ -1578,6 +1584,7 @@ void hpCheckRemoteTemp() {
                                                               // to HP internal temp sensor
     remoteTempActive = false;
     hp.setRemoteTemperature(0.0f);
+    // TODO(floatplane): do we need to explicitly call update? we don't do it anywhere else
     hp.update();
   }
 }
@@ -2118,7 +2125,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
       }
       // MQTT connected send status
       else {
-        hpStatusChanged(hp.getStatus());
+        onHeatPumpStatusChanged(hp.getStatus());
         mqtt_client.loop();
       }
     }
