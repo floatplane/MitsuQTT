@@ -5,10 +5,10 @@
 
 String getId();
 
-void loadWifi();
-void loadOthers();
-void loadUnit();
-void loadMqtt();
+void loadWifiConfig();
+void loadOthersConfig();
+void loadUnitConfig();
+void loadMqttConfig();
 
 bool initWifi();
 void handleRoot();

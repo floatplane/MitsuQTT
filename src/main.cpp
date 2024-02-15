@@ -347,10 +347,10 @@ void setup() {
     ticker.attach(0.6, tick);
   */
 
-  loadWifi();
-  loadOthers();
-  loadUnit();
-  loadMqtt();
+  loadWifiConfig();
+  loadOthersConfig();
+  loadUnitConfig();
+  loadMqttConfig();
 #ifdef ESP32
   WiFi.setHostname(config.network.hostname.c_str());
 #else
@@ -423,7 +423,7 @@ void setup() {
   logConfig();
 }
 
-void loadWifi() {
+void loadWifiConfig() {
   LOG(F("Loading WiFi configuration"));
   config.network.accessPointSsid = "";
   config.network.accessPointPassword = "";
@@ -443,7 +443,7 @@ void loadWifi() {
   }
 }
 
-void loadMqtt() {
+void loadMqttConfig() {
   LOG(F("Loading MQTT configuration"));
 
   const JsonDocument doc = FileSystem::loadJSON(mqtt_conf);
@@ -457,18 +457,9 @@ void loadMqtt() {
   config.mqtt.username = doc["mqtt_user"].as<String>();
   config.mqtt.password = doc["mqtt_pwd"].as<String>();
   config.mqtt.rootTopic = doc["mqtt_topic"].as<String>();
-
-  LOG(F("=== START DEBUG MQTT ==="));
-  LOG(F("Friendly Name") + config.mqtt.friendlyName);
-  LOG(F("IP Server ") + config.mqtt.server);
-  LOG(F("IP Port ") + portString);
-  LOG(F("Username ") + config.mqtt.username);
-  LOG(F("Password ") + config.mqtt.password);
-  LOG(F("Root topic ") + config.mqtt.rootTopic);
-  LOG(F("=== END DEBUG MQTT ==="));
 }
 
-void loadUnit() {
+void loadUnitConfig() {
   const JsonDocument doc = FileSystem::loadJSON(unit_conf);
   if (doc.isNull()) {
     return;
@@ -489,7 +480,7 @@ void loadUnit() {
   }
 }
 
-void loadOthers() {
+void loadOthersConfig() {
   const JsonDocument doc = FileSystem::loadJSON(others_conf);
   if (doc.isNull()) {
     return;
@@ -500,7 +491,7 @@ void loadOthers() {
   config.other.logToMqtt = doc["debugLogs"].as<String>() == "ON";
 }
 
-void saveMqtt(const Config &config) {
+void saveMqttConfig(const Config &config) {
   JsonDocument doc;
   doc["mqtt_fn"] = config.mqtt.friendlyName;
   doc["mqtt_host"] = config.mqtt.server;
@@ -511,7 +502,7 @@ void saveMqtt(const Config &config) {
   FileSystem::saveJSON(mqtt_conf, doc);
 }
 
-void saveUnit(const Config &config) {
+void saveUnitConfig(const Config &config) {
   JsonDocument doc;
   doc["unit_tempUnit"] = config.unit.tempUnit == TempUnit::F ? "fah" : "cel";
   doc["min_temp"] = String(config.unit.minTemp.getCelsius());
@@ -522,7 +513,7 @@ void saveUnit(const Config &config) {
   FileSystem::saveJSON(unit_conf, doc);
 }
 
-void saveWifi(const Config &config) {
+void saveWifiConfig(const Config &config) {
   JsonDocument doc;
   doc["ap_ssid"] = config.network.accessPointSsid;
   doc["ap_pwd"] = config.network.accessPointPassword;
@@ -531,7 +522,7 @@ void saveWifi(const Config &config) {
   FileSystem::saveJSON(wifi_conf, doc);
 }
 
-void saveOthers(const Config &config) {
+void saveOthersConfig(const Config &config) {
   JsonDocument doc;
   doc["haa"] = config.other.haAutodiscovery ? "ON" : "OFF";
   doc["haat"] = config.other.haAutodiscoveryTopic;
@@ -619,7 +610,7 @@ void handleSaveWifi() {
     config.network.accessPointPassword = server.arg("psk");
     config.network.hostname = server.arg("hn");
     config.network.otaUpdatePassword = server.arg("otapwd");
-    saveWifi(config);
+    saveWifiConfig(config);
   }
   String initSavePage = FPSTR(html_init_save);
   initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
@@ -731,7 +722,7 @@ void handleOthers() {
     config.other.haAutodiscoveryTopic = server.arg("haat");
     config.other.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
     config.other.logToMqtt = server.arg("DebugLogs") == "ON";
-    saveOthers(config);
+    saveOthersConfig(config);
     rebootAndSendPage();
   } else {
     String othersPage = FPSTR(html_page_others);
@@ -779,7 +770,7 @@ void handleMqtt() {
     config.mqtt.username = server.arg("mu");
     config.mqtt.password = server.arg("mp");
     config.mqtt.rootTopic = server.arg("mt");
-    saveMqtt(config);
+    saveMqttConfig(config);
     rebootAndSendPage();
   } else {
     String mqttPage = FPSTR(html_page_mqtt);
@@ -887,7 +878,7 @@ void handleUnitPost() {
     config.unit.minTemp = Temperature(nextMinTemp, unit);
     config.unit.maxTemp = Temperature(nextMaxTemp, unit);
   }
-  saveUnit(config);
+  saveUnitConfig(config);
   rebootAndSendPage();
 }
 
@@ -903,7 +894,7 @@ void handleWifi() {
     config.network.accessPointPassword = server.arg("psk");
     config.network.hostname = server.arg("hn");
     config.network.otaUpdatePassword = server.arg("otapwd");
-    saveWifi(config);
+    saveWifiConfig(config);
     rebootAndSendPage();
   } else {
     String wifiPage = FPSTR(html_page_wifi);
