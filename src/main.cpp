@@ -814,10 +814,8 @@ void handleUnitGet() {
   unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
   unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
   unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-  unitPage.replace(F("_MIN_TEMP_"),
-                   String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()));
-  unitPage.replace(F("_MAX_TEMP_"),
-                   String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()));
+  unitPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit));
+  unitPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit));
   unitPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
   // temp
   if (config.unit.tempUnit == TempUnit::F) {
@@ -984,14 +982,14 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
   controlPage.replace("_UNIT_NAME_", config.network.hostname);
   controlPage.replace("_RATE_", "60");
-  controlPage.replace("_ROOMTEMP_", String(Temperature(hp.getRoomTemperature(), TempUnit::C)
-                                               .toString(config.unit.tempUnit, 0.1f)
-                                               .c_str()));
+  controlPage.replace(
+      "_ROOMTEMP_",
+      Temperature(hp.getRoomTemperature(), TempUnit::C).toString(config.unit.tempUnit, 0.1f));
   controlPage.replace("_USE_FAHRENHEIT_", String(config.unit.tempUnit == TempUnit::F ? 1 : 0));
   controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
   controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.unit.supportHeatMode ? 1 : 0));
-  controlPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit).c_str());
-  controlPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit).c_str());
+  controlPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit));
+  controlPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit));
   controlPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
   controlPage.replace("_TXT_CTRL_CTEMP_", FPSTR(txt_ctrl_ctemp));
   controlPage.replace("_TXT_CTRL_TEMP_", FPSTR(txt_ctrl_temp));
@@ -1078,9 +1076,8 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   } else if (settings.wideVane == "SWING") {
     controlPage.replace("_WVANE_S_", "selected");
   }
-  controlPage.replace(
-      "_TEMP_",
-      Temperature(hp.getTemperature(), TempUnit::C).toString(config.unit.tempUnit).c_str());
+  controlPage.replace("_TEMP_",
+                      Temperature(hp.getTemperature(), TempUnit::C).toString(config.unit.tempUnit));
 
   // We need to send the page content in chunks to overcome
   // a limitation on the maximum size we can send at one
@@ -1470,11 +1467,10 @@ JsonDocument getHeatPumpStatusJson() {
   JsonDocument doc;
 
   doc["operating"] = currentStatus.operating;
-  doc["roomTemperature"] = Temperature(currentStatus.roomTemperature, TempUnit::C)
-                               .toString(config.unit.tempUnit)
-                               .c_str();
+  doc["roomTemperature"] =
+      Temperature(currentStatus.roomTemperature, TempUnit::C).toString(config.unit.tempUnit);
   doc["temperature"] =
-      Temperature(currentSettings.temperature, TempUnit::C).toString(config.unit.tempUnit).c_str();
+      Temperature(currentSettings.temperature, TempUnit::C).toString(config.unit.tempUnit);
   doc["fan"] = currentSettings.fan;
   doc["vane"] = currentSettings.vane;
   doc["wideVane"] = currentSettings.wideVane;
@@ -1828,18 +1824,18 @@ void haConfig() {
   String temp_stat_tpl_str =
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
-  temp_stat_tpl_str += String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) +
-                       " and value_json.temperature|int <= ";
-  temp_stat_tpl_str += String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) +
-                       ") %}{{ value_json.temperature }}";
+  temp_stat_tpl_str +=
+      config.unit.minTemp.toString(config.unit.tempUnit) + " and value_json.temperature|int <= ";
+  temp_stat_tpl_str +=
+      config.unit.maxTemp.toString(config.unit.tempUnit) + ") %}{{ value_json.temperature }}";
   temp_stat_tpl_str +=
       "{% elif (value_json.temperature|int < " +
-      String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) + ") %}" +
-      String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) +
+      config.unit.minTemp.toString(config.unit.tempUnit) + ") %}" +
+      config.unit.minTemp.toString(config.unit.tempUnit) +
       "{% elif (value_json.temperature|int > " +
-      String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) + ") %}" +
-      String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) + "{% endif %}{% else %}" +
-      String(Temperature(22.f, TempUnit::C).toString(config.unit.tempUnit).c_str()) + "{% endif %}";
+      config.unit.maxTemp.toString(config.unit.tempUnit) + ") %}" +
+      config.unit.maxTemp.toString(config.unit.tempUnit) + "{% endif %}{% else %}" +
+      Temperature(22.f, TempUnit::C).toString(config.unit.tempUnit) + "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
   haConfig["curr_temp_t"] = config.mqtt.ha_state_topic();
 
@@ -1847,7 +1843,7 @@ void haConfig() {
       String(F("{{ value_json.roomTemperature if (value_json is defined and "
                "value_json.roomTemperature is defined and "
                "value_json.roomTemperature|int > ")) +
-      String(Temperature(1.f, TempUnit::C).toString(config.unit.tempUnit).c_str()) +
+      Temperature(1.f, TempUnit::C).toString(config.unit.tempUnit) +
       ") }}";  // Set default value for fix "Could not parse data for HA"
   haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
   haConfig["min_temp"] = config.unit.minTemp.get(config.unit.tempUnit);

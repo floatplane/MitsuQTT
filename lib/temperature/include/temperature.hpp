@@ -1,8 +1,9 @@
 #pragma once
 
+#include <Arduino.h>
+
 #include <array>
 #include <cmath>
-#include <string>
 
 class Temperature {
  private:
@@ -45,14 +46,14 @@ class Temperature {
     return get(Unit::F, tempStep);
   }
 
-  std::string toString(const Unit unit, const float tempStep = 1.0f) const {
+  String toString(const Unit unit, const float tempStep = 1.0f) const {
     // Would like to use std::to_chars here, but it's not available in the Arduino environment
     std::array<char, 10> str;
     const auto value = get(unit, tempStep);
     const auto digits =
         tempStep > 0.f ? static_cast<int>(std::ceil(std::log10(1.0f / tempStep))) : 6;
     snprintf(str.data(), str.size(), "%.*f", std::max(0, digits), value);
-    return std::string(str.data());
+    return String(str.data());
   }
 
   void set(float value, const Unit unit) {
