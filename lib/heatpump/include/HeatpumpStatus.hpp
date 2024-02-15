@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <HeatPump.h>
 
-#include "Temperature.hpp"
+#include "temperature.hpp"
 
 class HeatpumpStatus {
  public:
