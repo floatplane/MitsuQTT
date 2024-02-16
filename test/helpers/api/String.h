@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include <cstring>
 #include <string>
+
+class __FlashStringHelper;
 
 // Reproduces Arduino's String class
 class String {
@@ -68,12 +71,28 @@ class String {
     return str_[index];
   }
 
+  void replace(const char* from, const char* to) {
+    size_t start = 0;
+    while (true) {
+      const auto pos = str_.find(from, start);
+      if (pos == std::string::npos) {
+        return;
+      }
+      str_.replace(pos, strlen(from), to);
+      start = pos + strlen(to);
+    }
+  }
+
+  void replace(const __FlashStringHelper* from, const __FlashStringHelper* to) {
+    replace(reinterpret_cast<const char*>(from), reinterpret_cast<const char*>(to));
+  }
+
   friend std::ostream& operator<<(std::ostream& lhs, const ::String& rhs) {
     lhs << rhs.str_;
     return lhs;
   }
 
- private:
+ protected:
   std::string str_;
   size_t maxCapacity_ = 1024;
 };

@@ -6,6 +6,13 @@
 #include <vector>
 
 class Template {
+ private:
+  struct Token {
+    String name;
+    bool isSubstitution;
+    bool htmlEscape;
+  };
+
  public:
   explicit Template(const String& templateContents) : templateContents(templateContents){};
 
@@ -15,12 +22,12 @@ class Template {
     while (*currentLocation != '\0') {
       const char* nextToken = strstr(currentLocation, "{{");
       if (nextToken != nullptr) {
-        result.concat(constructStringOfLength(currentLocation, nextToken - currentLocation));
+        result.concat(currentLocation, nextToken - currentLocation);
         // get the name of the token
         const auto parsedToken = parseTokenAtPoint(nextToken);
-        const String tokenName = parsedToken.first;
-        result.concat(renderToken(tokenName, data));
-        // set currentLocation to the end of the token (accounting for the "}}" characters)
+        const Token token = parsedToken.first;
+        result.concat(renderToken(token, data));
+        // set currentLocation to the end of the token
         currentLocation = parsedToken.second;
       } else {
         result.concat(currentLocation);
@@ -38,35 +45,82 @@ class Template {
  private:
   String templateContents;
 
-  String renderToken(const String& tokenName, const ArduinoJson::JsonDocument& data) const {
-    if (data.containsKey(tokenName)) {
-      const auto variant = data[tokenName];
-      if (variant.is<String>()) {
-        return variant.as<String>();
-      } else if (variant.is<int>()) {
-        return String(variant.as<int>());
-      } else if (variant.is<float>()) {
-        return String(variant.as<float>());
-      } else if (variant.is<double>()) {
-        return String(variant.as<double>());
-      }
+  String renderToken(const Token& token, const ArduinoJson::JsonDocument& data) const {
+    String result;
+    if (token.name == ".") {
+      return result;
     }
-    return String();
+    std::vector<String> path;
+    const char* iter = token.name.c_str();
+    while (true) {
+      const char* nextDot = strchr(iter, '.');
+      if (nextDot == nullptr) {
+        path.push_back(constructStringOfLength(iter, strlen(iter)));
+        break;
+      }
+      path.push_back(constructStringOfLength(iter, nextDot - iter));
+      iter = nextDot + 1;
+    }
+    auto node = data[path[0]];
+    for (auto i = 1; i < path.size(); i++) {
+      node = node[path[i]];
+    }
+    if (!node.isNull()) {
+      result = node.as<String>();
+    }
+
+    if (token.htmlEscape) {
+      // replace ampersands first, so that we don't replace the ampersands in the other escapes
+      result.replace(("&"), ("&amp;"));
+      result.replace(("\""), ("&quot;"));
+      result.replace(("<"), ("&lt;"));
+      result.replace((">"), ("&gt;"));
+    }
+    return result;
   }
 
   // Given a const char * at the start of a token sequence "{{", extract the token name and return a
   // pair of the token name and the const char * at the end of the token sequence
-  std::pair<String, const char*> parseTokenAtPoint(const char* tokenStart) const {
+  std::pair<Token, const char*> parseTokenAtPoint(const char* tokenStart) const {
     assert(tokenStart[0] == '{' && tokenStart[1] == '{');
+    tokenStart += 2;
+    String closeTag("}}");
+
+    bool escapeHtml = true;
+    if (*tokenStart == '{') {
+      escapeHtml = false;
+      tokenStart++;
+      closeTag = "}}}";
+    }
+
+    while (*tokenStart == ' ') {
+      tokenStart++;
+    }
+
+    if (*tokenStart == '&') {
+      escapeHtml = false;
+      tokenStart++;
+    }
+
+    while (*tokenStart == ' ') {
+      tokenStart++;
+    }
 
     // figure out the token name
-    tokenStart += 2;
-    const auto tokenEnd = strstr(tokenStart, "}}");
+    const char* tokenEnd = strstr(tokenStart, closeTag.c_str());
     if (tokenEnd == nullptr) {
-      return std::make_pair(String(), tokenStart + strlen(tokenStart));
+      return std::make_pair(
+          Token{.name = String(), .isSubstitution = true, .htmlEscape = escapeHtml},
+          tokenStart + strlen(tokenStart));
     }
-    const auto tokenLength = tokenEnd - tokenStart;
-    return std::make_pair(constructStringOfLength(tokenStart, tokenLength), tokenEnd + 2);
+    size_t tokenLength = tokenEnd - tokenStart;
+    while (tokenLength > 0 && tokenStart[tokenLength - 1] == ' ') {
+      tokenLength--;
+    }
+    return std::make_pair(Token{.name = constructStringOfLength(tokenStart, tokenLength),
+                                .isSubstitution = true,
+                                .htmlEscape = escapeHtml},
+                          tokenEnd + closeTag.length());
   }
 
   static String constructStringOfLength(const char* cString, size_t length) {
