@@ -406,7 +406,6 @@ void setup() {
     }
     // Serial.println(F("Connection to HVAC. Stop serial log."));
     LOG(F("MQTT initialized, trying to connect to HVAC"));
-    hp.setStatusChangedCallback(onHeatPumpStatusChanged);
     hp.setPacketCallback(hpPacketDebug);
 
     // Merge settings from remote control with settings driven from MQTT
@@ -1555,22 +1554,24 @@ String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSet
   return hpmode;  // unknown
 }
 
-// Invoked async when the heatpump's room temperature changes, or when the heatpump's operating
-// state changes. Also invoked synchronously every time through `loop`.
-// TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
-// NOLINTNEXTLINE(passedByValue) - we don't control this callback signature
-// cppcheck-suppress passedByValue
-void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
+void validateHeatPumpRemoteTemp() {
+  if (remoteTempActive && (millis() - lastRemoteTemp >
+                           CHECK_REMOTE_TEMP_INTERVAL_MS)) {  // if it's been 5 minutes since last
+    // remote_temp message, power off the heat pump
+    hp.setPowerSetting("OFF");
+    remoteTempActive = false;
+    hp.setRemoteTemperature(0.0f);
+    // TODO(floatplane): do we need to explicitly call update? we don't do it anywhere else
+    hp.update();
+  }
+}
+
+void onLoopHeatPump() {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS
                                                                // (millis rollover tolerant)
     hpCheckRemoteTemp();  // if the remote temperature feed from mqtt is stale,
                           // disable it and revert to the internal thermometer.
-
-    // TODO(floatplane): what? why?
-    // if (newStatus.roomTemperature == 0) {
-    //   return;
-    // }
 
     // TODO(floatplane): let's separate the job of periodically pushing latest state to MQTT from
     // the job of figuring out whether to use the remote temp sensor or the internal one.
@@ -2068,7 +2069,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
       }
       // MQTT connected send status
       else {
-        onHeatPumpStatusChanged(hp.getStatus());
+        onLoopHeatPump();
         mqtt_client.loop();
       }
     }
