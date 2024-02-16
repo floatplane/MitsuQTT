@@ -39,6 +39,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <temperature.hpp>
 
 #include "HeatpumpSettings.hpp"
+#include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
 #include "html_common.hpp"        // common code HTML (like header, footer)
 #include "html_init.hpp"          // code html for initial config
@@ -189,10 +190,6 @@ struct Config {
     }
     const String &ha_remote_temp_set_topic() const {
       static const String topicPath{rootTopic + F("/") + friendlyName + F("/remote_temp/set")};
-      return topicPath;
-    }
-    const String &ha_settings_topic() const {
-      static const String topicPath{rootTopic + F("/") + friendlyName + F("/settings")};
       return topicPath;
     }
     const String &ha_state_topic() const {
@@ -347,10 +344,10 @@ void setup() {
     ticker.attach(0.6, tick);
   */
 
-  loadWifi();
-  loadOthers();
-  loadUnit();
-  loadMqtt();
+  loadWifiConfig();
+  loadOthersConfig();
+  loadUnitConfig();
+  loadMqttConfig();
 #ifdef ESP32
   WiFi.setHostname(config.network.hostname.c_str());
 #else
@@ -404,12 +401,16 @@ void setup() {
     }
     // Serial.println(F("Connection to HVAC. Stop serial log."));
     LOG(F("MQTT initialized, trying to connect to HVAC"));
-    hp.setSettingsChangedCallback(hpSettingsChanged);
-    hp.setStatusChangedCallback(hpStatusChanged);
+    hp.setStatusChangedCallback(onHeatPumpStatusChanged);
     hp.setPacketCallback(hpPacketDebug);
-    // Allow Remote/Panel
+
+    // Merge settings from remote control with settings driven from MQTT
     hp.enableExternalUpdate();
+
+    // Automatically send new settings to heat pump when `sync()` is called
+    // Without this, you need to call update() after every state change
     hp.enableAutoUpdate();
+
     hp.connect(&Serial);
 
     lastTempSend = millis();
@@ -423,7 +424,7 @@ void setup() {
   logConfig();
 }
 
-void loadWifi() {
+void loadWifiConfig() {
   LOG(F("Loading WiFi configuration"));
   config.network.accessPointSsid = "";
   config.network.accessPointPassword = "";
@@ -443,7 +444,7 @@ void loadWifi() {
   }
 }
 
-void loadMqtt() {
+void loadMqttConfig() {
   LOG(F("Loading MQTT configuration"));
 
   const JsonDocument doc = FileSystem::loadJSON(mqtt_conf);
@@ -457,18 +458,9 @@ void loadMqtt() {
   config.mqtt.username = doc["mqtt_user"].as<String>();
   config.mqtt.password = doc["mqtt_pwd"].as<String>();
   config.mqtt.rootTopic = doc["mqtt_topic"].as<String>();
-
-  LOG(F("=== START DEBUG MQTT ==="));
-  LOG(F("Friendly Name") + config.mqtt.friendlyName);
-  LOG(F("IP Server ") + config.mqtt.server);
-  LOG(F("IP Port ") + portString);
-  LOG(F("Username ") + config.mqtt.username);
-  LOG(F("Password ") + config.mqtt.password);
-  LOG(F("Root topic ") + config.mqtt.rootTopic);
-  LOG(F("=== END DEBUG MQTT ==="));
 }
 
-void loadUnit() {
+void loadUnitConfig() {
   const JsonDocument doc = FileSystem::loadJSON(unit_conf);
   if (doc.isNull()) {
     return;
@@ -489,7 +481,7 @@ void loadUnit() {
   }
 }
 
-void loadOthers() {
+void loadOthersConfig() {
   const JsonDocument doc = FileSystem::loadJSON(others_conf);
   if (doc.isNull()) {
     return;
@@ -500,7 +492,7 @@ void loadOthers() {
   config.other.logToMqtt = doc["debugLogs"].as<String>() == "ON";
 }
 
-void saveMqtt(const Config &config) {
+void saveMqttConfig(const Config &config) {
   JsonDocument doc;
   doc["mqtt_fn"] = config.mqtt.friendlyName;
   doc["mqtt_host"] = config.mqtt.server;
@@ -511,7 +503,7 @@ void saveMqtt(const Config &config) {
   FileSystem::saveJSON(mqtt_conf, doc);
 }
 
-void saveUnit(const Config &config) {
+void saveUnitConfig(const Config &config) {
   JsonDocument doc;
   doc["unit_tempUnit"] = config.unit.tempUnit == TempUnit::F ? "fah" : "cel";
   doc["min_temp"] = String(config.unit.minTemp.getCelsius());
@@ -522,7 +514,7 @@ void saveUnit(const Config &config) {
   FileSystem::saveJSON(unit_conf, doc);
 }
 
-void saveWifi(const Config &config) {
+void saveWifiConfig(const Config &config) {
   JsonDocument doc;
   doc["ap_ssid"] = config.network.accessPointSsid;
   doc["ap_pwd"] = config.network.accessPointPassword;
@@ -531,7 +523,7 @@ void saveWifi(const Config &config) {
   FileSystem::saveJSON(wifi_conf, doc);
 }
 
-void saveOthers(const Config &config) {
+void saveOthersConfig(const Config &config) {
   JsonDocument doc;
   doc["haa"] = config.other.haAutodiscovery ? "ON" : "OFF";
   doc["haat"] = config.other.haAutodiscoveryTopic;
@@ -619,7 +611,7 @@ void handleSaveWifi() {
     config.network.accessPointPassword = server.arg("psk");
     config.network.hostname = server.arg("hn");
     config.network.otaUpdatePassword = server.arg("otapwd");
-    saveWifi(config);
+    saveWifiConfig(config);
   }
   String initSavePage = FPSTR(html_init_save);
   initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
@@ -731,7 +723,7 @@ void handleOthers() {
     config.other.haAutodiscoveryTopic = server.arg("haat");
     config.other.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
     config.other.logToMqtt = server.arg("DebugLogs") == "ON";
-    saveOthers(config);
+    saveOthersConfig(config);
     rebootAndSendPage();
   } else {
     String othersPage = FPSTR(html_page_others);
@@ -779,7 +771,7 @@ void handleMqtt() {
     config.mqtt.username = server.arg("mu");
     config.mqtt.password = server.arg("mp");
     config.mqtt.rootTopic = server.arg("mt");
-    saveMqtt(config);
+    saveMqttConfig(config);
     rebootAndSendPage();
   } else {
     String mqttPage = FPSTR(html_page_mqtt);
@@ -823,10 +815,8 @@ void handleUnitGet() {
   unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
   unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
   unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-  unitPage.replace(F("_MIN_TEMP_"),
-                   String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()));
-  unitPage.replace(F("_MAX_TEMP_"),
-                   String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()));
+  unitPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit));
+  unitPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit));
   unitPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
   // temp
   if (config.unit.tempUnit == TempUnit::F) {
@@ -887,7 +877,7 @@ void handleUnitPost() {
     config.unit.minTemp = Temperature(nextMinTemp, unit);
     config.unit.maxTemp = Temperature(nextMaxTemp, unit);
   }
-  saveUnit(config);
+  saveUnitConfig(config);
   rebootAndSendPage();
 }
 
@@ -903,7 +893,7 @@ void handleWifi() {
     config.network.accessPointPassword = server.arg("psk");
     config.network.hostname = server.arg("hn");
     config.network.otaUpdatePassword = server.arg("otapwd");
-    saveWifi(config);
+    saveWifiConfig(config);
     rebootAndSendPage();
   } else {
     String wifiPage = FPSTR(html_page_wifi);
@@ -993,14 +983,14 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
   controlPage.replace("_UNIT_NAME_", config.network.hostname);
   controlPage.replace("_RATE_", "60");
-  controlPage.replace("_ROOMTEMP_", String(Temperature(hp.getRoomTemperature(), TempUnit::C)
-                                               .toString(config.unit.tempUnit, 0.1f)
-                                               .c_str()));
+  controlPage.replace(
+      "_ROOMTEMP_",
+      Temperature(hp.getRoomTemperature(), TempUnit::C).toString(config.unit.tempUnit, 0.1f));
   controlPage.replace("_USE_FAHRENHEIT_", String(config.unit.tempUnit == TempUnit::F ? 1 : 0));
   controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
   controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.unit.supportHeatMode ? 1 : 0));
-  controlPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit).c_str());
-  controlPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit).c_str());
+  controlPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit));
+  controlPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit));
   controlPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
   controlPage.replace("_TXT_CTRL_CTEMP_", FPSTR(txt_ctrl_ctemp));
   controlPage.replace("_TXT_CTRL_TEMP_", FPSTR(txt_ctrl_temp));
@@ -1087,9 +1077,8 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
   } else if (settings.wideVane == "SWING") {
     controlPage.replace("_WVANE_S_", "selected");
   }
-  controlPage.replace(
-      "_TEMP_",
-      Temperature(hp.getTemperature(), TempUnit::C).toString(config.unit.tempUnit).c_str());
+  controlPage.replace("_TEMP_",
+                      Temperature(hp.getTemperature(), TempUnit::C).toString(config.unit.tempUnit));
 
   // We need to send the page content in chunks to overcome
   // a limitation on the maximum size we can send at one
@@ -1108,7 +1097,7 @@ void handleMetrics() {
   String metrics = FPSTR(html_metrics);
 
   const HeatpumpSettings currentSettings(hp.getSettings());
-  const heatpumpStatus currentStatus = hp.getStatus();
+  const HeatpumpStatus currentStatus(hp.getStatus());
 
   const String hppower = currentSettings.power == "ON" ? "1" : "0";
 
@@ -1168,8 +1157,8 @@ void handleMetrics() {
   metrics.replace("_VERSION_", BUILD_DATE);
   metrics.replace("_GIT_HASH_", COMMIT_HASH);
   metrics.replace("_POWER_", hppower);
-  metrics.replace("_ROOMTEMP_", String(currentStatus.roomTemperature));
-  metrics.replace("_TEMP_", String(currentSettings.temperature));
+  metrics.replace("_ROOMTEMP_", currentStatus.roomTemperature.toString(TempUnit::C));
+  metrics.replace("_TEMP_", currentSettings.temperature.toString(TempUnit::C));
   metrics.replace("_FAN_", hpfan);
   metrics.replace("_VANE_", hpvane);
   metrics.replace("_WIDEVANE_", hpwidevane);
@@ -1197,14 +1186,12 @@ void handleMetricsJson() {
   auto heatpump = doc[F("heatpump")].to<JsonObject>();
   heatpump[F("connected")] = hp.isConnected();
   if (hp.isConnected()) {
-    const heatpumpStatus currentStatus = hp.getStatus();
+    const HeatpumpStatus currentStatus(hp.getStatus());
     auto status = heatpump[F("status")].to<JsonObject>();
     status[F("compressorFrequency")] = currentStatus.compressorFrequency;
     status[F("operating")] = currentStatus.operating;
-    status[F("roomTemperature_F")] =
-        Temperature(currentStatus.roomTemperature, TempUnit::C).toString(TempUnit::F, 0.1f);
-    status[F("roomTemperature")] =
-        Temperature(currentStatus.roomTemperature, TempUnit::C).toString(TempUnit::C, 0.1f);
+    status[F("roomTemperature_F")] = currentStatus.roomTemperature.toString(TempUnit::F, 0.1f);
+    status[F("roomTemperature")] = currentStatus.roomTemperature.toString(TempUnit::C, 0.1f);
 
     const HeatpumpSettings currentSettings(hp.getSettings());
     auto settings = heatpump[F("settings")].to<JsonObject>();
@@ -1213,10 +1200,8 @@ void handleMetricsJson() {
     settings[F("iSee")] = currentSettings.iSee;
     settings[F("mode")] = currentSettings.mode;
     settings[F("power")] = currentSettings.power;
-    settings[F("temperature_F")] =
-        Temperature(currentSettings.temperature, TempUnit::C).toString(TempUnit::F, 0.1f);
-    settings[F("temperature")] =
-        Temperature(currentSettings.temperature, TempUnit::C).toString(TempUnit::C, 0.1f);
+    settings[F("temperature_F")] = currentSettings.temperature.toString(TempUnit::F, 0.1f);
+    settings[F("temperature")] = currentSettings.temperature.toString(TempUnit::C, 0.1f);
     settings[F("vane")] = currentSettings.vane;
     settings[F("wideVane")] = currentSettings.wideVane;
   }
@@ -1449,8 +1434,7 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
       update = true;
     }
     if (server.hasArg("TEMP")) {
-      newSettings.temperature =
-          Temperature(server.arg("TEMP").toFloat(), config.unit.tempUnit).getCelsius();
+      newSettings.temperature = Temperature(server.arg("TEMP").toFloat(), config.unit.tempUnit);
       update = true;
     }
     if (server.hasArg("FAN")) {
@@ -1473,17 +1457,14 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
 }
 
 JsonDocument getHeatPumpStatusJson() {
-  const heatpumpStatus currentStatus = hp.getStatus();
+  const HeatpumpStatus currentStatus(hp.getStatus());
   const HeatpumpSettings currentSettings(hp.getSettings());
 
   JsonDocument doc;
 
   doc["operating"] = currentStatus.operating;
-  doc["roomTemperature"] = Temperature(currentStatus.roomTemperature, TempUnit::C)
-                               .toString(config.unit.tempUnit)
-                               .c_str();
-  doc["temperature"] =
-      Temperature(currentSettings.temperature, TempUnit::C).toString(config.unit.tempUnit).c_str();
+  doc["roomTemperature"] = currentStatus.roomTemperature.get(config.unit.tempUnit, 0.5f);
+  doc["temperature"] = currentSettings.temperature.get(config.unit.tempUnit, 0.5f);
   doc["fan"] = currentSettings.fan;
   doc["vane"] = currentSettings.vane;
   doc["wideVane"] = currentSettings.wideVane;
@@ -1492,20 +1473,6 @@ JsonDocument getHeatPumpStatusJson() {
   doc["compressorFrequency"] = currentStatus.compressorFrequency;
 
   return doc;
-}
-
-void hpSettingsChanged() {
-  // send room temp, operating info and all information
-  JsonDocument status(getHeatPumpStatusJson());
-
-  String mqttOutput;
-  serializeJson(status, mqttOutput);
-
-  if (!mqtt_client.publish(config.mqtt.ha_settings_topic().c_str(), mqttOutput.c_str(), true)) {
-    LOG(F("Failed to publish hp settings"));
-  }
-
-  hpStatusChanged(hp.getStatus());
 }
 
 String hpGetMode(const HeatpumpSettings &hpSettings) {
@@ -1528,7 +1495,7 @@ String hpGetMode(const HeatpumpSettings &hpSettings) {
   return hpmode;  // cool, heat, dry
 }
 
-String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) {
+String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSettings) {
   // Map heat pump state to one of HA's CURRENT_HVAC_* values.
   // https://github.com/home-assistant/core/blob/master/homeassistant/components/climate/const.py#L80-L86
 
@@ -1560,7 +1527,10 @@ String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings) 
   return hpmode;  // unknown
 }
 
-void hpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
+// Invoked async when the heatpump's room temperature changes, or when the heatpump's operating
+// state changes. Also invoked synchronously every time through `loop`.
+// TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
+void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS
                                                                // (millis rollover tolerant)
@@ -1571,10 +1541,11 @@ void hpStatusChanged([[maybe_unused]] heatpumpStatus newStatus) {
     // if (newStatus.roomTemperature == 0) {
     //   return;
     // }
-    JsonDocument status(getHeatPumpStatusJson());
 
+    // TODO(floatplane): let's separate the job of periodically pushing latest state to MQTT from
+    // the job of figuring out whether to use the remote temp sensor or the internal one.
     String mqttOutput;
-    serializeJson(status, mqttOutput);
+    serializeJson(getHeatPumpStatusJson(), mqttOutput);
 
     if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
       LOG(F("Failed to publish hp status change"));
@@ -1591,14 +1562,18 @@ void hpCheckRemoteTemp() {
                                                               // to HP internal temp sensor
     remoteTempActive = false;
     hp.setRemoteTemperature(0.0f);
+    // TODO(floatplane): do we need to explicitly call update? we don't do it anywhere else
     hp.update();
   }
 }
 
 // NOLINTNEXTLINE(readability-non-const-parameter)
-void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection) {
-  // packetDirection should have been declared as const char *, but since hpPacketDebug is a
-  // callback function, it can't be.  So we'll just have to be careful not to modify it.
+void hpPacketDebug(byte *packet_, unsigned int length, char *packetDirection_) {
+  // `packet_` & `packetDirection_` should be const, but we don't control the signature of the
+  // callback function, so we stuff them into more restrictive pointers before moving on.
+  const byte *const packet = packet_;
+  const char *const packetDirection = packetDirection_;
+
   if (config.other.dumpPacketsToMqtt) {
     String message;
     for (unsigned int idx = 0; idx < length; idx++) {
@@ -1834,18 +1809,18 @@ void haConfig() {
   String temp_stat_tpl_str =
       F("{% if (value_json is defined and value_json.temperature is defined) "
         "%}{% if (value_json.temperature|int >= ");
-  temp_stat_tpl_str += String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) +
-                       " and value_json.temperature|int <= ";
-  temp_stat_tpl_str += String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) +
-                       ") %}{{ value_json.temperature }}";
+  temp_stat_tpl_str +=
+      config.unit.minTemp.toString(config.unit.tempUnit) + " and value_json.temperature|int <= ";
+  temp_stat_tpl_str +=
+      config.unit.maxTemp.toString(config.unit.tempUnit) + ") %}{{ value_json.temperature }}";
   temp_stat_tpl_str +=
       "{% elif (value_json.temperature|int < " +
-      String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) + ") %}" +
-      String(config.unit.minTemp.toString(config.unit.tempUnit).c_str()) +
+      config.unit.minTemp.toString(config.unit.tempUnit) + ") %}" +
+      config.unit.minTemp.toString(config.unit.tempUnit) +
       "{% elif (value_json.temperature|int > " +
-      String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) + ") %}" +
-      String(config.unit.maxTemp.toString(config.unit.tempUnit).c_str()) + "{% endif %}{% else %}" +
-      String(Temperature(22.f, TempUnit::C).toString(config.unit.tempUnit).c_str()) + "{% endif %}";
+      config.unit.maxTemp.toString(config.unit.tempUnit) + ") %}" +
+      config.unit.maxTemp.toString(config.unit.tempUnit) + "{% endif %}{% else %}" +
+      Temperature(22.f, TempUnit::C).toString(config.unit.tempUnit) + "{% endif %}";
   haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
   haConfig["curr_temp_t"] = config.mqtt.ha_state_topic();
 
@@ -1853,7 +1828,7 @@ void haConfig() {
       String(F("{{ value_json.roomTemperature if (value_json is defined and "
                "value_json.roomTemperature is defined and "
                "value_json.roomTemperature|int > ")) +
-      String(Temperature(1.f, TempUnit::C).toString(config.unit.tempUnit).c_str()) +
+      Temperature(1.f, TempUnit::C).toString(config.unit.tempUnit) +
       ") }}";  // Set default value for fix "Could not parse data for HA"
   haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
   haConfig["min_temp"] = config.unit.minTemp.get(config.unit.tempUnit);
@@ -2128,7 +2103,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
       }
       // MQTT connected send status
       else {
-        hpStatusChanged(hp.getStatus());
+        onHeatPumpStatusChanged(hp.getStatus());
         mqtt_client.loop();
       }
     }

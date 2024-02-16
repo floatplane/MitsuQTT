@@ -2,13 +2,14 @@
 #include <HeatPump.h>
 
 #include "HeatpumpSettings.hpp"
+#include "HeatpumpStatus.hpp"
 
 String getId();
 
-void loadWifi();
-void loadOthers();
-void loadUnit();
-void loadMqtt();
+void loadWifiConfig();
+void loadOthersConfig();
+void loadUnitConfig();
+void loadMqttConfig();
 
 bool initWifi();
 void handleRoot();
@@ -32,13 +33,13 @@ void handleUploadLoop();
 void handleControl();
 void initMqtt();
 void initCaptivePortal();
-void hpSettingsChanged();
-void hpStatusChanged(heatpumpStatus newStatus);
-void hpPacketDebug(byte *packet, unsigned int length, char *packetDirection);
+void onHeatPumpSettingsChanged();
+void onHeatPumpStatusChanged(heatpumpStatus newStatus);
+void hpPacketDebug(byte *packet_, unsigned int length, char *packetDirection_);
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit);
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit);
 String hpGetMode(const HeatpumpSettings &hpSettings);
-String hpGetAction(heatpumpStatus hpStatus, const HeatpumpSettings &hpSettings);
+String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSettings);
 void mqttCallback(const char *topic, const byte *payload, unsigned int length);
 void onSetCustomPacket(const char *message);
 void onSetDebugLogs(const char *message);
