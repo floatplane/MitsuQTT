@@ -5,6 +5,7 @@
 
 #include <template.hpp>
 
+#include "mustache_specs/comments.hpp"
 #include "mustache_specs/interpolation.hpp"
 
 int main(int argc, char **argv) {

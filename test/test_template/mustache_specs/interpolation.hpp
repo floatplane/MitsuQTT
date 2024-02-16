@@ -9,6 +9,8 @@ cat test/native/test_template/mustache_specs/interpolation.json| jq -r '.tests[]
 */
 // clang-format on
 
+TEST_SUITE_BEGIN("mustache/interpolation");
+
 TEST_CASE("No Interpolation") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
@@ -302,3 +304,5 @@ TEST_CASE("Ampersand With Padding") {
   CHECK_MESSAGE(Template(R"(|{{& string }}|)").render(data) == R"(|---|)",
                 R"(Superfluous in-tag whitespace should be ignored.)");
 }
+
+TEST_SUITE_END();

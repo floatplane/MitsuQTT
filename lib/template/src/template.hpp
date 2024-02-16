@@ -11,6 +11,7 @@ class Template {
     String name;
     bool isSubstitution;
     bool htmlEscape;
+    bool isComment;
   };
 
  public:
@@ -26,7 +27,9 @@ class Template {
         // get the name of the token
         const auto parsedToken = parseTokenAtPoint(nextToken);
         const Token token = parsedToken.first;
-        result.concat(renderToken(token, data));
+        if (!token.isComment) {
+          result.concat(renderToken(token, data));
+        }
         // set currentLocation to the end of the token
         currentLocation = parsedToken.second;
       } else {
@@ -87,10 +90,13 @@ class Template {
     String closeTag("}}");
 
     bool escapeHtml = true;
+    bool isComment = false;
     if (*tokenStart == '{') {
       escapeHtml = false;
       tokenStart++;
       closeTag = "}}}";
+    } else if (*tokenStart == '!') {
+      isComment = true;
     }
 
     while (*tokenStart == ' ') {
@@ -109,9 +115,11 @@ class Template {
     // figure out the token name
     const char* tokenEnd = strstr(tokenStart, closeTag.c_str());
     if (tokenEnd == nullptr) {
-      return std::make_pair(
-          Token{.name = String(), .isSubstitution = true, .htmlEscape = escapeHtml},
-          tokenStart + strlen(tokenStart));
+      return std::make_pair(Token{.name = String(),
+                                  .isSubstitution = true,
+                                  .htmlEscape = escapeHtml,
+                                  .isComment = isComment},
+                            tokenStart + strlen(tokenStart));
     }
     size_t tokenLength = tokenEnd - tokenStart;
     while (tokenLength > 0 && tokenStart[tokenLength - 1] == ' ') {
@@ -119,7 +127,8 @@ class Template {
     }
     return std::make_pair(Token{.name = constructStringOfLength(tokenStart, tokenLength),
                                 .isSubstitution = true,
-                                .htmlEscape = escapeHtml},
+                                .htmlEscape = escapeHtml,
+                                .isComment = isComment},
                           tokenEnd + closeTag.length());
   }
 
