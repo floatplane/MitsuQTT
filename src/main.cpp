@@ -58,6 +58,8 @@ ESP8266WebServer server(80);  // ESP8266 web
 #define LANG_PATH "languages/en-GB.h"  // default language English
 #endif
 
+#include "templates/ha_config.hpp"
+
 #ifdef ESP32
 const PROGMEM char *const wifi_conf = "/wifi.json";
 const PROGMEM char *const mqtt_conf = "/mqtt.json";
@@ -1776,127 +1778,62 @@ void onSetMode(const char *message) {
   }
 }
 
-void haConfig() {
+void sendHomeAssistantConfig() {
   // send HA config packet
   // setup HA payload device
   JsonDocument haConfig;
 
-  haConfig["name"] = config.network.hostname;
-  haConfig["unique_id"] = getId();
+  haConfig[F("name")] = config.network.hostname;
+  haConfig[F("unique_id")] = getId();
 
-  JsonArray haConfigModes = haConfig["modes"].to<JsonArray>();
-  haConfigModes.add("heat_cool");  // native AUTO mode
-  haConfigModes.add("cool");
-  haConfigModes.add("dry");
-  if (config.unit.supportHeatMode) {
-    haConfigModes.add("heat");
-  }
-  haConfigModes.add("fan_only");  // native FAN mode
-  haConfigModes.add("off");
+  haConfig[F("supportHeatMode")] = config.unit.supportHeatMode;
 
-  haConfig["mode_cmd_t"] = config.mqtt.ha_mode_set_topic();
-  haConfig["mode_stat_t"] = config.mqtt.ha_state_topic();
-  haConfig["mode_stat_tpl"] =
-      F("{{ value_json.mode if (value_json is defined and value_json.mode is "
-        "defined and value_json.mode|length) "
-        "else 'off' }}");  // Set default value for fix "Could not parse data
-                           // for HA"
-  haConfig["temp_cmd_t"] = config.mqtt.ha_temp_set_topic();
-  haConfig["temp_stat_t"] = config.mqtt.ha_state_topic();
-  haConfig["avty_t"] =
-      config.mqtt.ha_availability_topic();              // MQTT last will (status) messages topic
-  haConfig["pl_not_avail"] = mqtt_payload_unavailable;  // MQTT offline message payload
-  haConfig["pl_avail"] = mqtt_payload_available;        // MQTT online message payload
+  haConfig[F("mode_cmd_t")] = config.mqtt.ha_mode_set_topic();
+  haConfig[F("mode_stat_t")] = config.mqtt.ha_state_topic();
+  haConfig[F("temp_cmd_t")] = config.mqtt.ha_temp_set_topic();
+  haConfig[F("temp_stat_t")] = config.mqtt.ha_state_topic();
+  haConfig[F("avty_t")] =
+      config.mqtt.ha_availability_topic();                 // MQTT last will (status) messages topic
+  haConfig[F("pl_not_avail")] = mqtt_payload_unavailable;  // MQTT offline message payload
+  haConfig[F("pl_avail")] = mqtt_payload_available;        // MQTT online message payload
 
-  // Set default value for fix "Could not parse data for HA"
-  String temp_stat_tpl_str =
-      F("{% if (value_json is defined and value_json.temperature is defined) "
-        "%}{% if (value_json.temperature|int >= ");
-  temp_stat_tpl_str +=
-      config.unit.minTemp.toString(config.unit.tempUnit) + " and value_json.temperature|int <= ";
-  temp_stat_tpl_str +=
-      config.unit.maxTemp.toString(config.unit.tempUnit) + ") %}{{ value_json.temperature }}";
-  temp_stat_tpl_str +=
-      "{% elif (value_json.temperature|int < " +
-      config.unit.minTemp.toString(config.unit.tempUnit) + ") %}" +
-      config.unit.minTemp.toString(config.unit.tempUnit) +
-      "{% elif (value_json.temperature|int > " +
-      config.unit.maxTemp.toString(config.unit.tempUnit) + ") %}" +
-      config.unit.maxTemp.toString(config.unit.tempUnit) + "{% endif %}{% else %}" +
-      Temperature(22.f, TempUnit::C).toString(config.unit.tempUnit) + "{% endif %}";
-  haConfig["temp_stat_tpl"] = temp_stat_tpl_str;
-  haConfig["curr_temp_t"] = config.mqtt.ha_state_topic();
+  auto tempStatTpl = haConfig[F("tempStatTpl")].to<JsonObject>();
+  tempStatTpl[F("fieldName")] = F("temperature");
+  tempStatTpl[F("minTemp")] = config.unit.minTemp.toString(config.unit.tempUnit);
+  tempStatTpl[F("maxTemp")] = config.unit.maxTemp.toString(config.unit.tempUnit);
+  tempStatTpl[F("defaultTemp")] = Temperature(22.f, TempUnit::C).toString(config.unit.tempUnit);
 
-  const String curr_temp_tpl_str =
-      String(F("{{ value_json.roomTemperature if (value_json is defined and "
-               "value_json.roomTemperature is defined and "
-               "value_json.roomTemperature|int > ")) +
-      Temperature(1.f, TempUnit::C).toString(config.unit.tempUnit) +
-      ") }}";  // Set default value for fix "Could not parse data for HA"
-  haConfig["curr_temp_tpl"] = curr_temp_tpl_str;
-  haConfig["min_temp"] = config.unit.minTemp.get(config.unit.tempUnit);
-  haConfig["max_temp"] = config.unit.maxTemp.get(config.unit.tempUnit);
-  haConfig["temp_step"] = config.unit.tempStep;
-  haConfig["temperature_unit"] = getTemperatureScale();
+  haConfig[F("curr_temp_t")] = config.mqtt.ha_state_topic();
 
-  JsonArray haConfigFan_modes = haConfig["fan_modes"].to<JsonArray>();
-  haConfigFan_modes.add("AUTO");
-  haConfigFan_modes.add("QUIET");
-  haConfigFan_modes.add("1");
-  haConfigFan_modes.add("2");
-  haConfigFan_modes.add("3");
-  haConfigFan_modes.add("4");
+  auto currTempTpl = haConfig[F("currTempTpl")].to<JsonObject>();
+  currTempTpl[F("fieldName")] = F("roomTemperature");
+  currTempTpl[F("minTemp")] = Temperature(1.f, TempUnit::C).toString(config.unit.tempUnit);
 
-  haConfig["fan_mode_cmd_t"] = config.mqtt.ha_fan_set_topic();
-  haConfig["fan_mode_stat_t"] = config.mqtt.ha_state_topic();
-  haConfig["fan_mode_stat_tpl"] =
-      F("{{ value_json.fan if (value_json is defined and value_json.fan is "
-        "defined and value_json.fan|length) else "
-        "'AUTO' }}");  // Set default value for fix "Could not parse data for HA"
+  haConfig[F("min_temp")] = config.unit.minTemp.toString(config.unit.tempUnit);
+  haConfig[F("max_temp")] = config.unit.maxTemp.toString(config.unit.tempUnit);
+  haConfig[F("temp_step")] = config.unit.tempStep;
+  haConfig[F("temperature_unit")] = getTemperatureScale();
 
-  JsonArray haConfigSwing_modes = haConfig["swing_modes"].to<JsonArray>();
-  haConfigSwing_modes.add("AUTO");
-  haConfigSwing_modes.add("1");
-  haConfigSwing_modes.add("2");
-  haConfigSwing_modes.add("3");
-  haConfigSwing_modes.add("4");
-  haConfigSwing_modes.add("5");
-  haConfigSwing_modes.add("SWING");
+  haConfig[F("fan_mode_cmd_t")] = config.mqtt.ha_fan_set_topic();
+  haConfig[F("fan_mode_stat_t")] = config.mqtt.ha_state_topic();
 
-  haConfig["swing_mode_cmd_t"] = config.mqtt.ha_vane_set_topic();
-  haConfig["swing_mode_stat_t"] = config.mqtt.ha_state_topic();
-  haConfig["swing_mode_stat_tpl"] =
-      F("{{ value_json.vane if (value_json is defined and value_json.vane is "
-        "defined and value_json.vane|length) "
-        "else 'AUTO' }}");  // Set default value for fix "Could not parse data
-                            // for HA"
-  haConfig["action_topic"] = config.mqtt.ha_state_topic();
-  haConfig["action_template"] =
-      F("{{ value_json.action if (value_json is defined and value_json.action "
-        "is defined and "
-        "value_json.action|length) else 'idle' }}");  // Set default value for
-                                                      // fix "Could not parse
-                                                      // data for HA"
+  haConfig[F("swing_mode_cmd_t")] = config.mqtt.ha_vane_set_topic();
+  haConfig[F("swing_mode_stat_t")] = config.mqtt.ha_state_topic();
+  haConfig[F("action_topic")] = config.mqtt.ha_state_topic();
 
-  JsonObject haConfigDevice = haConfig["device"].to<JsonObject>();
-
-  haConfigDevice["ids"] = config.mqtt.friendlyName;
-  haConfigDevice["name"] = config.mqtt.friendlyName;
-  haConfigDevice["sw"] = "Mitsubishi2MQTT " + String(BUILD_DATE) + " (" + String(COMMIT_HASH) + ")";
-  haConfigDevice["mdl"] = "HVAC MITSUBISHI";
-  haConfigDevice["mf"] = "MITSUBISHI ELECTRIC";
-  haConfigDevice["configuration_url"] = "http://" + WiFi.localIP().toString();
+  haConfig[F("friendlyName")] = config.mqtt.friendlyName;
+  haConfig[F("buildDate")] = BUILD_DATE;
+  haConfig[F("commitHash")] = COMMIT_HASH;
+  haConfig[F("localIP")] = WiFi.localIP().toString();
 
   // Additional attributes are in the state
   // For now, only compressorFrequency
-  haConfig["json_attr_t"] = config.mqtt.ha_state_topic();
-  haConfig["json_attr_tpl"] =
-      F("{{ {'compressorFrequency': value_json.compressorFrequency if "
-        "(value_json is defined "
-        "and value_json.compressorFrequency is defined) else '-1' } | tojson }}");
+  haConfig[F("json_attr_t")] = config.mqtt.ha_state_topic();
 
-  String mqttOutput;
-  serializeJson(haConfig, mqttOutput);
+  String mqttOutput =
+      Template(templates::configTemplate)
+          .render(haConfig, {{"lbrace", templates::lbrace}, {"rbraces", templates::rbraces}});
+
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);
   mqtt_client.endPublish();
@@ -1943,7 +1880,7 @@ void mqttConnect() {
       mqtt_client.publish(config.mqtt.ha_availability_topic().c_str(), mqtt_payload_available,
                           true);  // publish status as available
       if (config.other.haAutodiscovery) {
-        haConfig();
+        sendHomeAssistantConfig();
       }
     }
   }
