@@ -27,6 +27,10 @@ class String {
     return concat(s.c_str(), s.length());
   }
 
+  unsigned char concat(const String& s, size_t n) {
+    return concat(s.c_str(), n);
+  }
+
   unsigned char concat(const char* s) {
     return concat(s, strlen(s));
   }

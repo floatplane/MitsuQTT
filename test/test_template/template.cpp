@@ -8,6 +8,7 @@
 #include "mustache_specs/comments.hpp"
 #include "mustache_specs/interpolation.hpp"
 #include "mustache_specs/inverted.hpp"
+#include "mustache_specs/partials.hpp"
 #include "mustache_specs/sections.hpp"
 
 TEST_SUITE_BEGIN("isFalsy");

@@ -24,7 +24,8 @@ class Template {
  public:
   explicit Template(const String& templateContents) : templateContents(templateContents){};
 
-  String render(const ArduinoJson::JsonDocument& data) const {
+  String render(const ArduinoJson::JsonDocument& data,
+                const std::vector<std::pair<String, String>>& partials = {}) const {
     // set up context stack
     // root of stack: object/array/null/string
     // each recursive call to renderWithContextStack does the following:
@@ -36,7 +37,7 @@ class Template {
     std::vector<JsonVariantConst> contextStack;
     contextStack.push_back(currentContext);
 
-    const auto result = renderWithContextStack(0, contextStack, true);
+    const auto result = renderWithContextStack(0, contextStack, partials, true);
     return result.first;
   }
 
@@ -52,12 +53,31 @@ class Template {
     return false;
   }
 
+  static String indentLines(const String& input, size_t indentation) {
+    String result;
+    std::string indent(indentation, ' ');
+    size_t start = 0;
+    while (start < input.length()) {
+      auto end = input.indexOf('\n', start);
+      if (end == -1) {
+        result.concat(indent.c_str());
+        result.concat(input.substring(start, input.length()));
+        break;
+      }
+      result.concat(indent.c_str());
+      result.concat(input.substring(start, end + 1));
+      start = end + 1;
+    }
+    return result;
+  }
+
  private:
   String templateContents;
 
-  std::pair<String, size_t> renderWithContextStack(size_t position,
-                                                   std::vector<JsonVariantConst>& contextStack,
-                                                   bool renderSection) const {
+  std::pair<String, size_t> renderWithContextStack(
+      size_t position, std::vector<JsonVariantConst>& contextStack,
+
+      const std::vector<std::pair<String, String>>& partials, bool renderSection) const {
     String result;
     while (position < templateContents.length()) {
       auto nextToken = templateContents.indexOf("{{", position);
@@ -66,53 +86,85 @@ class Template {
         const auto tokenRenderExtents =
             getExclusionRangeForToken(nextToken, parsedToken.second, parsedToken.first.type);
         if (renderSection) {
-          result.concat(templateContents.substring(position, tokenRenderExtents.first));
+          result.concat(templateContents.substring(position, tokenRenderExtents.start));
         }
         const Token token = parsedToken.first;
-        if (token.type == TokenType::Text) {
-          if (renderSection) {
-            result.concat(renderToken(token, contextStack));
-          }
-          position = tokenRenderExtents.second;
-        } else if (token.type == TokenType::Section) {
-          auto context = lookupTokenInContextStack(token.name, contextStack);
-          auto falsy = isFalsy(context);
-          if (!falsy && context.is<JsonArrayConst>()) {
-            auto array = context.as<JsonArrayConst>();
-            for (auto i = 0; i < array.size(); i++) {
-              contextStack.push_back(array[i]);
-              auto sectionResult =
-                  renderWithContextStack(tokenRenderExtents.second, contextStack, renderSection);
+        switch (token.type) {
+          case TokenType::Text:
+            if (renderSection) {
+              result.concat(renderToken(token, contextStack));
+            }
+            position = tokenRenderExtents.end;
+            break;
+
+          case TokenType::Section: {
+            auto context = lookupTokenInContextStack(token.name, contextStack);
+            auto falsy = isFalsy(context);
+            if (!falsy && context.is<JsonArrayConst>()) {
+              auto array = context.as<JsonArrayConst>();
+              for (auto i = 0; i < array.size(); i++) {
+                contextStack.push_back(array[i]);
+                auto sectionResult = renderWithContextStack(tokenRenderExtents.end, contextStack,
+                                                            partials, renderSection);
+                if (renderSection) {
+                  result.concat(sectionResult.first);
+                }
+                contextStack.pop_back();
+                position = sectionResult.second;
+              }
+            } else {
+              contextStack.push_back(context);
+              auto sectionResult = renderWithContextStack(tokenRenderExtents.end, contextStack,
+                                                          partials, renderSection && !falsy);
               if (renderSection) {
                 result.concat(sectionResult.first);
               }
               contextStack.pop_back();
               position = sectionResult.second;
             }
-          } else {
-            contextStack.push_back(context);
-            auto sectionResult = renderWithContextStack(tokenRenderExtents.second, contextStack,
-                                                        renderSection && !falsy);
+            break;
+          }
+
+          case TokenType::InvertedSection: {
+            // check token for falsy value, render if falsy
+            auto context = lookupTokenInContextStack(token.name, contextStack);
+            auto falsy = isFalsy(context);
+            auto sectionResult = renderWithContextStack(tokenRenderExtents.end, contextStack,
+                                                        partials, renderSection && falsy);
             if (renderSection) {
               result.concat(sectionResult.first);
             }
-            contextStack.pop_back();
             position = sectionResult.second;
+            break;
           }
-        } else if (token.type == TokenType::InvertedSection) {
-          // check token for falsy value, render if falsy
-          auto context = lookupTokenInContextStack(token.name, contextStack);
-          auto falsy = isFalsy(context);
-          auto sectionResult = renderWithContextStack(tokenRenderExtents.second, contextStack,
-                                                      renderSection && falsy);
-          if (renderSection) {
-            result.concat(sectionResult.first);
-          }
-          position = sectionResult.second;
-        } else if (token.type == TokenType::EndSection) {
-          return std::make_pair(result, tokenRenderExtents.second);
-        } else {
-          position = tokenRenderExtents.second;
+
+          case TokenType::EndSection:
+            return std::make_pair(result, tokenRenderExtents.end);
+
+          case TokenType::Partial:
+            if (renderSection) {
+              // find partial in partials list and render with it
+              for (auto partial : partials) {
+                if (partial.first == token.name) {
+                  // Partials must match the indentation of the token that references them
+                  String indentedPartial =
+                      indentLines(partial.second, tokenRenderExtents.indentation);
+                  String partialResult =
+                      Template(indentedPartial)
+                          .renderWithContextStack(0, contextStack, partials, renderSection)
+                          .first;
+                  result.concat(partialResult);
+
+                  break;
+                }
+              }
+            }
+            position = tokenRenderExtents.end;
+            break;
+
+          default:
+            position = tokenRenderExtents.end;
+            break;
         }
       } else {
         if (renderSection) {
@@ -127,11 +179,22 @@ class Template {
   // Tokens that don't output content and are standalone (i.e. not surrounded by non-whitespace)
   // should not leave blank lines in the content. This function returns the range of the template
   // that should be excluded from the output when the token is standalone.
-  std::pair<size_t, size_t> getExclusionRangeForToken(size_t tokenStart, size_t tokenEnd,
-                                                      TokenType tokenType) const {
-    if (tokenType == TokenType::Text || tokenType == TokenType::Partial) {
-      // These token types output content, so we treat the whitespace around them as significant
-      return std::make_pair(tokenStart, tokenEnd);
+  struct ExclusionRange {
+    size_t start;
+    size_t end;
+    size_t indentation;
+  };
+  ExclusionRange getExclusionRangeForToken(size_t tokenStart, size_t tokenEnd,
+                                           TokenType tokenType) const {
+    ExclusionRange defaultResult{
+        .start = tokenStart,
+        .end = tokenEnd,
+        .indentation = 0,
+    };
+
+    if (tokenType == TokenType::Text) {
+      // Text tokens are never standalone
+      return defaultResult;
     }
 
     auto lineStart = templateContents.lastIndexOf('\n', static_cast<int>(tokenStart)) +
@@ -154,11 +217,12 @@ class Template {
       }
     }
     if (!standalone) {
-      return std::make_pair(tokenStart, tokenEnd);
+      return defaultResult;
     }
 
     // If the token is on the very last line of the template, then remove the preceding newline,
     // but only if there's no leading whitespace before the token
+    size_t indentation = tokenStart - lineStart;
     if (lineEnd == templateContents.length() && lineStart > 0 && lineStart == tokenStart) {
       lineStart--;
       // Also remove any preceding carriage return
@@ -169,7 +233,11 @@ class Template {
       // Remove the trailing newline
       lineEnd++;
     }
-    return std::make_pair(lineStart, lineEnd);
+    return {
+        .start = static_cast<size_t>(lineStart),
+        .end = static_cast<size_t>(lineEnd),
+        .indentation = indentation,
+    };
   }
 
   String renderToken(const Token& token, const std::vector<JsonVariantConst>& contextStack) const {
@@ -257,9 +325,10 @@ class Template {
         type = TokenType::EndSection;
         position++;
         break;
-      // case '>':
-      //   type = TokenType::Partial;
-      //   break;
+      case '>':
+        type = TokenType::Partial;
+        position++;
+        break;
       default:
         break;
     }
