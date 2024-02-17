@@ -108,7 +108,7 @@ class Template {
             auto falsy = isFalsy(context);
             if (!falsy && context.is<JsonArrayConst>()) {
               auto array = context.as<JsonArrayConst>();
-              for (auto i = 0; i < array.size(); i++) {
+              for (size_t i = 0; i < array.size(); i++) {
                 contextStack.push_back(array[i]);
                 auto sectionResult = renderWithContextStack(tokenRenderExtents.end, contextStack,
                                                             partials, renderSection);
@@ -209,13 +209,13 @@ class Template {
       lineEnd = static_cast<int>(templateContents.length());
     }
     bool standalone = true;
-    for (auto i = lineStart; i < tokenStart; i++) {
+    for (int i = lineStart; i < static_cast<int>(tokenStart); i++) {
       if (isspace(templateContents[i]) == 0) {
         standalone = false;
         break;
       }
     }
-    for (auto i = tokenEnd; i < lineEnd; i++) {
+    for (int i = static_cast<int>(tokenEnd); i < lineEnd; i++) {
       if (isspace(templateContents[i]) == 0) {
         standalone = false;
         break;
@@ -228,7 +228,8 @@ class Template {
     // If the token is on the very last line of the template, then remove the preceding newline,
     // but only if there's no leading whitespace before the token
     size_t indentation = tokenStart - lineStart;
-    if (lineEnd == templateContents.length() && lineStart > 0 && lineStart == tokenStart) {
+    if (lineEnd == static_cast<int>(templateContents.length()) && lineStart > 0 &&
+        lineStart == static_cast<int>(tokenStart)) {
       lineStart--;
       // Also remove any preceding carriage return
       if (lineStart > 0 && templateContents[lineStart] == '\r') {
@@ -279,7 +280,7 @@ class Template {
                                                const JsonVariantConst& context) {
     String result;
     auto node = context[path[0]];
-    for (auto i = 1; i < path.size(); i++) {
+    for (size_t i = 1; i < path.size(); i++) {
       node = node[path[i]];
     }
     return node;
@@ -287,9 +288,8 @@ class Template {
 
   static std::vector<String> splitPath(const String& path) {
     std::vector<String> result;
-    size_t start = 0;
-    size_t end = path.indexOf('.');
-    // cppcheck-suppress knownConditionTrueFalse
+    int start = 0;
+    int end = path.indexOf('.');
     while (end != -1) {
       result.push_back(path.substring(start, end));
       start = end + 1;
@@ -302,7 +302,8 @@ class Template {
   // Given a const char * at the start of a token sequence "{{", extract the token name and return a
   // pair of the token name and the const char * at the end of the token sequence
   std::pair<Token, size_t> parseTokenAtPoint(size_t position) const {
-    assert(templateContents[position] == '{' && templateContents[position + 1] == '{');
+    assert(templateContents[position] == '{');
+    assert(templateContents[position + 1] == '{');
     position += 2;
     String closeTag("}}");
 
