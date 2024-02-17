@@ -1532,6 +1532,7 @@ String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSet
 // state changes. Also invoked synchronously every time through `loop`.
 // TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
 // NOLINTNEXTLINE(passedByValue) - we don't control this callback signature
+// cppcheck-suppress passedByValue
 void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS

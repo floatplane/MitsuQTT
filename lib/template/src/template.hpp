@@ -24,6 +24,8 @@ class Template {
  public:
   explicit Template(const String& templateContents) : templateContents(templateContents){};
 
+  // TODO(floatplane) I know that this method can be static, but not doing it today
+  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   String render(const ArduinoJson::JsonDocument& data,
                 const std::vector<std::pair<String, String>>& partials = {}) const {
     // set up context stack
@@ -44,10 +46,12 @@ class Template {
   static bool isFalsy(const JsonVariantConst& value) {
     if (value.isNull()) {
       return true;
-    } else if (value.is<JsonArrayConst>()) {
+    }
+    if (value.is<JsonArrayConst>()) {
       const auto asArray = value.as<ArduinoJson::JsonArrayConst>();
       return asArray.size() == 0;
-    } else if (value.is<bool>()) {
+    }
+    if (value.is<bool>()) {
       return !value.as<bool>();
     }
     return false;
@@ -74,6 +78,8 @@ class Template {
  private:
   String templateContents;
 
+  // TODO(floatplane) yeah, I know it's a mess
+  // NOLINTNEXTLINE(readability-function-cognitive-complexity)
   std::pair<String, size_t> renderWithContextStack(
       size_t position, std::vector<JsonVariantConst>& contextStack,
 
@@ -144,19 +150,18 @@ class Template {
           case TokenType::Partial:
             if (renderSection) {
               // find partial in partials list and render with it
-              for (auto partial : partials) {
-                if (partial.first == token.name) {
-                  // Partials must match the indentation of the token that references them
-                  String indentedPartial =
-                      indentLines(partial.second, tokenRenderExtents.indentation);
-                  String partialResult =
-                      Template(indentedPartial)
-                          .renderWithContextStack(0, contextStack, partials, renderSection)
-                          .first;
-                  result.concat(partialResult);
-
-                  break;
-                }
+              auto partial = std::find_if(
+                  partials.begin(), partials.end(),
+                  [&token](const auto& partial) { return partial.first == token.name; });
+              if (partial != partials.end()) {
+                // Partials must match the indentation of the token that references them
+                String indentedPartial =
+                    indentLines(partial->second, tokenRenderExtents.indentation);
+                String partialResult =
+                    Template(indentedPartial)
+                        .renderWithContextStack(0, contextStack, partials, renderSection)
+                        .first;
+                result.concat(partialResult);
               }
             }
             position = tokenRenderExtents.end;
@@ -201,17 +206,17 @@ class Template {
                      1;                                       // 0 if this is the first line
     auto lineEnd = templateContents.indexOf('\n', tokenEnd);  // -1 if this is the last line
     if (lineEnd == -1) {
-      lineEnd = templateContents.length();
+      lineEnd = static_cast<int>(templateContents.length());
     }
     bool standalone = true;
     for (auto i = lineStart; i < tokenStart; i++) {
-      if (!isspace(templateContents[i])) {
+      if (isspace(templateContents[i]) == 0) {
         standalone = false;
         break;
       }
     }
     for (auto i = tokenEnd; i < lineEnd; i++) {
-      if (!isspace(templateContents[i])) {
+      if (isspace(templateContents[i]) == 0) {
         standalone = false;
         break;
       }
@@ -240,7 +245,7 @@ class Template {
     };
   }
 
-  String renderToken(const Token& token, const std::vector<JsonVariantConst>& contextStack) const {
+  static String renderToken(const Token& token, const std::vector<JsonVariantConst>& contextStack) {
     auto node = lookupTokenInContextStack(token.name, contextStack);
     String result = node.isNull() ? "" : node.as<String>();
 
@@ -254,8 +259,8 @@ class Template {
     return result;
   }
 
-  JsonVariantConst lookupTokenInContextStack(
-      const String& name, const std::vector<JsonVariantConst>& contextStack) const {
+  static JsonVariantConst lookupTokenInContextStack(
+      const String& name, const std::vector<JsonVariantConst>& contextStack) {
     JsonVariantConst node;
     if (name == ".") {
       return contextStack.back();
@@ -270,8 +275,8 @@ class Template {
     return node;
   }
 
-  JsonVariantConst lookupTokenInContext(const std::vector<String>& path,
-                                        const JsonVariantConst& context) const {
+  static JsonVariantConst lookupTokenInContext(const std::vector<String>& path,
+                                               const JsonVariantConst& context) {
     String result;
     auto node = context[path[0]];
     for (auto i = 1; i < path.size(); i++) {
@@ -280,10 +285,11 @@ class Template {
     return node;
   }
 
-  std::vector<String> splitPath(const String& path) const {
+  static std::vector<String> splitPath(const String& path) {
     std::vector<String> result;
     size_t start = 0;
     size_t end = path.indexOf('.');
+    // cppcheck-suppress knownConditionTrueFalse
     while (end != -1) {
       result.push_back(path.substring(start, end));
       start = end + 1;
