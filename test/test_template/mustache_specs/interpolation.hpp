@@ -5,7 +5,7 @@
 
 // clang-format off
 /* generated via
-cat test/test_template/mustache_specs/interpolation.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data))\"); CHECK_MESSAGE(Template(R\"(\(.template))\").render(data) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
+cat test/test_template/mustache_specs/interpolation.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data|tojson))\"); CHECK_MESSAGE(Template(R\"(\(.template))\").render(data) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
 */
 // clang-format on
 
@@ -212,7 +212,6 @@ TEST_CASE("Dotted Names - Context Precedence" * doctest::skip(true)) {
                 R"(Dotted names should be resolved against former resolutions.)");
 }
 
-// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
 TEST_CASE("Implicit Iterators - Basic Interpolation") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"("world")");
@@ -223,7 +222,6 @@ TEST_CASE("Implicit Iterators - Basic Interpolation") {
                 R"(Unadorned tags should interpolate content into the template.)");
 }
 
-// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
 TEST_CASE("Implicit Iterators - HTML Escaping") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"("& \" < >")");
@@ -235,7 +233,6 @@ TEST_CASE("Implicit Iterators - HTML Escaping") {
       R"(Basic interpolation should be HTML escaped.)");
 }
 
-// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
 TEST_CASE("Implicit Iterators - Triple Mustache") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"("& \" < >")");
@@ -246,7 +243,6 @@ TEST_CASE("Implicit Iterators - Triple Mustache") {
                 R"(Triple mustaches should interpolate without HTML escaping.)");
 }
 
-// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
 TEST_CASE("Implicit Iterators - Ampersand") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"("& \" < >")");
