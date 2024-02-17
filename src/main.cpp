@@ -37,6 +37,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include <map>
 #include <temperature.hpp>
+#include <template.hpp>
 
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
@@ -1094,8 +1095,6 @@ void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
 void handleMetrics() {
   LOG(F("handleMetrics()"));
 
-  String metrics = FPSTR(html_metrics);
-
   const HeatpumpSettings currentSettings(hp.getSettings());
   const HeatpumpStatus currentStatus(hp.getStatus());
 
@@ -1153,19 +1152,21 @@ void handleMetrics() {
     hpmode = "-2";
   }
 
-  metrics.replace("_UNIT_NAME_", config.network.hostname);
-  metrics.replace("_VERSION_", BUILD_DATE);
-  metrics.replace("_GIT_HASH_", COMMIT_HASH);
-  metrics.replace("_POWER_", hppower);
-  metrics.replace("_ROOMTEMP_", currentStatus.roomTemperature.toString(TempUnit::C));
-  metrics.replace("_TEMP_", currentSettings.temperature.toString(TempUnit::C));
-  metrics.replace("_FAN_", hpfan);
-  metrics.replace("_VANE_", hpvane);
-  metrics.replace("_WIDEVANE_", hpwidevane);
-  metrics.replace("_MODE_", hpmode);
-  metrics.replace("_OPER_", String(currentStatus.operating ? 1 : 0));
-  metrics.replace("_COMPFREQ_", String(currentStatus.compressorFrequency));
-  server.send(HttpStatusCodes::httpOk, F("text/plain"), metrics);
+  Template metricsTemplate(FPSTR(html_metrics));
+  ArduinoJson::JsonDocument data;
+  data["unit_name"] = config.network.hostname;
+  data["version"] = BUILD_DATE;
+  data["git_hash"] = COMMIT_HASH;
+  data["power"] = hppower;
+  data["roomtemp"] = currentStatus.roomTemperature.toString(TempUnit::C);
+  data["temp"] = currentSettings.temperature.toString(TempUnit::C);
+  data["fan"] = hpfan;
+  data["vane"] = hpvane;
+  data["widevane"] = hpwidevane;
+  data["mode"] = hpmode;
+  data["oper"] = currentStatus.operating ? 1 : 0;
+  data["compfreq"] = currentStatus.compressorFrequency;
+  server.send(HttpStatusCodes::httpOk, F("text/plain"), metricsTemplate.render(data));
 }
 
 void handleMetricsJson() {
@@ -1530,6 +1531,8 @@ String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSet
 // Invoked async when the heatpump's room temperature changes, or when the heatpump's operating
 // state changes. Also invoked synchronously every time through `loop`.
 // TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
+// NOLINTNEXTLINE(passedByValue) - we don't control this callback signature
+// cppcheck-suppress passedByValue
 void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
   if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
                                                                // SEND_ROOM_TEMP_INTERVAL_MS
