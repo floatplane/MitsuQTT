@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ArduinoJson.h>
-#include <doctest/doctest.h>
+#include <doctest.h>
 
 // clang-format off
 /* generated via

@@ -87,6 +87,38 @@ class String {
     replace(reinterpret_cast<const char*>(from), reinterpret_cast<const char*>(to));
   }
 
+  int indexOf(char ch, unsigned int fromIndex = 0) const {
+    const auto pos = str_.find(ch, fromIndex);
+    if (pos == std::string::npos) {
+      return -1;
+    }
+    return pos;
+  }
+
+  int lastIndexOf(char ch, unsigned int fromIndex = 0) const {
+    const auto pos = str_.rfind(ch, fromIndex);
+    if (pos == std::string::npos) {
+      return -1;
+    }
+    return pos;
+  }
+
+  int indexOf(const char* str, unsigned int fromIndex = 0) const {
+    const auto pos = str_.find(str, fromIndex);
+    if (pos == std::string::npos) {
+      return -1;
+    }
+    return pos;
+  }
+
+  int indexOf(const String& str, unsigned int fromIndex = 0) const {
+    return indexOf(str.c_str(), fromIndex);
+  }
+
+  String substring(unsigned int beginIndex, unsigned int endIndex) const {
+    return String(str_.substr(beginIndex, endIndex - beginIndex).c_str());
+  }
+
   friend std::ostream& operator<<(std::ostream& lhs, const ::String& rhs) {
     lhs << rhs.str_;
     return lhs;
