@@ -5,7 +5,7 @@
 
 // clang-format off
 /* generated via
-cat test/test_template/mustache_specs/sections.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"-(\(.data))-\"); CHECK_MESSAGE(Template(R\"-(\(.template|rtrimstr("\n")))-\").render(data) == R\"-(\(.expected|rtrimstr("\n")))-\", R\"-(\(.desc))-\"); }\n"' | pbcopy
+cat test/test_template/mustache_specs/sections.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"-(\(.data))-\"); CHECK_MESSAGE(Template(R\"-(\(.template))-\").render(data) == R\"-(\(.expected))-\", R\"-(\(.desc))-\"); }\n"' | pbcopy
 */
 // clang-format on
 
@@ -99,7 +99,8 @@ TEST_CASE("Deeply Nested Contexts") {
 {{one}}{{two}}{{one}}
 {{/b}}
 {{one}}
-{{/a}})-")
+{{/a}}
+)-")
                         .render(data) == R"-(1
 121
 12321
@@ -110,7 +111,8 @@ TEST_CASE("Deeply Nested Contexts") {
 1234321
 12321
 121
-1)-",
+1
+)-",
                 R"-(All elements on the context stack should be accessible.)-");
 }
 
@@ -137,10 +139,12 @@ TEST_CASE("Doubled") {
 * {{two}}
 {{#bool}}
 * third
-{{/bool}})-")
+{{/bool}}
+)-")
                         .render(data) == R"-(* first
 * second
-* third)-",
+* third
+)-",
                 R"-(Multiple sections per template should be permitted.)-");
 }
 
@@ -256,8 +260,10 @@ TEST_CASE("Dotted Names - Broken Chains") {
 TEST_CASE("Surrounding Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":true})-");
-  CHECK_MESSAGE(Template(R"-( | {{#boolean}}	|	{{/boolean}} | )-").render(data) ==
-                    R"-( | 	|	 | )-",
+  CHECK_MESSAGE(Template(R"-( | {{#boolean}}	|	{{/boolean}} | 
+)-")
+                        .render(data) == R"-( | 	|	 | 
+)-",
                 R"-(Sections should not alter surrounding whitespace.)-");
 }
 
@@ -265,9 +271,11 @@ TEST_CASE("Internal Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":true})-");
   CHECK_MESSAGE(Template(R"-( | {{#boolean}} {{! Important Whitespace }}
- {{/boolean}} | )-")
+ {{/boolean}} | 
+)-")
                         .render(data) == R"-( |  
-  | )-",
+  | 
+)-",
                 R"-(Sections should not alter internal whitespace.)-");
 }
 
@@ -275,9 +283,11 @@ TEST_CASE("Indented Inline Sections") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":true})-");
   CHECK_MESSAGE(Template(R"-( {{#boolean}}YES{{/boolean}}
- {{#boolean}}GOOD{{/boolean}})-")
+ {{#boolean}}GOOD{{/boolean}}
+)-")
                         .render(data) == R"-( YES
- GOOD)-",
+ GOOD
+)-",
                 R"-(Single-line sections should not alter surrounding whitespace.)-");
 }
 
@@ -288,10 +298,12 @@ TEST_CASE("Standalone Lines") {
 {{#boolean}}
 |
 {{/boolean}}
-| A Line)-")
+| A Line
+)-")
                         .render(data) == R"-(| This Is
 |
-| A Line)-",
+| A Line
+)-",
                 R"-(Standalone lines should be removed from the template.)-");
 }
 
@@ -302,10 +314,12 @@ TEST_CASE("Indented Standalone Lines") {
   {{#boolean}}
 |
   {{/boolean}}
-| A Line)-")
+| A Line
+)-")
                         .render(data) == R"-(| This Is
 |
-| A Line)-",
+| A Line
+)-",
                 R"-(Indented standalone lines should be removed from the template.)-");
 }
 
@@ -339,7 +353,8 @@ TEST_CASE("Standalone Without Newline") {
 /
   {{/boolean}})-")
                         .render(data) == R"-(#
-/)-",
+/
+)-",
                 R"-(Standalone tags should not require a newline to follow them.)-");
 }
 

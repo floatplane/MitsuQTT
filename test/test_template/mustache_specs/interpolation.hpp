@@ -5,7 +5,7 @@
 
 // clang-format off
 /* generated via
-cat test/native/test_template/mustache_specs/interpolation.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data))\"); CHECK_MESSAGE(Template(R\"(\(.template|rtrimstr("\n")))\").render(data) == R\"(\(.expected|rtrimstr("\n")))\", R\"(\(.desc))\"); }\n"' | pbcopy
+cat test/test_template/mustache_specs/interpolation.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data))\"); CHECK_MESSAGE(Template(R\"(\(.template))\").render(data) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
 */
 // clang-format on
 
@@ -14,14 +14,20 @@ TEST_SUITE_BEGIN("mustache/interpolation");
 TEST_CASE("No Interpolation") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Template(R"(Hello from {Mustache}!)").render(data) == R"(Hello from {Mustache}!)",
+  CHECK_MESSAGE(Template(R"(Hello from {Mustache}!
+)")
+                        .render(data) == R"(Hello from {Mustache}!
+)",
                 R"(Mustache-free templates should render as-is.)");
 }
 
 TEST_CASE("Basic Interpolation") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"subject":"world"})");
-  CHECK_MESSAGE(Template(R"(Hello, {{subject}}!)").render(data) == R"(Hello, world!)",
+  CHECK_MESSAGE(Template(R"(Hello, {{subject}}!
+)")
+                        .render(data) == R"(Hello, world!
+)",
                 R"(Unadorned tags should interpolate content into the template.)");
 }
 
@@ -29,27 +35,31 @@ TEST_CASE("HTML Escaping") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"forbidden":"& \" < >"})");
   CHECK_MESSAGE(
-      Template(R"(These characters should be HTML escaped: {{forbidden}})").render(data) ==
-          R"(These characters should be HTML escaped: &amp; &quot; &lt; &gt;)",
+      Template(R"(These characters should be HTML escaped: {{forbidden}}
+)")
+              .render(data) == R"(These characters should be HTML escaped: &amp; &quot; &lt; &gt;
+)",
       R"(Basic interpolation should be HTML escaped.)");
 }
 
 TEST_CASE("Triple Mustache") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"forbidden":"& \" < >"})");
-  CHECK_MESSAGE(
-      Template(R"(These characters should not be HTML escaped: {{{forbidden}}})").render(data) ==
-          R"(These characters should not be HTML escaped: & " < >)",
-      R"(Triple mustaches should interpolate without HTML escaping.)");
+  CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{{forbidden}}}
+)")
+                        .render(data) == R"(These characters should not be HTML escaped: & " < >
+)",
+                R"(Triple mustaches should interpolate without HTML escaping.)");
 }
 
 TEST_CASE("Ampersand") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"forbidden":"& \" < >"})");
-  CHECK_MESSAGE(
-      Template(R"(These characters should not be HTML escaped: {{&forbidden}})").render(data) ==
-          R"(These characters should not be HTML escaped: & " < >)",
-      R"(Ampersand should interpolate without HTML escaping.)");
+  CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{&forbidden}}
+)")
+                        .render(data) == R"(These characters should not be HTML escaped: & " < >
+)",
+                R"(Ampersand should interpolate without HTML escaping.)");
 }
 
 TEST_CASE("Basic Integer Interpolation") {
@@ -193,7 +203,8 @@ TEST_CASE("Dotted Names - Initial Resolution") {
       R"(The first part of a dotted name should resolve as any other name.)");
 }
 
-// We don't know (yet) that we should stop after searching for `b.c` because we found `b` and `c` was missing inside it.
+// We don't know (yet?) that we should stop after searching for `b.c` because we found `b` and `c`
+// was missing inside it.
 TEST_CASE("Dotted Names - Context Precedence" * doctest::skip(true)) {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"a":{"b":{}},"b":{"c":"ERROR"}})");
@@ -201,34 +212,48 @@ TEST_CASE("Dotted Names - Context Precedence" * doctest::skip(true)) {
                 R"(Dotted names should be resolved against former resolutions.)");
 }
 
-TEST_CASE("Implicit Iterators - Basic Interpolation" * doctest::skip(true)) {
+// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
+TEST_CASE("Implicit Iterators - Basic Interpolation") {
   ArduinoJson::JsonDocument data;
-  auto error = deserializeJson(data, R"(world)");
-  CHECK_MESSAGE(Template(R"(Hello, {{.}}!)").render(data) == R"(Hello, world!)",
+  deserializeJson(data, R"("world")");
+  CHECK_MESSAGE(Template(R"(Hello, {{.}}!
+)")
+                        .render(data) == R"(Hello, world!
+)",
                 R"(Unadorned tags should interpolate content into the template.)");
 }
 
-TEST_CASE("Implicit Iterators - HTML Escaping" * doctest::skip(true)) {
+// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
+TEST_CASE("Implicit Iterators - HTML Escaping") {
   ArduinoJson::JsonDocument data;
-  deserializeJson(data, R"(& " < >)");
-  CHECK_MESSAGE(Template(R"(These characters should be HTML escaped: {{.}})").render(data) ==
-                    R"(These characters should be HTML escaped: &amp; &quot; &lt; &gt;)",
-                R"(Basic interpolation should be HTML escaped.)");
+  deserializeJson(data, R"("& \" < >")");
+  CHECK_MESSAGE(
+      Template(R"(These characters should be HTML escaped: {{.}}
+)")
+              .render(data) == R"(These characters should be HTML escaped: &amp; &quot; &lt; &gt;
+)",
+      R"(Basic interpolation should be HTML escaped.)");
 }
 
-TEST_CASE("Implicit Iterators - Triple Mustache" * doctest::skip(true)) {
+// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
+TEST_CASE("Implicit Iterators - Triple Mustache") {
   ArduinoJson::JsonDocument data;
-  deserializeJson(data, R"(& " < >)");
-  CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{{.}}})").render(data) ==
-                    R"(These characters should not be HTML escaped: & " < >)",
+  deserializeJson(data, R"("& \" < >")");
+  CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{{.}}}
+)")
+                        .render(data) == R"(These characters should not be HTML escaped: & " < >
+)",
                 R"(Triple mustaches should interpolate without HTML escaping.)");
 }
 
-TEST_CASE("Implicit Iterators - Ampersand" * doctest::skip(true)) {
+// Had to modify this one manually to put quotes around the input - otherwise, wasn't valid JSON
+TEST_CASE("Implicit Iterators - Ampersand") {
   ArduinoJson::JsonDocument data;
-  deserializeJson(data, R"(& " < >)");
-  CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{&.}})").render(data) ==
-                    R"(These characters should not be HTML escaped: & " < >)",
+  deserializeJson(data, R"("& \" < >")");
+  CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{&.}}
+)")
+                        .render(data) == R"(These characters should not be HTML escaped: & " < >
+)",
                 R"(Ampersand should interpolate without HTML escaping.)");
 }
 
@@ -263,21 +288,30 @@ TEST_CASE("Ampersand - Surrounding Whitespace") {
 TEST_CASE("Interpolation - Standalone") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"string":"---"})");
-  CHECK_MESSAGE(Template(R"(  {{string}})").render(data) == R"(  ---)",
+  CHECK_MESSAGE(Template(R"(  {{string}}
+)")
+                        .render(data) == R"(  ---
+)",
                 R"(Standalone interpolation should not alter surrounding whitespace.)");
 }
 
 TEST_CASE("Triple Mustache - Standalone") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"string":"---"})");
-  CHECK_MESSAGE(Template(R"(  {{{string}}})").render(data) == R"(  ---)",
+  CHECK_MESSAGE(Template(R"(  {{{string}}}
+)")
+                        .render(data) == R"(  ---
+)",
                 R"(Standalone interpolation should not alter surrounding whitespace.)");
 }
 
 TEST_CASE("Ampersand - Standalone") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"string":"---"})");
-  CHECK_MESSAGE(Template(R"(  {{&string}})").render(data) == R"(  ---)",
+  CHECK_MESSAGE(Template(R"(  {{&string}}
+)")
+                        .render(data) == R"(  ---
+)",
                 R"(Standalone interpolation should not alter surrounding whitespace.)");
 }
 

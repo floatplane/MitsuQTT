@@ -100,22 +100,16 @@ class Template {
             position = sectionResult.second;
           }
         } else if (token.type == TokenType::InvertedSection) {
-          // printf("Inverted section: %s %lu %s\n", token.name.c_str(), parsedToken.second,
-          //        templateContents.c_str());
           // check token for falsy value, render if falsy
           auto context = lookupTokenInContextStack(token.name, contextStack);
           auto falsy = isFalsy(context);
           auto sectionResult = renderWithContextStack(tokenRenderExtents.second, contextStack,
                                                       renderSection && falsy);
-          // printf("Inverted section result: %s %lu\n", sectionResult.first.c_str(),
-          //        sectionResult.second);
           if (renderSection) {
             result.concat(sectionResult.first);
           }
           position = sectionResult.second;
         } else if (token.type == TokenType::EndSection) {
-          // printf("End section: %s %lu %s\n", token.name.c_str(), parsedToken.second,
-          //        templateContents.c_str());
           return std::make_pair(result, tokenRenderExtents.second);
         } else {
           position = tokenRenderExtents.second;
@@ -163,11 +157,12 @@ class Template {
       return std::make_pair(tokenStart, tokenEnd);
     }
 
-    // If the token is on the very last line of the template, then remove the preceding newline
-    if (lineEnd == templateContents.length() && lineStart > 0) {
+    // If the token is on the very last line of the template, then remove the preceding newline,
+    // but only if there's no leading whitespace before the token
+    if (lineEnd == templateContents.length() && lineStart > 0 && lineStart == tokenStart) {
       lineStart--;
       // Also remove any preceding carriage return
-      if (templateContents[lineStart] == '\r') {
+      if (lineStart > 0 && templateContents[lineStart] == '\r') {
         lineStart--;
       }
     } else {

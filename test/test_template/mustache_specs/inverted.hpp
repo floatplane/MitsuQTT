@@ -5,7 +5,7 @@
 
 // clang-format off
 /* generated via
-cat test/test_template/mustache_specs/inverted.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"-(\(.data))-\"); CHECK_MESSAGE(Template(R\"-(\(.template|rtrimstr("\n")))-\").render(data) == R\"-(\(.expected|rtrimstr("\n")))-\", R\"-(\(.desc))-\"); }\n"' | pbcopy
+cat test/test_template/mustache_specs/inverted.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"-(\(.data))-\"); CHECK_MESSAGE(Template(R\"-(\(.template))-\").render(data) == R\"-(\(.expected))-\", R\"-(\(.desc))-\"); }\n"' | pbcopy
 */
 // clang-format on
 
@@ -66,10 +66,12 @@ TEST_CASE("Doubled") {
 * {{two}}
 {{^bool}}
 * third
-{{/bool}})-")
+{{/bool}}
+)-")
                         .render(data) == R"-(* first
 * second
-* third)-",
+* third
+)-",
                 R"-(Multiple inverted sections per template should be permitted.)-");
 }
 
@@ -125,8 +127,10 @@ TEST_CASE("Dotted Names - Broken Chains") {
 TEST_CASE("Surrounding Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Template(R"-( | {{^boolean}}	|	{{/boolean}} | )-").render(data) ==
-                    R"-( | 	|	 | )-",
+  CHECK_MESSAGE(Template(R"-( | {{^boolean}}	|	{{/boolean}} | 
+)-")
+                        .render(data) == R"-( | 	|	 | 
+)-",
                 R"-(Inverted sections should not alter surrounding whitespace.)-");
 }
 
@@ -134,9 +138,11 @@ TEST_CASE("Internal Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
   CHECK_MESSAGE(Template(R"-( | {{^boolean}} {{! Important Whitespace }}
- {{/boolean}} | )-")
+ {{/boolean}} | 
+)-")
                         .render(data) == R"-( |  
-  | )-",
+  | 
+)-",
                 R"-(Inverted should not alter internal whitespace.)-");
 }
 
@@ -144,9 +150,11 @@ TEST_CASE("Indented Inline Sections") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
   CHECK_MESSAGE(Template(R"-( {{^boolean}}NO{{/boolean}}
- {{^boolean}}WAY{{/boolean}})-")
+ {{^boolean}}WAY{{/boolean}}
+)-")
                         .render(data) == R"-( NO
- WAY)-",
+ WAY
+)-",
                 R"-(Single-line sections should not alter surrounding whitespace.)-");
 }
 
@@ -157,10 +165,12 @@ TEST_CASE("Standalone Lines") {
 {{^boolean}}
 |
 {{/boolean}}
-| A Line)-")
+| A Line
+)-")
                         .render(data) == R"-(| This Is
 |
-| A Line)-",
+| A Line
+)-",
                 R"-(Standalone lines should be removed from the template.)-");
 }
 
@@ -171,10 +181,12 @@ TEST_CASE("Standalone Indented Lines") {
   {{^boolean}}
 |
   {{/boolean}}
-| A Line)-")
+| A Line
+)-")
                         .render(data) == R"-(| This Is
 |
-| A Line)-",
+| A Line
+)-",
                 R"-(Standalone indented lines should be removed from the template.)-");
 }
 
@@ -208,7 +220,8 @@ TEST_CASE("Standalone Without Newline") {
 /
   {{/boolean}})-")
                         .render(data) == R"-(^
-/)-",
+/
+)-",
                 R"-(Standalone tags should not require a newline to follow them.)-");
 }
 

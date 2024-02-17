@@ -5,7 +5,7 @@
 
 // clang-format off
 /* generated via
-cat test/test_template/mustache_specs/comments.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data))\"); CHECK_MESSAGE(Template(R\"(\(.template|rtrimstr("\n")))\").render(data) == R\"(\(.expected|rtrimstr("\n")))\", R\"(\(.desc))\"); }\n"' | pbcopy
+cat test/test_template/mustache_specs/comments.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data))\"); CHECK_MESSAGE(Template(R\"(\(.template))\").render(data) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
 */
 // clang-format on
 
@@ -24,20 +24,23 @@ TEST_CASE("Multiline") {
   CHECK_MESSAGE(Template(R"(12345{{!
   This is a
   multi-line comment...
-}}67890)")
-                        .render(data) == R"(1234567890)",
+}}67890
+)")
+                        .render(data) == R"(1234567890
+)",
                 R"(Multiline comments should be permitted.)");
 }
 
-// Don't care about stripping standalone comments completely
 TEST_CASE("Standalone") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
   CHECK_MESSAGE(Template(R"(Begin.
 {{! Comment Block! }}
-End.)")
+End.
+)")
                         .render(data) == R"(Begin.
-End.)",
+End.
+)",
                 R"(All standalone comment lines should be removed.)");
 }
 
@@ -46,9 +49,11 @@ TEST_CASE("Indented Standalone") {
   deserializeJson(data, R"({})");
   CHECK_MESSAGE(Template(R"(Begin.
   {{! Indented Comment Block! }}
-End.)")
+End.
+)")
                         .render(data) == R"(Begin.
-End.)",
+End.
+)",
                 R"(All standalone comment lines should be removed.)");
 }
 
@@ -77,7 +82,8 @@ TEST_CASE("Standalone Without Newline") {
   deserializeJson(data, R"({})");
   CHECK_MESSAGE(Template(R"(!
   {{! I'm Still Standalone }})")
-                        .render(data) == R"(!)",
+                        .render(data) == R"(!
+)",
                 R"(Standalone tags should not require a newline to follow them.)");
 }
 
@@ -88,9 +94,11 @@ TEST_CASE("Multiline Standalone") {
 {{!
 Something's going on here...
 }}
-End.)")
+End.
+)")
                         .render(data) == R"(Begin.
-End.)",
+End.
+)",
                 R"(All standalone comment lines should be removed.)");
 }
 
@@ -101,16 +109,21 @@ TEST_CASE("Indented Multiline Standalone") {
   {{!
     Something's going on here...
   }}
-End.)")
+End.
+)")
                         .render(data) == R"(Begin.
-End.)",
+End.
+)",
                 R"(All standalone comment lines should be removed.)");
 }
 
 TEST_CASE("Indented Inline") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Template(R"(  12 {{! 34 }})").render(data) == R"(  12 )",
+  CHECK_MESSAGE(Template(R"(  12 {{! 34 }}
+)")
+                        .render(data) == R"(  12 
+)",
                 R"(Inline comments should not strip whitespace)");
 }
 
