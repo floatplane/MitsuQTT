@@ -27,7 +27,7 @@ class Template {
   String render(const ArduinoJson::JsonDocument& data) const {
     // set up context stack
     // root of stack: object/array/null/string
-    // each recursive call does the following:
+    // each recursive call to renderWithContextStack does the following:
     // 1. push new context onto stack
     // 2. render template until end of section/end of template
     // 3. pop context off stack
@@ -37,7 +37,6 @@ class Template {
     contextStack.push_back(currentContext);
 
     const auto result = renderWithContextStack(0, contextStack, true);
-    // assert(result.second == templateContents.length());
     return result.first;
   }
 
@@ -66,12 +65,9 @@ class Template {
         const auto parsedToken = parseTokenAtPoint(nextToken);
         const auto tokenRenderExtents =
             getExclusionRangeForToken(nextToken, parsedToken.second, parsedToken.first.type);
-        // printf("Next token: %lu\n", nextToken);
         if (renderSection) {
           result.concat(templateContents.substring(position, tokenRenderExtents.first));
         }
-        // printf("parsed token: %s type: %d end: %lu\n", parsedToken.first.name.c_str(),
-        //        (int)parsedToken.first.type, parsedToken.second);
         const Token token = parsedToken.first;
         if (token.type == TokenType::Text) {
           if (renderSection) {
@@ -134,6 +130,9 @@ class Template {
     return std::make_pair(result, position);
   }
 
+  // Tokens that don't output content and are standalone (i.e. not surrounded by non-whitespace)
+  // should not leave blank lines in the content. This function returns the range of the template
+  // that should be excluded from the output when the token is standalone.
   std::pair<size_t, size_t> getExclusionRangeForToken(size_t tokenStart, size_t tokenEnd,
                                                       TokenType tokenType) const {
     if (tokenType == TokenType::Text || tokenType == TokenType::Partial) {
@@ -176,12 +175,6 @@ class Template {
       lineEnd++;
     }
     return std::make_pair(lineStart, lineEnd);
-
-    // // If the token is on a line by itself (with leading and trailing whitespace allowed), and
-    // // the token doesn't generate any output itself, then we should not output the blank line.
-    // // This means pushing the start of the exclusion range back to the start of the line, and the
-    // // end to the start of the next line.
-    // return std::make_pair(startOfTokenLine, startOfNextLine);
   }
 
   String renderToken(const Token& token, const std::vector<JsonVariantConst>& contextStack) const {

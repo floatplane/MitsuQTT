@@ -136,7 +136,6 @@ TEST_CASE("Ampersand Context Miss Interpolation") {
                 R"(Failed context lookups should default to empty strings.)");
 }
 
-#if 0
 TEST_CASE("Dotted Names - Basic Interpolation") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"person":{"name":"Joe"}})");
@@ -162,7 +161,6 @@ TEST_CASE("Dotted Names - Ampersand Interpolation") {
           R"("Joe" == "Joe")",
       R"(Dotted names should be considered a form of shorthand for sections.)");
 }
-#endif
 
 TEST_CASE("Dotted Names - Arbitrary Depth") {
   ArduinoJson::JsonDocument data;
@@ -185,7 +183,6 @@ TEST_CASE("Dotted Names - Broken Chain Resolution") {
                 R"(Each part of a dotted name should resolve only against its parent.)");
 }
 
-#if 0
 TEST_CASE("Dotted Names - Initial Resolution") {
   ArduinoJson::JsonDocument data;
   deserializeJson(
@@ -196,21 +193,22 @@ TEST_CASE("Dotted Names - Initial Resolution") {
       R"(The first part of a dotted name should resolve as any other name.)");
 }
 
-TEST_CASE("Dotted Names - Context Precedence") {
+// We don't know (yet) that we should stop after searching for `b.c` because we found `b` and `c` was missing inside it.
+TEST_CASE("Dotted Names - Context Precedence" * doctest::skip(true)) {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"a":{"b":{}},"b":{"c":"ERROR"}})");
   CHECK_MESSAGE(Template(R"({{#a}}{{b.c}}{{/a}})").render(data) == R"()",
                 R"(Dotted names should be resolved against former resolutions.)");
 }
 
-TEST_CASE("Implicit Iterators - Basic Interpolation") {
+TEST_CASE("Implicit Iterators - Basic Interpolation" * doctest::skip(true)) {
   ArduinoJson::JsonDocument data;
   auto error = deserializeJson(data, R"(world)");
   CHECK_MESSAGE(Template(R"(Hello, {{.}}!)").render(data) == R"(Hello, world!)",
                 R"(Unadorned tags should interpolate content into the template.)");
 }
 
-TEST_CASE("Implicit Iterators - HTML Escaping") {
+TEST_CASE("Implicit Iterators - HTML Escaping" * doctest::skip(true)) {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"(& " < >)");
   CHECK_MESSAGE(Template(R"(These characters should be HTML escaped: {{.}})").render(data) ==
@@ -218,7 +216,7 @@ TEST_CASE("Implicit Iterators - HTML Escaping") {
                 R"(Basic interpolation should be HTML escaped.)");
 }
 
-TEST_CASE("Implicit Iterators - Triple Mustache") {
+TEST_CASE("Implicit Iterators - Triple Mustache" * doctest::skip(true)) {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"(& " < >)");
   CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{{.}}})").render(data) ==
@@ -226,7 +224,7 @@ TEST_CASE("Implicit Iterators - Triple Mustache") {
                 R"(Triple mustaches should interpolate without HTML escaping.)");
 }
 
-TEST_CASE("Implicit Iterators - Ampersand") {
+TEST_CASE("Implicit Iterators - Ampersand" * doctest::skip(true)) {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"(& " < >)");
   CHECK_MESSAGE(Template(R"(These characters should not be HTML escaped: {{&.}})").render(data) ==
@@ -240,7 +238,6 @@ TEST_CASE("Implicit Iterators - Basic Integer Interpolation") {
   CHECK_MESSAGE(Template(R"("{{.}} miles an hour!")").render(data) == R"("85 miles an hour!")",
                 R"(Integers should interpolate seamlessly.)");
 }
-#endif
 
 TEST_CASE("Interpolation - Surrounding Whitespace") {
   ArduinoJson::JsonDocument data;

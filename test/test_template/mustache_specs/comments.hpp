@@ -29,7 +29,6 @@ TEST_CASE("Multiline") {
                 R"(Multiline comments should be permitted.)");
 }
 
-#if 0
 // Don't care about stripping standalone comments completely
 TEST_CASE("Standalone") {
   ArduinoJson::JsonDocument data;
@@ -107,8 +106,6 @@ End.)")
 End.)",
                 R"(All standalone comment lines should be removed.)");
 }
-
-#endif  // 0
 
 TEST_CASE("Indented Inline") {
   ArduinoJson::JsonDocument data;
