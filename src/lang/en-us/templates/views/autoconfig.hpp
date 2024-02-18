@@ -1,11 +1,10 @@
 #pragma once
 #include <Arduino.h>
 
-#include "templates/partials.hpp"
-
 namespace templates {
+namespace views {
 
-const char configTemplate[] PROGMEM = R"====(
+const char autoConfigTemplate[] PROGMEM = R"====(
 {
   "name": "{{name}}",
   "unique_id": "{{unique_id}}",
@@ -71,4 +70,5 @@ const char configTemplate[] PROGMEM = R"====(
   "json_attr_tpl": "{{>lbrace}}{{>lbrace}} {'compressorFrequency': value_json.compressorFrequency if (value_json is defined and value_json.compressorFrequency is defined) else '-1' } | tojson {{>rbraces}}"
 }
 )====";
+};  // namespace views
 };  // namespace templates

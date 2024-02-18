@@ -58,7 +58,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #define LANG_PATH "languages/en-GB.h"  // default language English
 #endif
 
-#include "templates/ha_config.hpp"
+#include "templates/templates.hpp"
 
 #ifdef ESP32
 const PROGMEM char *const wifi_conf = "/wifi.json";
@@ -1830,9 +1830,9 @@ void sendHomeAssistantConfig() {
   // For now, only compressorFrequency
   haConfig[F("json_attr_t")] = config.mqtt.ha_state_topic();
 
-  String mqttOutput =
-      Template(templates::configTemplate)
-          .render(haConfig, {{"lbrace", templates::lbrace}, {"rbraces", templates::rbraces}});
+  String mqttOutput = Template(templates::views::autoConfigTemplate)
+                          .render(haConfig, {{"lbrace", templates::partials::lbrace},
+                                             {"rbraces", templates::partials::rbraces}});
 
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);
