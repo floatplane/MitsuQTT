@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-namespace templates {
 namespace views {
 
 const char* mqttFriendlyNameLabel PROGMEM = "Friendly Name";
@@ -50,4 +49,3 @@ const char* mqtt PROGMEM = // R"====(
 // )====";
 // clang-format on
 };  // namespace views
-};  // namespace templates

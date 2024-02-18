@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-namespace templates {
 namespace views {
 
 const char autoConfigTemplate[] PROGMEM = R"====(
@@ -71,4 +70,3 @@ const char autoConfigTemplate[] PROGMEM = R"====(
 }
 )====";
 };  // namespace views
-};  // namespace templates

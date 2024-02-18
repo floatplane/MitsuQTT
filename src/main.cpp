@@ -60,8 +60,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "ministache.hpp"
 #include "templates/templates.hpp"
 
-using namespace ministache;
-using namespace templates;
+using ministache::Ministache;
 
 #ifdef ESP32
 const PROGMEM char *const wifi_conf = "/wifi.json";

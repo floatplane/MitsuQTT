@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-namespace templates {
 namespace partials {
 
 // This is a hack to allow the use of the `{{` and `}}` characters in the templates
@@ -10,4 +9,3 @@ const char *lbrace PROGMEM = "{";
 const char *rbraces PROGMEM = "}}";
 
 };  // namespace partials
-};  // namespace templates

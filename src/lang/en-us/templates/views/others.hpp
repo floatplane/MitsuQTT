@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-namespace templates {
 namespace views {
 
 // clang-format off
@@ -34,4 +33,3 @@ const char* others PROGMEM = // R"====(
 // )====";
 // clang-format on
 };  // namespace views
-};  // namespace templates

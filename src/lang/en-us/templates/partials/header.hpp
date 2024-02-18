@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-namespace templates {
 namespace partials {
 
 const char* header PROGMEM = R"====(
@@ -141,4 +140,3 @@ const char* header PROGMEM = R"====(
 )====";
 
 };  // namespace partials
-};  // namespace templates
