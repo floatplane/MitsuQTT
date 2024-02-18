@@ -37,7 +37,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include <map>
 #include <temperature.hpp>
-#include <template.hpp>
 
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
@@ -58,7 +57,11 @@ ESP8266WebServer server(80);  // ESP8266 web
 #define LANG_PATH "languages/en-GB.h"  // default language English
 #endif
 
+#include "ministache.hpp"
 #include "templates/templates.hpp"
+
+using namespace ministache;
+using namespace templates;
 
 #ifdef ESP32
 const PROGMEM char *const wifi_conf = "/wifi.json";
@@ -1154,7 +1157,7 @@ void handleMetrics() {
     hpmode = "-2";
   }
 
-  Template metricsTemplate(FPSTR(html_metrics));
+  Ministache metricsTemplate(FPSTR(html_metrics));
   ArduinoJson::JsonDocument data;
   data["unit_name"] = config.network.hostname;
   data["version"] = BUILD_DATE;
@@ -1830,9 +1833,9 @@ void sendHomeAssistantConfig() {
   // For now, only compressorFrequency
   haConfig[F("json_attr_t")] = config.mqtt.ha_state_topic();
 
-  String mqttOutput = Template(templates::views::autoConfigTemplate)
-                          .render(haConfig, {{"lbrace", templates::partials::lbrace},
-                                             {"rbraces", templates::partials::rbraces}});
+  String mqttOutput =
+      Ministache(views::autoConfigTemplate)
+          .render(haConfig, {{"lbrace", partials::lbrace}, {"rbraces", partials::rbraces}});
 
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);

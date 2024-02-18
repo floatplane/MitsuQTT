@@ -5,7 +5,9 @@
 #include <cassert>
 #include <vector>
 
-class Template {
+namespace ministache {
+
+class Ministache {
  private:
   enum class TokenType {
     Text,
@@ -22,7 +24,7 @@ class Template {
   };
 
  public:
-  explicit Template(const String& templateContents) : templateContents(templateContents){};
+  explicit Ministache(const String& templateContents) : templateContents(templateContents){};
 
   // TODO(floatplane) I know that this method can be static, but not doing it today
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
@@ -158,7 +160,7 @@ class Template {
                 String indentedPartial =
                     indentLines(partial->second, tokenRenderExtents.indentation);
                 String partialResult =
-                    Template(indentedPartial)
+                    Ministache(indentedPartial)
                         .renderWithContextStack(0, contextStack, partials, renderSection)
                         .first;
                 result.concat(partialResult);
@@ -370,3 +372,5 @@ class Template {
                           closeTagPosition + closeTag.length());
   }
 };
+
+};  // namespace ministache
