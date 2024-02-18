@@ -717,6 +717,18 @@ void rebootAndSendPage() {
   restartAfterDelay(500);
 }
 
+void renderView(const Ministache &view, JsonDocument &data,
+                const std::vector<std::pair<String, String>> &partials = {}) {
+  auto header = data[F("header")].to<JsonObject>();
+  header[F("hostname")] = config.network.hostname;
+
+  auto footer = data[F("footer")].to<JsonObject>();
+  footer[F("version")] = BUILD_DATE;
+  footer[F("git_hash")] = COMMIT_HASH;
+
+  server.send(HttpStatusCodes::httpOk, F("text/html"), view.render(data, partials));
+}
+
 void handleOthers() {
   if (!checkLogin()) {
     return;
@@ -732,34 +744,25 @@ void handleOthers() {
     saveOthersConfig(config);
     rebootAndSendPage();
   } else {
-    String othersPage = FPSTR(html_page_others);
-    othersPage.replace("_TXT_SAVE_", FPSTR(txt_save));
-    othersPage.replace("_TXT_BACK_", FPSTR(txt_back));
-    othersPage.replace("_TXT_F_ON_", FPSTR(txt_f_on));
-    othersPage.replace("_TXT_F_OFF_", FPSTR(txt_f_off));
-    othersPage.replace("_TXT_OTHERS_TITLE_", FPSTR(txt_others_title));
-    othersPage.replace("_TXT_OTHERS_HAAUTO_", FPSTR(txt_others_haauto));
-    othersPage.replace("_TXT_OTHERS_HATOPIC_", FPSTR(txt_others_hatopic));
-    othersPage.replace("_TXT_OTHERS_DEBUG_PCKTS_", FPSTR(txt_others_debug_packets));
-    othersPage.replace("_TXT_OTHERS_DEBUG_LOGS_", FPSTR(txt_others_debug_log));
+    JsonDocument data;
+    data[F("autodiscovery")] = config.other.haAutodiscovery;
+    data[F("topic")] = config.other.haAutodiscoveryTopic;
 
-    othersPage.replace("_HAA_TOPIC_", config.other.haAutodiscoveryTopic);
-    if (config.other.haAutodiscovery) {
-      othersPage.replace("_HAA_ON_", "selected");
-    } else {
-      othersPage.replace("_HAA_OFF_", "selected");
-    }
-    if (config.other.dumpPacketsToMqtt) {
-      othersPage.replace("_DEBUG_PCKTS_ON_", "selected");
-    } else {
-      othersPage.replace("_DEBUG_PCKTS_OFF_", "selected");
-    }
-    if (config.other.logToMqtt) {
-      othersPage.replace("_DEBUG_LOGS_ON_", "selected");
-    } else {
-      othersPage.replace("_DEBUG_LOGS_OFF_", "selected");
-    }
-    sendWrappedHTML(othersPage);
+    const auto toggles = data[F("toggles")].to<JsonArray>();
+    const auto debugLog = toggles.add<JsonObject>();
+    debugLog[F("title")] = F("MQTT topic debug logs");
+    debugLog[F("name")] = F("DebugLogs");
+    debugLog[F("value")] = config.other.logToMqtt;
+
+    const auto debugPackets = toggles.add<JsonObject>();
+    debugPackets[F("title")] = F("MQTT topic debug packets");
+    debugPackets[F("name")] = F("DebugPckts");
+    debugPackets[F("value")] = config.other.dumpPacketsToMqtt;
+
+    data[F("dumpPacketsToMqtt")] = config.other.dumpPacketsToMqtt;
+    data[F("logToMqtt")] = config.other.logToMqtt;
+    renderView(Ministache(views::others), data,
+               {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 

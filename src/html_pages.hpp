@@ -71,47 +71,6 @@ const char html_page_mqtt[] PROGMEM =
 ;
 // clang-format on
 
-const char html_page_others[] PROGMEM =
-    // clang-format off
-"<div id='l1' name='l1'>"
-    "<fieldset>"
-        "<legend><b>&nbsp; _TXT_OTHERS_TITLE_ &nbsp;</b></legend>"
-        "<form method='post'>"
-            "<p><b>_TXT_OTHERS_HAAUTO_</b>"
-                "<select name='HAA'>"
-                    "<option value='ON' _HAA_ON_>_TXT_F_ON_</option>"
-                    "<option value='OFF' _HAA_OFF_>_TXT_F_OFF_</option>"
-                "</select>"
-            "</p>"
-            "<p><b>_TXT_OTHERS_HATOPIC_</b> ()"
-                "<br/>"
-                "<input id='haat' name='haat' "
-                "autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' "
-                "placeholder=' ' value='_HAA_TOPIC_'>"
-            "</p>"
-            "<p><b>_TXT_OTHERS_DEBUG_LOGS_</b>"
-                "<select name='DebugLogs'>"
-                    "<option value='ON' _DEBUG_LOGS_ON_>_TXT_F_ON_</option>"
-                    "<option value='OFF' _DEBUG_LOGS_OFF_>_TXT_F_OFF_</option>"
-                "</select>"
-            "</p>"
-            "<p><b>_TXT_OTHERS_DEBUG_PCKTS_</b>"
-                "<select name='DebugPckts'>"
-                    "<option value='ON' _DEBUG_PCKTS_ON_>_TXT_F_ON_</option>"
-                    "<option value='OFF' _DEBUG_PCKTS_OFF_>_TXT_F_OFF_</option>"
-                "</select>"
-            "</p>"
-            "<br/>"
-            "<button name='save' type='submit' class='button bgrn'>_TXT_SAVE_</button>"
-        "</form>"
-    "</fieldset>"
-    "<p>"
-        "<a class='button back' href='/setup'>_TXT_BACK_</a>"
-    "</p>"
-"</div>"
-;
-// clang-format on
-
 const char html_page_status[] PROGMEM =
     // clang-format off
 "<div id='l1' name='l1'>"
