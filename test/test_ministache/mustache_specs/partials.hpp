@@ -5,24 +5,24 @@
 
 // clang-format off
 /* generated via
-cat test/test_template/mustache_specs/partials.json| jq -r '.tests[] | .partials |= to_entries | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data|tojson))\"); CHECK_MESSAGE(Template(R\"(\(.template))\").render(data, \(.partials|tojson)) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
+cat test/test_template/mustache_specs/partials.json| jq -r '.tests[] | .partials |= to_entries | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data|tojson))\"); CHECK_MESSAGE(Ministache(R\"(\(.template))\").render(data, \(.partials|tojson)) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
 */
 // clang-format on
 
-TEST_SUITE_BEGIN("mustache/partials");
+TEST_SUITE_BEGIN("minimustache/specs/partials");
 
 TEST_CASE("Basic Behavior") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
   CHECK_MESSAGE(
-      Template(R"("{{>text}}")").render(data, {{"text", "from partial"}}) == R"("from partial")",
+      Ministache(R"("{{>text}}")").render(data, {{"text", "from partial"}}) == R"("from partial")",
       R"(The greater-than operator should expand to the named partial.)");
 }
 
 TEST_CASE("Failed Lookup") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Template(R"("{{>text}}")").render(data, {}) == R"("")",
+  CHECK_MESSAGE(Ministache(R"("{{>text}}")").render(data, {}) == R"("")",
                 R"(The empty string should be used when the named partial is not found.)");
 }
 
@@ -30,14 +30,14 @@ TEST_CASE("Context") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"text":"content"})");
   CHECK_MESSAGE(
-      Template(R"("{{>partial}}")").render(data, {{"partial", "*{{text}}*"}}) == R"("*content*")",
+      Ministache(R"("{{>partial}}")").render(data, {{"partial", "*{{text}}*"}}) == R"("*content*")",
       R"(The greater-than operator should operate within the current context.)");
 }
 
 TEST_CASE("Recursion") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"content":"X","nodes":[{"content":"Y","nodes":[]}]})");
-  CHECK_MESSAGE(Template(R"({{>node}})")
+  CHECK_MESSAGE(Ministache(R"({{>node}})")
                         .render(data, {{"node", "{{content}}<{{#nodes}}{{>node}}{{/nodes}}>"}}) ==
                     R"(X<Y<>>)",
                 R"(The greater-than operator should properly recurse.)");
@@ -46,7 +46,7 @@ TEST_CASE("Recursion") {
 TEST_CASE("Nested") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"a":"hello","b":"world"})");
-  CHECK_MESSAGE(Template(R"({{>outer}})")
+  CHECK_MESSAGE(Ministache(R"({{>outer}})")
                         .render(data, {{"outer", "*{{a}} {{>inner}}*"}, {"inner", "{{b}}!"}}) ==
                     R"(*hello world!*)",
                 R"(The greater-than operator should work from within partials.)");
@@ -55,7 +55,7 @@ TEST_CASE("Nested") {
 TEST_CASE("Surrounding Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Template(R"(| {{>partial}} |)").render(data, {{"partial", "\t|\t"}}) ==
+  CHECK_MESSAGE(Ministache(R"(| {{>partial}} |)").render(data, {{"partial", "\t|\t"}}) ==
                     R"(| 	|	 |)",
                 R"(The greater-than operator should not alter surrounding whitespace.)");
 }
@@ -63,7 +63,7 @@ TEST_CASE("Surrounding Whitespace") {
 TEST_CASE("Inline Indentation") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"data":"|"})");
-  CHECK_MESSAGE(Template(R"(  {{data}}  {{> partial}}
+  CHECK_MESSAGE(Ministache(R"(  {{data}}  {{> partial}}
 )")
                         .render(data, {{"partial", ">\n>"}}) == R"(  |  >
 >
@@ -74,7 +74,7 @@ TEST_CASE("Inline Indentation") {
 TEST_CASE("Standalone Line Endings") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Template(R"(|
+  CHECK_MESSAGE(Ministache(R"(|
 {{>partial}}
 |)")
                         .render(data, {{"partial", ">"}}) == R"(|
@@ -85,7 +85,7 @@ TEST_CASE("Standalone Line Endings") {
 TEST_CASE("Standalone Without Previous Line") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Template(R"(  {{>partial}}
+  CHECK_MESSAGE(Ministache(R"(  {{>partial}}
 >)")
                         .render(data, {{"partial", ">\n>"}}) == R"(  >
   >>)",
@@ -95,7 +95,7 @@ TEST_CASE("Standalone Without Previous Line") {
 TEST_CASE("Standalone Without Newline") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Template(R"(>
+  CHECK_MESSAGE(Ministache(R"(>
   {{>partial}})")
                         .render(data, {{"partial", ">\n>"}}) == R"(>
   >
@@ -106,7 +106,7 @@ TEST_CASE("Standalone Without Newline") {
 TEST_CASE("Standalone Indentation") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"content":"<\n->"})");
-  CHECK_MESSAGE(Template(R"(\
+  CHECK_MESSAGE(Ministache(R"(\
  {{>partial}}
 /
 )")
@@ -123,7 +123,7 @@ TEST_CASE("Standalone Indentation") {
 TEST_CASE("Padding Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"boolean":true})");
-  CHECK_MESSAGE(Template(R"(|{{> partial }}|)").render(data, {{"partial", "[]"}}) == R"(|[]|)",
+  CHECK_MESSAGE(Ministache(R"(|{{> partial }}|)").render(data, {{"partial", "[]"}}) == R"(|[]|)",
                 R"(Superfluous in-tag whitespace should be ignored.)");
 }
 
