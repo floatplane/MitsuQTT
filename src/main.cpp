@@ -745,10 +745,14 @@ void handleOthers() {
     rebootAndSendPage();
   } else {
     JsonDocument data;
-    data[F("autodiscovery")] = config.other.haAutodiscovery;
     data[F("topic")] = config.other.haAutodiscoveryTopic;
 
     const auto toggles = data[F("toggles")].to<JsonArray>();
+    const auto autodiscovery = toggles.add<JsonObject>();
+    autodiscovery[F("title")] = F("Home Assistant autodiscovery");
+    autodiscovery[F("name")] = F("HAA");
+    autodiscovery[F("value")] = config.other.haAutodiscovery;
+
     const auto debugLog = toggles.add<JsonObject>();
     debugLog[F("title")] = F("MQTT topic debug logs");
     debugLog[F("name")] = F("DebugLogs");
@@ -783,23 +787,39 @@ void handleMqtt() {
     saveMqttConfig(config);
     rebootAndSendPage();
   } else {
-    String mqttPage = FPSTR(html_page_mqtt);
-    mqttPage.replace("_TXT_SAVE_", FPSTR(txt_save));
-    mqttPage.replace("_TXT_BACK_", FPSTR(txt_back));
-    mqttPage.replace("_TXT_MQTT_TITLE_", FPSTR(txt_mqtt_title));
-    mqttPage.replace("_TXT_MQTT_FN_", FPSTR(txt_mqtt_fn));
-    mqttPage.replace("_TXT_MQTT_HOST_", FPSTR(txt_mqtt_host));
-    mqttPage.replace("_TXT_MQTT_PORT_", FPSTR(txt_mqtt_port));
-    mqttPage.replace("_TXT_MQTT_USER_", FPSTR(txt_mqtt_user));
-    mqttPage.replace("_TXT_MQTT_PASSWORD_", FPSTR(txt_mqtt_password));
-    mqttPage.replace("_TXT_MQTT_TOPIC_", FPSTR(txt_mqtt_topic));
-    mqttPage.replace(F("_MQTT_FN_"), config.mqtt.friendlyName);
-    mqttPage.replace(F("_MQTT_HOST_"), config.mqtt.server);
-    mqttPage.replace(F("_MQTT_PORT_"), String(config.mqtt.port));
-    mqttPage.replace(F("_MQTT_USER_"), config.mqtt.username);
-    mqttPage.replace(F("_MQTT_PASSWORD_"), config.mqtt.password);
-    mqttPage.replace(F("_MQTT_TOPIC_"), config.mqtt.rootTopic);
-    sendWrappedHTML(mqttPage);
+    JsonDocument data;
+    auto friendlyName = data[F("friendlyName")].to<JsonObject>();
+    friendlyName[F("label")] = views::mqttFriendlyNameLabel;
+    friendlyName[F("value")] = config.mqtt.friendlyName;
+    friendlyName[F("param")] = F("fn");
+
+    auto server = data[F("server")].to<JsonObject>();
+    server[F("label")] = views::mqttHostLabel;
+    server[F("value")] = config.mqtt.server;
+    server[F("param")] = F("mh");
+
+    auto port = data[F("port")].to<JsonObject>();
+    port[F("value")] = config.mqtt.port;
+
+    auto password = data[F("password")].to<JsonObject>();
+    password[F("value")] = config.mqtt.password;
+
+    auto username = data[F("user")].to<JsonObject>();
+    username[F("label")] = views::mqttUserLabel;
+    username[F("value")] = config.mqtt.username;
+    username[F("param")] = F("mu");
+    username[F("placeholder")] = F("mqtt_user");
+
+    auto topic = data[F("topic")].to<JsonObject>();
+    topic[F("label")] = views::mqttTopicLabel;
+    topic[F("value")] = config.mqtt.rootTopic;
+    topic[F("param")] = F("mt");
+    topic[F("placeholder")] = F("topic");
+
+    renderView(Ministache(views::mqtt), data,
+               {{"mqttTextField", views::mqttTextFieldPartial},
+                {"header", partials::header},
+                {"footer", partials::footer}});
   }
 }
 

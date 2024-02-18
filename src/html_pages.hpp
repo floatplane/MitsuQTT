@@ -22,55 +22,6 @@ const char html_page_reset[] PROGMEM = "<p>_TXT_M_RESET_ _SSID_...</p>";
 
 const char html_page_save_reboot[] PROGMEM = "<p>_TXT_M_SAVE_ <span id='count'>10s</span>...</p>";
 
-const char html_page_mqtt[] PROGMEM =
-    // clang-format off
-"<div id='l1' name='l1'>"
-    "<fieldset>"
-        "<legend><b>&nbsp; _TXT_MQTT_TITLE_ &nbsp;</b></legend>"
-        "<form method='post'>"
-            "<p><b>_TXT_MQTT_FN_</b>"
-                "<br/>"
-                "<input id='fn' name='fn' "
-                "autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' "
-                "placeholder=' ' value='_MQTT_FN_'>"
-            "</p>"
-            "<p><b>_TXT_MQTT_HOST_</b>"
-                "<br/>"
-                "<input id='mh' name='mh' "
-                "autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' "
-                "placeholder=' ' value='_MQTT_HOST_'>"
-            "</p>"
-            "<p><b>_TXT_MQTT_PORT_</b>"
-                "<br/>"
-                "<input id='ml' name='ml' type='numeric' placeholder='1883' value='_MQTT_PORT_'>"
-            "</p>"
-            "<p><b>_TXT_MQTT_USER_</b>"
-                "<br/>"
-                "<input id='mu' name='mu' "
-                "autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' "
-                "placeholder='DVES_USER' value='_MQTT_USER_'>"
-            "</p>"
-            "<p><b>_TXT_MQTT_PASSWORD_</b>"
-                "<br/>"
-                "<input id='mp' name='mp' type='password' placeholder='Password' value='_MQTT_PASSWORD_'>"
-            "</p>"
-            "<p><b>_TXT_MQTT_TOPIC_</b>"
-                "<br/>"
-                "<input id='mt' name='mt' "
-                "autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' "
-                "placeholder='topic' value='_MQTT_TOPIC_'>"
-            "</p>"
-            "<br/>"
-            "<button name='save' type='submit' class='button bgrn'>_TXT_SAVE_</button>"
-        "</form>"
-    "</fieldset>"
-    "<p>"
-        "<a class='button back' href='/setup'>_TXT_BACK_</a>"
-    "</p>"
-"</div>"
-;
-// clang-format on
-
 const char html_page_status[] PROGMEM =
     // clang-format off
 "<div id='l1' name='l1'>"

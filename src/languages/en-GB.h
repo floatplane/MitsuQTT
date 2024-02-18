@@ -60,22 +60,6 @@ const char txt_m_reboot[] PROGMEM = "Rebooting... Refresh in";
 const char txt_m_reset[] PROGMEM = "Resetting... Connect to SSID";
 const char txt_m_save[] PROGMEM = "Saving configuration and rebooting... Refresh in";
 
-// Page MQTT
-const char txt_mqtt_title[] PROGMEM = "MQTT Parameters";
-const char txt_mqtt_fn[] PROGMEM = "Friendly name";
-const char txt_mqtt_host[] PROGMEM = "Host";
-const char txt_mqtt_port[] PROGMEM = "Port (default 1883)";
-const char txt_mqtt_user[] PROGMEM = "User";
-const char txt_mqtt_password[] PROGMEM = "Password";
-const char txt_mqtt_topic[] PROGMEM = "Topic";
-
-// Page Others
-const char txt_others_title[] PROGMEM = "Others Parameters";
-const char txt_others_haauto[] PROGMEM = "HA Autodiscovery";
-const char txt_others_hatopic[] PROGMEM = "HA Autodiscovery topic";
-const char txt_others_debug_packets[] PROGMEM = "MQTT topic debug packets";
-const char txt_others_debug_log[] PROGMEM = "MQTT topic debug logs";
-
 // Page Status
 const char txt_status_title[] PROGMEM = "Status";
 const char txt_status_hvac[] PROGMEM = "HVAC Status";
