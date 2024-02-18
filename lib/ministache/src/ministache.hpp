@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+#include <algorithm>
 #include <cassert>
 #include <vector>
 
