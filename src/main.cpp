@@ -121,12 +121,17 @@ struct Config {
     // This is useful if you want to prevent the heat pump from running away if the MQTT server goes
     // down.
     bool safeMode;
+    // Optimistic updates: when true, will push state updates to MQTT before the heat pump has
+    // confirmed the change. This is useful if you want to make the UI feel more responsive, but
+    // could lead to the UI showing the wrong state if the heat pump fails to change state.
+    bool optimisticUpdates;
     Other()
         : haAutodiscovery(true),
           haAutodiscoveryTopic(F("homeassistant")),
           logToMqtt(false),
           dumpPacketsToMqtt(false),
-          safeMode(false) {
+          safeMode(false),
+          optimisticUpdates(true) {
     }
   } other;
 
@@ -499,6 +504,8 @@ void loadOthersConfig() {
   config.other.dumpPacketsToMqtt = doc["debugPckts"].as<String>() == "ON";
   config.other.logToMqtt = doc["debugLogs"].as<String>() == "ON";
   config.other.safeMode = doc["safeMode"].as<String>() == "ON";
+  // make optimisticUpdates default to true if it's not present in the config
+  config.other.optimisticUpdates = doc["optimisticUpdates"].as<String>() != "OFF";
 }
 
 void saveMqttConfig(const Config &config) {
@@ -539,6 +546,7 @@ void saveOthersConfig(const Config &config) {
   doc["debugPckts"] = config.other.dumpPacketsToMqtt ? "ON" : "OFF";
   doc["debugLogs"] = config.other.logToMqtt ? "ON" : "OFF";
   doc["safeMode"] = config.other.safeMode ? "ON" : "OFF";
+  doc["optimisticUpdates"] = config.other.optimisticUpdates ? "ON" : "OFF";
   FileSystem::saveJSON(others_conf, doc);
 }
 
@@ -754,6 +762,7 @@ void handleOthers() {
     config.other.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
     config.other.logToMqtt = server.arg("DebugLogs") == "ON";
     config.other.safeMode = server.arg("SafeMode") == "ON";
+    config.other.optimisticUpdates = server.arg("OptimisticUpdates") == "ON";
     saveOthersConfig(config);
     rebootAndSendPage();
   } else {
@@ -770,6 +779,11 @@ void handleOthers() {
     safeMode[F("title")] = F("Safe mode");
     safeMode[F("name")] = F("SafeMode");
     safeMode[F("value")] = config.other.safeMode;
+
+    const auto optimisticUpdates = toggles.add<JsonObject>();
+    optimisticUpdates[F("title")] = F("Optimistic updates");
+    optimisticUpdates[F("name")] = F("OptimisticUpdates");
+    optimisticUpdates[F("value")] = config.other.optimisticUpdates;
 
     const auto debugLog = toggles.add<JsonObject>();
     debugLog[F("title")] = F("MQTT topic debug logs");
@@ -1609,6 +1623,10 @@ void hpPacketDebug(byte *packet_, unsigned int length, char *packetDirection_) {
 // This is used to send an optimistic state update to MQTT, which in turn causes the Home Assistant
 // UI to update without waiting to apply a setting and read it back.
 void publishOptimisticStateChange(JsonDocument &override) {
+  if (!config.other.optimisticUpdates) {
+    return;
+  }
+
   JsonDocument status(getHeatPumpStatusJson());
   auto override2 = override.as<JsonObject>();
   for (auto pair : override2) {
@@ -1616,7 +1634,9 @@ void publishOptimisticStateChange(JsonDocument &override) {
   }
   String mqttOutput;
   serializeJson(status, mqttOutput);
-  mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str(), false);
+  if (config.other.dumpPacketsToMqtt) {
+    mqtt_client.publish(config.mqtt.ha_debug_pckts_topic().c_str(), mqttOutput.c_str(), false);
+  }
   if (!mqtt_client.publish_P(config.mqtt.ha_state_topic().c_str(), mqttOutput.c_str(), false)) {
     LOG(F("Failed to publish dummy hp status change"));
   }
