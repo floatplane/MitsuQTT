@@ -38,7 +38,7 @@ How to use:
  - Step 6: (optional): Set MQTT information for use with Home Assistant
  - Step 7: (optional): Set Login password to prevent unwanted access in SETUP->ADVANCE->Login Password
 
-Builds are available for select platforms via GitHub Actions. Go to [the build workflow](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml), select the latest build on `main`, then check the **Artifacts** section. 
+Builds are available for select platforms via GitHub Actions. Go to [the build workflow](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml?query=branch%3Amain) and view the **Artifacts** section for the latest run. 
 
 ***
 For nodered fans MQTT topic use cases
