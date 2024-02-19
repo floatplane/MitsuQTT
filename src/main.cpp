@@ -1844,9 +1844,7 @@ void sendHomeAssistantConfig() {
   // For now, only compressorFrequency
   haConfig[F("json_attr_t")] = config.mqtt.ha_state_topic();
 
-  String mqttOutput =
-      Ministache(views::autoConfigTemplate)
-          .render(haConfig, {{"lbrace", partials::lbrace}, {"rbraces", partials::rbraces}});
+  String mqttOutput = Ministache(views::autoConfigTemplate).render(haConfig);
 
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);
