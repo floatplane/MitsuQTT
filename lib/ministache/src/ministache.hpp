@@ -265,28 +265,38 @@ class Ministache {
 
   static JsonVariantConst lookupTokenInContextStack(
       const String& name, const std::vector<JsonVariantConst>& contextStack) {
-    JsonVariantConst node;
     if (name == ".") {
       return contextStack.back();
     }
     std::vector<String> path = splitPath(name);
     for (auto context = contextStack.rbegin(); context != contextStack.rend(); context++) {
-      node = lookupTokenInContext(path, *context);
-      if (!node.isNull()) {
-        break;
+      if (isValidContextForPath(*context, path)) {
+        return lookupTokenInContext(path, *context);
       }
     }
-    return node;
+    return JsonVariantConst();
   }
 
   static JsonVariantConst lookupTokenInContext(const std::vector<String>& path,
                                                const JsonVariantConst& context) {
     String result;
-    auto node = context[path[0]];
-    for (size_t i = 1; i < path.size(); i++) {
+    auto node = context;
+    for (size_t i = 0; i < path.size(); i++) {
       node = node[path[i]];
     }
     return node;
+  }
+
+  static bool isValidContextForPath(const JsonVariantConst& context,
+                                    const std::vector<String>& path) {
+    if (path.size() == 1) {
+      return context.containsKey(path[0]);
+    }
+    auto parent = context;
+    for (size_t i = 0; i < path.size() - 1; i++) {
+      parent = parent[path[i]];
+    }
+    return !parent.isNull();
   }
 
   static std::vector<String> splitPath(const String& path) {
