@@ -258,8 +258,6 @@ String ha_config_topic;
 // Customization
 
 // sketch settings
-const PROGMEM uint32_t SEND_MQTT_STATE_INTERVAL_MS =
-    30000;  // 45 seconds (anything less may cause bouncing)
 const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000;  // 5 minutes
 const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;           // 1 second
 const PROGMEM uint64_t HP_RETRY_INTERVAL_MS = 1000UL;           // 1 second
@@ -1580,7 +1578,10 @@ String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSet
 }
 
 void pushHeatPumpStateToMqtt() {
-  if (millis() - lastMqttStatePacketSend > SEND_MQTT_STATE_INTERVAL_MS) {
+  // If we're not pushing optimistic updates on every incoming change, then we should send the
+  // state to MQTT at a higher cadence
+  const uint32_t interval = config.other.optimisticUpdates ? 30000UL : 10000UL;
+  if (millis() - lastMqttStatePacketSend > interval) {
     String mqttOutput;
     serializeJson(getHeatPumpStatusJson(), mqttOutput);
 
