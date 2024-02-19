@@ -595,6 +595,10 @@ bool remoteTempStale() {
   return (millis() - lastRemoteTemp > CHECK_REMOTE_TEMP_INTERVAL_MS);
 }
 
+bool safeModeActive() {
+  return config.other.safeMode && remoteTempStale();
+}
+
 // Handler webserver response
 
 void sendWrappedHTML(const String &content) {
@@ -1208,7 +1212,7 @@ void handleMetricsJson() {
   doc[F("git_hash")] = COMMIT_HASH;
 
   auto systemStatus = doc[F("status")].to<JsonObject>();
-  systemStatus[F("safeModeLockout")] = config.other.safeMode && remoteTempStale();
+  systemStatus[F("safeModeLockout")] = safeModeActive();
 
   // auto mallocStats = mallinfo();
   // doc[F("memory")] = JsonObject();
@@ -1704,7 +1708,7 @@ void onSetRemoteTemp(const char *message) {
     remoteTempActive = false;  // clear the remote temp flag
     hp.setRemoteTemperature(0.0);
   } else {
-    if (config.other.safeMode && remoteTempStale()) {
+    if (safeModeActive()) {
       LOG(F("Safe mode lockout turned off: we got a remote temp message to %f"), temperature);
     }
     remoteTempActive = true;    // Remote temp has been pushed.
@@ -1750,7 +1754,7 @@ void onSetMode(const char *message) {
   JsonDocument stateOverride;
   String modeUpper = message;
   modeUpper.toUpperCase();
-  if (modeUpper == "OFF" || (config.other.safeMode && remoteTempStale())) {
+  if (modeUpper == "OFF" || safeModeActive()) {
     if (modeUpper != "OFF") {
       LOG(F("Safe mode lockout enabled, ignoring mode change to %s"), modeUpper.c_str());
     }
