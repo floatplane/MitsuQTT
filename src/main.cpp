@@ -1134,20 +1134,20 @@ void handleMetrics() {
   data["compfreq"] = currentStatus.compressorFrequency;
 
   data["fan"] = currentSettings.fan;
-  if (currentSettings.fan == "AUTO") {
+  if (currentSettings.fan == "AUTO") {  // NOLINT(bugprone-branch-clone) false positive
     data["fan"] = "-1";
   } else if (currentSettings.fan == "QUIET") {
     data["fan"] = "0";
   }
 
   data["vane"] = currentSettings.vane;
-  if (currentSettings.vane == "AUTO") {
+  if (currentSettings.vane == "AUTO") {  // NOLINT(bugprone-branch-clone) false positive
     data["vane"] = "-1";
   } else if (currentSettings.vane == "SWING") {
     data["vane"] = "0";
   }
 
-  if (currentSettings.wideVane == "SWING") {
+  if (currentSettings.wideVane == "SWING") {  // NOLINT(bugprone-branch-clone) false positive
     data["widevane"] = "0";
   } else if (currentSettings.wideVane == "<<") {
     data["widevane"] = "1";
@@ -1165,7 +1165,7 @@ void handleMetrics() {
     data["widevane"] = "-2";
   }
 
-  if (currentSettings.mode == "AUTO") {
+  if (currentSettings.mode == "AUTO") {  // NOLINT(bugprone-branch-clone) false positive
     data["mode"] = "-1";
   } else if (currentSettings.mode == "COOL") {
     data["mode"] = "1";
