@@ -135,7 +135,7 @@ const char* header PROGMEM = R"====(
   <div class="main">
     <div style='text-align:center;'>
       <noscript>To use Mitsubishi2MQTT, you need to activate Javascript<br/></noscript>
-      <h3>testboard</h3>
+      <h3>{{header.hostname}}</h3>
     </div>
 )====";
 
