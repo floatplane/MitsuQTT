@@ -117,11 +117,16 @@ struct Config {
     // heatpump to topic heatpump_debug_packets_topic this can also be set by
     // sending "on" to heatpump_debug_set_topic
     bool dumpPacketsToMqtt;
+    // Safe mode: when true, will turn the heat pump off if remote temperature messages stop.
+    // This is useful if you want to prevent the heat pump from running away if the MQTT server goes
+    // down.
+    bool safeMode;
     Other()
         : haAutodiscovery(true),
           haAutodiscoveryTopic(F("homeassistant")),
           logToMqtt(false),
-          dumpPacketsToMqtt(false) {
+          dumpPacketsToMqtt(false),
+          safeMode(false) {
     }
   } other;
 
@@ -248,7 +253,7 @@ String ha_config_topic;
 // Customization
 
 // sketch settings
-const PROGMEM uint32_t SEND_ROOM_TEMP_INTERVAL_MS =
+const PROGMEM uint32_t SEND_MQTT_STATE_INTERVAL_MS =
     30000;  // 45 seconds (anything less may cause bouncing)
 const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000;  // 5 minutes
 const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;           // 1 second
@@ -279,7 +284,7 @@ boolean remoteTempActive = false;
 
 // HVAC
 HeatPump hp;  // NOLINT(readability-identifier-length)
-uint64_t lastTempSend;
+uint64_t lastMqttStatePacketSend;
 uint64_t lastMqttRetry;
 uint64_t lastHpSync;
 unsigned int hpConnectionRetries;
@@ -405,7 +410,6 @@ void setup() {
     }
     // Serial.println(F("Connection to HVAC. Stop serial log."));
     LOG(F("MQTT initialized, trying to connect to HVAC"));
-    hp.setStatusChangedCallback(onHeatPumpStatusChanged);
     hp.setPacketCallback(hpPacketDebug);
 
     // Merge settings from remote control with settings driven from MQTT
@@ -417,7 +421,7 @@ void setup() {
 
     hp.connect(&Serial);
 
-    lastTempSend = millis();
+    lastMqttStatePacketSend = millis();
   } else {
     dnsServer.start(DNS_PORT, "*", apIP);
     initCaptivePortal();
@@ -494,6 +498,7 @@ void loadOthersConfig() {
   config.other.haAutodiscovery = doc["haa"].as<String>() == "ON";
   config.other.dumpPacketsToMqtt = doc["debugPckts"].as<String>() == "ON";
   config.other.logToMqtt = doc["debugLogs"].as<String>() == "ON";
+  config.other.safeMode = doc["safeMode"].as<String>() == "ON";
 }
 
 void saveMqttConfig(const Config &config) {
@@ -533,6 +538,7 @@ void saveOthersConfig(const Config &config) {
   doc["haat"] = config.other.haAutodiscoveryTopic;
   doc["debugPckts"] = config.other.dumpPacketsToMqtt ? "ON" : "OFF";
   doc["debugLogs"] = config.other.logToMqtt ? "ON" : "OFF";
+  doc["safeMode"] = config.other.safeMode ? "ON" : "OFF";
   FileSystem::saveJSON(others_conf, doc);
 }
 
@@ -583,6 +589,14 @@ bool initWifi() {
   // ticker.attach(0.2, tick); // Start LED to flash rapidly to indicate we are
   // ready for setting up the wifi-connection (entered captive portal).
   return false;
+}
+
+bool remoteTempStale() {
+  return (millis() - lastRemoteTemp > CHECK_REMOTE_TEMP_INTERVAL_MS);
+}
+
+bool safeModeActive() {
+  return config.other.safeMode && remoteTempStale();
 }
 
 // Handler webserver response
@@ -739,6 +753,7 @@ void handleOthers() {
     config.other.haAutodiscoveryTopic = server.arg("haat");
     config.other.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
     config.other.logToMqtt = server.arg("DebugLogs") == "ON";
+    config.other.safeMode = server.arg("SafeMode") == "ON";
     saveOthersConfig(config);
     rebootAndSendPage();
   } else {
@@ -750,6 +765,11 @@ void handleOthers() {
     autodiscovery[F("title")] = F("Home Assistant autodiscovery");
     autodiscovery[F("name")] = F("HAA");
     autodiscovery[F("value")] = config.other.haAutodiscovery;
+
+    const auto safeMode = toggles.add<JsonObject>();
+    safeMode[F("title")] = F("Safe mode");
+    safeMode[F("name")] = F("SafeMode");
+    safeMode[F("value")] = config.other.safeMode;
 
     const auto debugLog = toggles.add<JsonObject>();
     debugLog[F("title")] = F("MQTT topic debug logs");
@@ -1186,12 +1206,13 @@ void handleMetrics() {
 }
 
 void handleMetricsJson() {
-  LOG(F("handleMetricsJson()"));
-
   JsonDocument doc;
   doc[F("hostname")] = config.network.hostname;
   doc[F("version")] = BUILD_DATE;
   doc[F("git_hash")] = COMMIT_HASH;
+
+  auto systemStatus = doc[F("status")].to<JsonObject>();
+  systemStatus[F("safeModeLockout")] = safeModeActive();
 
   // auto mallocStats = mallinfo();
   // doc[F("memory")] = JsonObject();
@@ -1544,25 +1565,8 @@ String hpGetAction(const HeatpumpStatus &hpStatus, const HeatpumpSettings &hpSet
   return hpmode;  // unknown
 }
 
-// Invoked async when the heatpump's room temperature changes, or when the heatpump's operating
-// state changes. Also invoked synchronously every time through `loop`.
-// TODO(floatplane): remove async invocation - we do it on every loop, so what's the point?
-// NOLINTNEXTLINE(passedByValue) - we don't control this callback signature
-// cppcheck-suppress passedByValue
-void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
-  if (millis() - lastTempSend > SEND_ROOM_TEMP_INTERVAL_MS) {  // only send the temperature every
-                                                               // SEND_ROOM_TEMP_INTERVAL_MS
-                                                               // (millis rollover tolerant)
-    hpCheckRemoteTemp();  // if the remote temperature feed from mqtt is stale,
-                          // disable it and revert to the internal thermometer.
-
-    // TODO(floatplane): what? why?
-    // if (newStatus.roomTemperature == 0) {
-    //   return;
-    // }
-
-    // TODO(floatplane): let's separate the job of periodically pushing latest state to MQTT from
-    // the job of figuring out whether to use the remote temp sensor or the internal one.
+void pushHeatPumpStateToMqtt() {
+  if (millis() - lastMqttStatePacketSend > SEND_MQTT_STATE_INTERVAL_MS) {
     String mqttOutput;
     serializeJson(getHeatPumpStatusJson(), mqttOutput);
 
@@ -1570,19 +1574,7 @@ void onHeatPumpStatusChanged([[maybe_unused]] heatpumpStatus _newStatus) {
       LOG(F("Failed to publish hp status change"));
     }
 
-    lastTempSend = millis();
-  }
-}
-
-void hpCheckRemoteTemp() {
-  if (remoteTempActive && (millis() - lastRemoteTemp >
-                           CHECK_REMOTE_TEMP_INTERVAL_MS)) {  // if it's been 5 minutes since last
-                                                              // remote_temp message, revert back
-                                                              // to HP internal temp sensor
-    remoteTempActive = false;
-    hp.setRemoteTemperature(0.0f);
-    // TODO(floatplane): do we need to explicitly call update? we don't do it anywhere else
-    hp.update();
+    lastMqttStatePacketSend = millis();
   }
 }
 
@@ -1631,7 +1623,7 @@ void publishOptimisticStateChange(JsonDocument &override) {
 
   // Restart counter for waiting enought time for the unit to update before
   // sending a state packet
-  lastTempSend = millis();
+  lastMqttStatePacketSend = millis();
 }
 
 static std::map<String, std::function<void(const char *)>> mqttTopicHandlers;
@@ -1716,6 +1708,9 @@ void onSetRemoteTemp(const char *message) {
     remoteTempActive = false;  // clear the remote temp flag
     hp.setRemoteTemperature(0.0);
   } else {
+    if (safeModeActive()) {
+      LOG(F("Safe mode lockout turned off: we got a remote temp message to %f"), temperature);
+    }
     remoteTempActive = true;    // Remote temp has been pushed.
     lastRemoteTemp = millis();  // Note time
     hp.setRemoteTemperature(Temperature(temperature, config.unit.tempUnit).getCelsius());
@@ -1759,7 +1754,10 @@ void onSetMode(const char *message) {
   JsonDocument stateOverride;
   String modeUpper = message;
   modeUpper.toUpperCase();
-  if (modeUpper == "OFF") {
+  if (modeUpper == "OFF" || safeModeActive()) {
+    if (modeUpper != "OFF") {
+      LOG(F("Safe mode lockout enabled, ignoring mode change to %s"), modeUpper.c_str());
+    }
     stateOverride["mode"] = "off";
     stateOverride["action"] = "off";
     publishOptimisticStateChange(stateOverride);
@@ -2021,45 +2019,61 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
     restartAfterDelay(0);
   }
 
-  if (!captive) {
-    // Sync HVAC UNIT
-    if (!hp.isConnected()) {
-      LOG(F("HVAC not connected"));
-      // Use exponential backoff for retries, where each retry is double the
-      // length of the previous one.
-      const uint64_t durationNextSync = (1UL << hpConnectionRetries) * HP_RETRY_INTERVAL_MS;
-      if (((millis() - lastHpSync > durationNextSync) or lastHpSync == 0)) {
-        lastHpSync = millis();
-        // If we've retried more than the max number of tries, keep retrying at
-        // that fixed interval, which is several minutes.
-        hpConnectionRetries = min(hpConnectionRetries + 1U, HP_MAX_RETRIES);
-        hpConnectionTotalRetries++;
-        LOG(F("Trying to reconnect to HVAC"));
-        hp.sync();
+  if (captive) {
+    dnsServer.processNextRequest();
+    return;
+  }
+
+  // Sync HVAC UNIT
+  if (hp.isConnected()) {
+    hpConnectionRetries = 0;
+    // if it's been CHECK_REMOTE_TEMP_INTERVAL_MS since last remote_temp
+    // message was received, either revert back to HP internal temp sensor
+    // or shut down.
+    if (remoteTempStale() && (remoteTempActive || config.other.safeMode)) {
+      if (config.other.safeMode) {
+        if (strcmp(hp.getPowerSetting(), "ON") == 0) {
+          LOG(F("Remote temperature updates aren't coming in, shutting down"));
+          hp.setPowerSetting("OFF");
+        }
+      } else if (remoteTempActive) {
+        LOG(F("Remote temperature feed is stale, reverting to internal thermometer"));
+        remoteTempActive = false;
+        hp.setRemoteTemperature(0.0f);
       }
-    } else {
-      hpConnectionRetries = 0;
+    }
+    hp.sync();
+  } else {
+    LOG(F("HVAC not connected"));
+    // Use exponential backoff for retries, where each retry is double the
+    // length of the previous one.
+    const uint64_t durationNextSync = (1UL << hpConnectionRetries) * HP_RETRY_INTERVAL_MS;
+    if (((millis() - lastHpSync > durationNextSync) or lastHpSync == 0)) {
+      lastHpSync = millis();
+      // If we've retried more than the max number of tries, keep retrying at
+      // that fixed interval, which is several minutes.
+      hpConnectionRetries = min(hpConnectionRetries + 1U, HP_MAX_RETRIES);
+      hpConnectionTotalRetries++;
+      LOG(F("Trying to reconnect to HVAC"));
       hp.sync();
     }
+  }
 
-    if (config.mqtt.configured()) {
-      // MQTT failed retry to connect
-      if (mqtt_client.state() < MQTT_CONNECTED) {
-        if ((millis() - lastMqttRetry > MQTT_RETRY_INTERVAL_MS) or lastMqttRetry == 0) {
-          mqttConnect();
-        }
-      }
-      // MQTT config problem on MQTT do nothing
-      else if (mqtt_client.state() > MQTT_CONNECTED) {
-        return;
-      }
-      // MQTT connected send status
-      else {
-        onHeatPumpStatusChanged(hp.getStatus());
-        mqtt_client.loop();
+  if (config.mqtt.configured()) {
+    // MQTT failed retry to connect
+    if (mqtt_client.state() < MQTT_CONNECTED) {
+      if ((millis() - lastMqttRetry > MQTT_RETRY_INTERVAL_MS) or lastMqttRetry == 0) {
+        mqttConnect();
       }
     }
-  } else {
-    dnsServer.processNextRequest();
+    // MQTT config problem on MQTT do nothing
+    else if (mqtt_client.state() > MQTT_CONNECTED) {
+      return;
+    }
+    // MQTT connected send status
+    else {
+      mqtt_client.loop();
+      pushHeatPumpStateToMqtt();
+    }
   }
 }
