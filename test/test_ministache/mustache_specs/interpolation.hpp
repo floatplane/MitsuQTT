@@ -206,9 +206,7 @@ TEST_CASE("Dotted Names - Initial Resolution") {
                 R"(The first part of a dotted name should resolve as any other name.)");
 }
 
-// We don't know (yet?) that we should stop after searching for `b.c` because we found `b` and `c`
-// was missing inside it.
-TEST_CASE("Dotted Names - Context Precedence" * doctest::skip(true)) {
+TEST_CASE("Dotted Names - Context Precedence") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"a":{"b":{}},"b":{"c":"ERROR"}})");
   CHECK_MESSAGE(Ministache(R"({{#a}}{{b.c}}{{/a}})").render(data) == R"()",
