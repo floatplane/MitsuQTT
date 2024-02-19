@@ -1,6 +1,6 @@
 # mitsubishi2MQTT
 
-Heavily based on [gysmo38/mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT), but with strictness levels turned up to :100:.
+An evolved fork of [gysmo38/mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT)
 
 [![.github/workflows/build.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml)
 [![.github/workflows/test.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml)
@@ -38,7 +38,7 @@ How to use:
  - Step 6: (optional): Set MQTT information for use with Home Assistant
  - Step 7: (optional): Set Login password to prevent unwanted access in SETUP->ADVANCE->Login Password
 
-Nightly builds are available for select platforms via GitHub Actions. Go to [the platformio workflow](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/platformio.yml), select the latest build, then check the **Artifacts** section. 
+Builds are available for select platforms via GitHub Actions. Go to [the build workflow](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml?query=branch%3Amain) and view the **Artifacts** section for the latest run. 
 
 ***
 For nodered fans MQTT topic use cases
