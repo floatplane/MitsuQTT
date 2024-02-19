@@ -1765,21 +1765,16 @@ void onSetMode(const char *message) {
   } else {
     if (modeUpper == "HEAT_COOL") {
       stateOverride["mode"] = "heat_cool";
-      stateOverride["action"] = "idle";
       modeUpper = "AUTO";
       // NOLINTNEXTLINE(bugprone-branch-clone) why is the next branch getting flagged as a clone?
     } else if (modeUpper == "HEAT") {
       stateOverride["mode"] = "heat";
-      stateOverride["action"] = "heating";
     } else if (modeUpper == "COOL") {
       stateOverride["mode"] = "cool";
-      stateOverride["action"] = "cooling";
     } else if (modeUpper == "DRY") {
       stateOverride["mode"] = "dry";
-      stateOverride["action"] = "drying";
     } else if (modeUpper == "FAN_ONLY") {
       stateOverride["mode"] = "fan_only";
-      stateOverride["action"] = "fan";
       modeUpper = "FAN";
     } else {
       return;
