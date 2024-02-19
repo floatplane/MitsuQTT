@@ -791,10 +791,10 @@ void handleMqtt() {
     friendlyName[F("value")] = config.mqtt.friendlyName;
     friendlyName[F("param")] = F("fn");
 
-    auto server = data[F("server")].to<JsonObject>();
-    server[F("label")] = views::mqttHostLabel;
-    server[F("value")] = config.mqtt.server;
-    server[F("param")] = F("mh");
+    auto mqttServer = data[F("server")].to<JsonObject>();
+    mqttServer[F("label")] = views::mqttHostLabel;
+    mqttServer[F("value")] = config.mqtt.server;
+    mqttServer[F("param")] = F("mh");
 
     auto port = data[F("port")].to<JsonObject>();
     port[F("value")] = config.mqtt.port;
