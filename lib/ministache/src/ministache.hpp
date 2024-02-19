@@ -17,11 +17,16 @@ class Ministache {
     InvertedSection,
     EndSection,
     Partial,
+    Delimiter,
   };
   struct Token {
     String name;
     TokenType type;
     bool htmlEscape;
+  };
+  struct DelimiterPair {
+    String open;
+    String close;
   };
 
  public:
@@ -86,12 +91,14 @@ class Ministache {
   std::pair<String, size_t> renderWithContextStack(
       size_t position, std::vector<JsonVariantConst>& contextStack,
 
-      const std::vector<std::pair<String, String>>& partials, bool renderSection) const {
+      const std::vector<std::pair<String, String>>& partials, bool renderSection,
+      const DelimiterPair& initialDelimiters = {.open = "{{", .close = "}}"}) const {
     String result;
+    DelimiterPair delimiters = initialDelimiters;
     while (position < templateContents.length()) {
-      auto nextToken = templateContents.indexOf("{{", position);
+      auto nextToken = templateContents.indexOf(delimiters.open, position);
       if (nextToken != -1) {
-        const auto parsedToken = parseTokenAtPoint(nextToken);
+        const auto parsedToken = parseTokenAtPoint(nextToken, delimiters);
         const auto tokenRenderExtents =
             getExclusionRangeForToken(nextToken, parsedToken.second, parsedToken.first.type);
         if (renderSection) {
@@ -114,7 +121,7 @@ class Ministache {
               for (size_t i = 0; i < array.size(); i++) {
                 contextStack.push_back(array[i]);
                 auto sectionResult = renderWithContextStack(tokenRenderExtents.end, contextStack,
-                                                            partials, renderSection);
+                                                            partials, renderSection, delimiters);
                 if (renderSection) {
                   result.concat(sectionResult.first);
                 }
@@ -123,8 +130,9 @@ class Ministache {
               }
             } else {
               contextStack.push_back(context);
-              auto sectionResult = renderWithContextStack(tokenRenderExtents.end, contextStack,
-                                                          partials, renderSection && !falsy);
+              auto sectionResult =
+                  renderWithContextStack(tokenRenderExtents.end, contextStack, partials,
+                                         renderSection && !falsy, delimiters);
               if (renderSection) {
                 result.concat(sectionResult.first);
               }
@@ -138,8 +146,8 @@ class Ministache {
             // check token for falsy value, render if falsy
             auto context = lookupTokenInContextStack(token.name, contextStack);
             auto falsy = isFalsy(context);
-            auto sectionResult = renderWithContextStack(tokenRenderExtents.end, contextStack,
-                                                        partials, renderSection && falsy);
+            auto sectionResult = renderWithContextStack(
+                tokenRenderExtents.end, contextStack, partials, renderSection && falsy, delimiters);
             if (renderSection) {
               result.concat(sectionResult.first);
             }
@@ -160,6 +168,7 @@ class Ministache {
                 // Partials must match the indentation of the token that references them
                 String indentedPartial =
                     indentLines(partial->second, tokenRenderExtents.indentation);
+                // NB: we don't pass custom delimiters down to a partial
                 String partialResult =
                     Ministache(indentedPartial)
                         .renderWithContextStack(0, contextStack, partials, renderSection)
@@ -167,6 +176,15 @@ class Ministache {
                 result.concat(partialResult);
               }
             }
+            position = tokenRenderExtents.end;
+            break;
+
+          case TokenType::Delimiter:
+            // The name will look like "<% %>" - we need to split it on whitespace, and
+            // assign the start and end delimiters
+            delimiters.open = token.name.substring(0, token.name.indexOf(' '));
+            delimiters.close = token.name.substring(
+                token.name.lastIndexOf(' ', token.name.length() - 1) + 1, token.name.length());
             position = tokenRenderExtents.end;
             break;
 
@@ -265,28 +283,38 @@ class Ministache {
 
   static JsonVariantConst lookupTokenInContextStack(
       const String& name, const std::vector<JsonVariantConst>& contextStack) {
-    JsonVariantConst node;
     if (name == ".") {
       return contextStack.back();
     }
     std::vector<String> path = splitPath(name);
     for (auto context = contextStack.rbegin(); context != contextStack.rend(); context++) {
-      node = lookupTokenInContext(path, *context);
-      if (!node.isNull()) {
-        break;
+      if (isValidContextForPath(*context, path)) {
+        return lookupTokenInContext(path, *context);
       }
     }
-    return node;
+    return JsonVariantConst();
   }
 
   static JsonVariantConst lookupTokenInContext(const std::vector<String>& path,
                                                const JsonVariantConst& context) {
     String result;
-    auto node = context[path[0]];
-    for (size_t i = 1; i < path.size(); i++) {
+    auto node = context;
+    for (size_t i = 0; i < path.size(); i++) {
       node = node[path[i]];
     }
     return node;
+  }
+
+  static bool isValidContextForPath(const JsonVariantConst& context,
+                                    const std::vector<String>& path) {
+    if (path.size() == 1) {
+      return context.containsKey(path[0]);
+    }
+    auto parent = context;
+    for (size_t i = 0; i < path.size() - 1; i++) {
+      parent = parent[path[i]];
+    }
+    return !parent.isNull();
   }
 
   static std::vector<String> splitPath(const String& path) {
@@ -304,11 +332,12 @@ class Ministache {
 
   // Given a const char * at the start of a token sequence "{{", extract the token name and return a
   // pair of the token name and the const char * at the end of the token sequence
-  std::pair<Token, size_t> parseTokenAtPoint(size_t position) const {
-    assert(templateContents[position] == '{');
-    assert(templateContents[position + 1] == '{');
-    position += 2;
-    String closeTag("}}");
+  std::pair<Token, size_t> parseTokenAtPoint(size_t position,
+                                             const DelimiterPair& delimiters) const {
+    assert(templateContents.substring(position, position + delimiters.open.length()) ==
+           delimiters.open);
+    position += delimiters.open.length();
+    String closeTag(delimiters.close);
 
     bool escapeHtml = true;
     TokenType type = TokenType::Text;
@@ -317,7 +346,8 @@ class Ministache {
       case '{':
         escapeHtml = false;
         position++;
-        closeTag = "}}}";
+        closeTag = String("}");
+        closeTag.concat(delimiters.close);
         break;
       case '!':
         type = TokenType::Comment;
@@ -338,6 +368,12 @@ class Ministache {
       case '>':
         type = TokenType::Partial;
         position++;
+        break;
+      case '=':
+        type = TokenType::Delimiter;
+        position++;
+        closeTag = String("=");
+        closeTag.concat(delimiters.close);
         break;
       default:
         break;

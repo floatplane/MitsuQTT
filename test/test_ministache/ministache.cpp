@@ -9,6 +9,7 @@
 using namespace ministache;
 
 #include "mustache_specs/comments.hpp"
+#include "mustache_specs/delimiters.hpp"
 #include "mustache_specs/interpolation.hpp"
 #include "mustache_specs/inverted.hpp"
 #include "mustache_specs/partials.hpp"
