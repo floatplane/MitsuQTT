@@ -117,11 +117,16 @@ struct Config {
     // heatpump to topic heatpump_debug_packets_topic this can also be set by
     // sending "on" to heatpump_debug_set_topic
     bool dumpPacketsToMqtt;
+    // Safe mode: when true, will turn the heat pump off if the MQTT or Wifi connection is lost.
+    // This is useful if you want to prevent the heat pump from running away if the MQTT server goes
+    // down.
+    bool safeMode;
     Other()
         : haAutodiscovery(true),
           haAutodiscoveryTopic(F("homeassistant")),
           logToMqtt(false),
-          dumpPacketsToMqtt(false) {
+          dumpPacketsToMqtt(false),
+          safeMode(false) {
     }
   } other;
 
@@ -494,6 +499,7 @@ void loadOthersConfig() {
   config.other.haAutodiscovery = doc["haa"].as<String>() == "ON";
   config.other.dumpPacketsToMqtt = doc["debugPckts"].as<String>() == "ON";
   config.other.logToMqtt = doc["debugLogs"].as<String>() == "ON";
+  config.other.safeMode = doc["safeMode"].as<String>() == "ON";
 }
 
 void saveMqttConfig(const Config &config) {
@@ -533,6 +539,7 @@ void saveOthersConfig(const Config &config) {
   doc["haat"] = config.other.haAutodiscoveryTopic;
   doc["debugPckts"] = config.other.dumpPacketsToMqtt ? "ON" : "OFF";
   doc["debugLogs"] = config.other.logToMqtt ? "ON" : "OFF";
+  doc["safeMode"] = config.other.safeMode ? "ON" : "OFF";
   FileSystem::saveJSON(others_conf, doc);
 }
 
@@ -739,6 +746,7 @@ void handleOthers() {
     config.other.haAutodiscoveryTopic = server.arg("haat");
     config.other.dumpPacketsToMqtt = server.arg("DebugPckts") == "ON";
     config.other.logToMqtt = server.arg("DebugLogs") == "ON";
+    config.other.safeMode = server.arg("SafeMode") == "ON";
     saveOthersConfig(config);
     rebootAndSendPage();
   } else {
@@ -750,6 +758,11 @@ void handleOthers() {
     autodiscovery[F("title")] = F("Home Assistant autodiscovery");
     autodiscovery[F("name")] = F("HAA");
     autodiscovery[F("value")] = config.other.haAutodiscovery;
+
+    const auto safeMode = toggles.add<JsonObject>();
+    safeMode[F("title")] = F("Safe mode");
+    safeMode[F("name")] = F("SafeMode");
+    safeMode[F("value")] = config.other.safeMode;
 
     const auto debugLog = toggles.add<JsonObject>();
     debugLog[F("title")] = F("MQTT topic debug logs");
