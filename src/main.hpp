@@ -33,7 +33,6 @@ void handleUploadLoop();
 void handleControl();
 void initMqtt();
 void initCaptivePortal();
-void processHeatPumpLoop();
 void hpPacketDebug(byte *packet_, unsigned int length, char *packetDirection_);
 float convertCelsiusToLocalUnit(float temperature, bool isFahrenheit);
 float convertLocalUnitToCelsius(float temperature, bool isFahrenheit);
