@@ -44,7 +44,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "html_common.hpp"        // common code HTML (like header, footer)
 #include "html_init.hpp"          // code html for initial config
 #include "html_menu.hpp"          // code html for menu
-#include "html_metrics.hpp"       // prometheus metrics
 #include "html_pages.hpp"         // code html for pages
 #include "javascript_common.hpp"  // common code javascript (like refresh page)
 #include "logger.hpp"
@@ -1124,75 +1123,65 @@ void handleMetrics() {
 
   const HeatpumpSettings currentSettings(hp.getSettings());
   const HeatpumpStatus currentStatus(hp.getStatus());
-
-  const String hppower = currentSettings.power == "ON" ? "1" : "0";
-
-  String hpfan = currentSettings.fan;
-  if (hpfan == "AUTO") {
-    hpfan = "-1";
-  }
-  if (hpfan == "QUIET") {
-    hpfan = "0";
-  }
-
-  String hpvane = currentSettings.vane;
-  if (hpvane == "AUTO") {
-    hpvane = "-1";
-  }
-  if (hpvane == "SWING") {
-    hpvane = "0";
-  }
-
-  String hpwidevane = currentSettings.wideVane;
-  if (hpwidevane == "SWING") {
-    hpwidevane = "0";
-  } else if (hpwidevane == "<<") {
-    hpwidevane = "1";
-  } else if (hpwidevane == "<") {
-    hpwidevane = "2";
-  } else if (hpwidevane == "|") {
-    hpwidevane = "3";
-  } else if (hpwidevane == ">") {
-    hpwidevane = "4";
-  } else if (hpwidevane == ">>") {
-    hpwidevane = "5";
-  } else if (hpwidevane == "<>") {
-    hpwidevane = "6";
-  } else {
-    hpwidevane = "-2";
-  }
-
-  String hpmode = currentSettings.mode;
-  if (hpmode == "AUTO") {
-    hpmode = "-1";
-  } else if (hpmode == "COOL") {
-    hpmode = "1";
-  } else if (hpmode == "DRY") {
-    hpmode = "2";
-  } else if (hpmode == "HEAT") {
-    hpmode = "3";
-  } else if (hpmode == "FAN") {
-    hpmode = "4";
-  } else if (hppower == "0") {
-    hpmode = "0";
-  } else {
-    hpmode = "-2";
-  }
-
-  Ministache metricsTemplate(FPSTR(html_metrics));
   ArduinoJson::JsonDocument data;
   data["unit_name"] = config.network.hostname;
   data["version"] = BUILD_DATE;
   data["git_hash"] = COMMIT_HASH;
-  data["power"] = hppower;
+  data["power"] = currentSettings.power == "ON" ? 1 : 0;
   data["roomtemp"] = currentStatus.roomTemperature.toString(TempUnit::C);
   data["temp"] = currentSettings.temperature.toString(TempUnit::C);
-  data["fan"] = hpfan;
-  data["vane"] = hpvane;
-  data["widevane"] = hpwidevane;
-  data["mode"] = hpmode;
   data["oper"] = currentStatus.operating ? 1 : 0;
   data["compfreq"] = currentStatus.compressorFrequency;
+
+  data["fan"] = currentSettings.fan;
+  if (currentSettings.fan == "AUTO") {
+    data["fan"] = "-1";
+  } else if (currentSettings.fan == "QUIET") {
+    data["fan"] = "0";
+  }
+
+  data["vane"] = currentSettings.vane;
+  if (currentSettings.vane == "AUTO") {
+    data["vane"] = "-1";
+  } else if (currentSettings.vane == "SWING") {
+    data["vane"] = "0";
+  }
+
+  if (currentSettings.wideVane == "SWING") {
+    data["widevane"] = "0";
+  } else if (currentSettings.wideVane == "<<") {
+    data["widevane"] = "1";
+  } else if (currentSettings.wideVane == "<") {
+    data["widevane"] = "2";
+  } else if (currentSettings.wideVane == "|") {
+    data["widevane"] = "3";
+  } else if (currentSettings.wideVane == ">") {
+    data["widevane"] = "4";
+  } else if (currentSettings.wideVane == ">>") {
+    data["widevane"] = "5";
+  } else if (currentSettings.wideVane == "<>") {
+    data["widevane"] = "6";
+  } else {
+    data["widevane"] = "-2";
+  }
+
+  if (currentSettings.mode == "AUTO") {
+    data["mode"] = "-1";
+  } else if (currentSettings.mode == "COOL") {
+    data["mode"] = "1";
+  } else if (currentSettings.mode == "DRY") {
+    data["mode"] = "2";
+  } else if (currentSettings.mode == "HEAT") {
+    data["mode"] = "3";
+  } else if (currentSettings.mode == "FAN") {
+    data["mode"] = "4";
+  } else if (data["power"] == "0") {
+    data["mode"] = "0";
+  } else {
+    data["mode"] = "-2";
+  }
+
+  Ministache metricsTemplate(views::metricsView);
   server.send(HttpStatusCodes::httpOk, F("text/plain"), metricsTemplate.render(data));
 }
 

@@ -16,7 +16,9 @@
 #pragma once
 #include <Arduino.h>
 
-const char html_metrics[] PROGMEM = R"====(
+namespace views {
+
+const char *metricsView PROGMEM = R"====(
 # HELP mitsubishi2mqtt_version Mitsubishi2MQTT version
 # TYPE mitsubishi2mqtt_version gauge
 mitsubishi2mqtt_version{hostname="{{unit_name}}",version="{{version}}"} 1
@@ -48,3 +50,5 @@ mitsubishi_operating{hostname="{{unit_name}}"} {{oper}}
 # TYPE mitsubishi_compressor_frequency gauge
 mitsubishi_compressor_frequency{hostname="{{unit_name}}"} {{compfreq}}
 )====";
+
+};  // namespace views

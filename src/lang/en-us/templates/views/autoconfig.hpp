@@ -3,7 +3,7 @@
 
 namespace views {
 
-const char autoConfigTemplate[] PROGMEM = R"====(
+const char* autoConfigTemplate PROGMEM = R"====(
 {
   "name": "{{name}}",
   "unique_id": "{{unique_id}}",
