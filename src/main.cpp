@@ -56,12 +56,11 @@ ESP8266WebServer server(80);  // ESP8266 web
 #define LANG_PATH "languages/en-GB.h"  // default language English
 #endif
 
+#include "frontend/templates.hpp"
 #include "ministache.hpp"
-#include "templates/templates.hpp"
-#include "templates/views/autoconfig.hpp"
-#include "templates/views/metrics.hpp"
-#include "templates/views/mqtt.hpp"
-#include "templates/views/others.hpp"
+#include "views/metrics.hpp"
+#include "views/mqtt.hpp"
+#include "views/others.hpp"
 
 using ministache::Ministache;
 
@@ -343,15 +342,6 @@ void logConfig() {
   }
 }
 
-#define INCBIN_PREFIX
-#include "incbin.h"
-// This macro will include the file src/mvp.css in the binary as a NULL-terminated flash string
-// named cssData. It also generates a pointer to the end of the data (cssEnd) and a size
-// (cssSize). The file gets served up by the `/css` endpoint.
-namespace statics {
-INCTXT(css, "src/mvp.css");
-}
-
 void setup() {
   // Start serial for debug before HVAC connect to serial
   Serial.begin(115200);
@@ -394,7 +384,7 @@ void setup() {
     server.on(F("/metrics"), handleMetrics);
     server.on(F("/metrics.json"), handleMetricsJson);
     server.on(F("/css"), HTTPMethod::HTTP_GET,
-              []() { server.send(200, F("text/css"), statics::cssData); });
+              []() { server.send(200, F("text/css"), statics::css); });
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
       server.on(F("/login"), handleLogin);
@@ -1873,7 +1863,7 @@ void sendHomeAssistantConfig() {
   // For now, only compressorFrequency
   haConfig[F("json_attr_t")] = config.mqtt.ha_state_topic();
 
-  String mqttOutput = Ministache(views::autoConfigTemplate).render(haConfig);
+  String mqttOutput = Ministache(views::autoconfig).render(haConfig);
 
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);

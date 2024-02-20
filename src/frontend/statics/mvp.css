@@ -127,6 +127,7 @@ header {
     text-align: var(--justify-important);
 }
 
+header a.buttonLink,
 header a b,
 header a em,
 header a i,
@@ -292,6 +293,11 @@ a:hover {
     filter: brightness(var(--hover-brightness));
 }
 
+a.buttonLink {
+    text-decoration: none;
+}
+
+a.buttonLink,
 a b,
 a em,
 a i,
@@ -332,6 +338,7 @@ input[type="submit"] {
     color: var(--color-bg);
 }
 
+a.buttonLink,
 a em,
 a i {
     border: 2px solid var(--color-link);
@@ -543,6 +550,7 @@ header, main, footer {
     min-width: var(--width-card);
 }
 
+a.buttonLink,
 a b,
 a em,
 a i,

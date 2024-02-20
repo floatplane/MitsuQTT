@@ -37,7 +37,7 @@ const char* mqtt PROGMEM = // R"====(
         "</p>"
         "{{#topic}}{{> mqttTextField}}{{/topic}}"
         "<br/>"
-        "<a href='/setup'><em>&lt; Back</em></a>"
+        "<a class=\"buttonLink\" href='/setup'>&lt; Back</a>"
         "<button name='save' type='submit' class='button bgrn'>Save & Reboot</button>"
     "</form>"
 "</main>"
