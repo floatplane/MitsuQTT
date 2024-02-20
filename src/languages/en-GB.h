@@ -35,7 +35,6 @@ const char txt_reset_confirm[] PROGMEM = "Do you really want to reset this unit?
 const char txt_back[] PROGMEM = "Back";
 const char txt_save[] PROGMEM = "Save & Reboot";
 const char txt_logout[] PROGMEM = "Logout";
-const char txt_upgrade[] PROGMEM = "Start upgrade";
 const char txt_login[] PROGMEM = "LOGIN";
 
 // Form choices
@@ -101,11 +100,6 @@ const char txt_login_password[] PROGMEM = "Password";
 const char txt_login_sucess[] PROGMEM =
     "Login successful, you will be redirected in a few seconds.";
 const char txt_login_fail[] PROGMEM = "Wrong username/password! Try again.";
-
-// Page Upgrade
-const char txt_upgrade_title[] PROGMEM = "Upgrade";
-const char txt_upgrade_info[] PROGMEM = "Firmware OTA upgrade by bin file upload";
-const char txt_upgrade_start[] PROGMEM = "Upload started";
 
 // Page Upload
 const char txt_upload_nofile[] PROGMEM = "No file selected";

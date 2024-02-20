@@ -9,11 +9,6 @@
 INCTXT(footer, "src/frontend/" STRINGIFY(LANGUAGE) "/partials/footer.mst");
 INCTXT(header, "src/frontend/" STRINGIFY(LANGUAGE) "/partials/header.mst");
 
-namespace partials {
-const __FlashStringHelper *footer = FPSTR(footerData);
-const __FlashStringHelper *header = FPSTR(headerData);
-};  // namespace partials
-
 INCTXT(autoconfig, "src/frontend/" STRINGIFY(LANGUAGE) "/views/autoconfig.mst");
 INCTXT(captiveIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/index.mst");
 INCTXT(captiveReboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/reboot.mst");
@@ -22,6 +17,14 @@ INCTXT(metrics, "src/frontend/" STRINGIFY(LANGUAGE) "/views/metrics.mst");
 INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
 INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
+INCTXT(upgrade, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upgrade.mst");
+
+INCTXT(css, "src/frontend/statics/mvp.css");
+
+namespace partials {
+const __FlashStringHelper *footer = FPSTR(footerData);
+const __FlashStringHelper *header = FPSTR(headerData);
+};  // namespace partials
 
 namespace views {
 const __FlashStringHelper *autoconfig = FPSTR(autoconfigData);
@@ -40,9 +43,8 @@ const __FlashStringHelper *textField = FPSTR(mqttTextFieldData);
 }  // namespace mqtt
 
 const __FlashStringHelper *others = FPSTR(othersData);
+const __FlashStringHelper *upgrade = FPSTR(upgradeData);
 };  // namespace views
-
-INCTXT(css, "src/frontend/statics/mvp.css");
 
 namespace statics {
 const __FlashStringHelper *css = FPSTR(cssData);

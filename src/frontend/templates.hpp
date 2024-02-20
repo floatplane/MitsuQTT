@@ -24,6 +24,7 @@ extern const __FlashStringHelper *textField;
 }  // namespace mqtt
 
 extern const __FlashStringHelper *others;
+extern const __FlashStringHelper *upgrade;
 };  // namespace views
 
 namespace statics {

@@ -1329,14 +1329,9 @@ void handleUpgrade() {
   LOG(F("handleUpgrade()"));
 
   uploaderror = UploadError::noError;
-  String upgradePage = FPSTR(html_page_upgrade);
-  upgradePage.replace("_TXT_B_UPGRADE_", FPSTR(txt_upgrade));
-  upgradePage.replace("_TXT_BACK_", FPSTR(txt_back));
-  upgradePage.replace("_TXT_UPGRADE_TITLE_", FPSTR(txt_upgrade_title));
-  upgradePage.replace("_TXT_UPGRADE_INFO_", FPSTR(txt_upgrade_info));
-  upgradePage.replace("_TXT_UPGRADE_START_", FPSTR(txt_upgrade_start));
-
-  sendWrappedHTML(upgradePage);
+  JsonDocument data;
+  renderView(Ministache(views::upgrade), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleUploadDone() {

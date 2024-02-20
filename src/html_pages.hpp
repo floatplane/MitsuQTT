@@ -282,33 +282,6 @@ const char html_page_login[] PROGMEM =
 ;
 // clang-format on
 
-const char html_page_upgrade[] PROGMEM =
-    // clang-format off
-"<script>"
-    "function eb(s) {"
-        "return document.getElementById(s);"
-    "}"
-"</script>"
-    "<div id='f1' style='display:block;'>"
-        "<fieldset>"
-            "<legend><b>&nbsp; _TXT_UPGRADE_TITLE_ &nbsp;</b></legend>"
-            "<form method='post' action='upload' enctype='multipart/form-data'>"
-                "<p><span>_TXT_UPGRADE_INFO_</span></p>"
-                "<br>"
-                "<input type='file' accept='.bin' name='upload'>"
-                "<br>"
-                "<br>"
-                "<button type='submit' onclick=\"eb('f1').style.display='none';eb('f2').style.display='block';this.form.submit();\" class='button bgrn'>_TXT_B_UPGRADE_</button>"
-            "</form>"
-        "</fieldset>"
-        "<p>"
-            "<a class='button back' href='/'>_TXT_BACK_</a>"
-        "</p>"
-    "</div>"
-    "<div id='f2' style='display:none;text-align:center;'><b>_TXT_UPGRADE_START_ ...</b></div>"
-;
-// clang-format on
-
 const char html_page_upload[] PROGMEM =
     // clang-format off
 "<div id='l1' name='l1'>"
