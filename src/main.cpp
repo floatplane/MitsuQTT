@@ -58,7 +58,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include "frontend/templates.hpp"
 #include "ministache.hpp"
-#include "views/metrics.hpp"
 #include "views/mqtt/strings.hpp"
 
 using ministache::Ministache;
@@ -1217,7 +1216,7 @@ void handleMetrics() {
     data["mode"] = "-2";
   }
 
-  Ministache metricsTemplate(views::metricsView);
+  Ministache metricsTemplate(views::metrics);
   server.send(HttpStatusCodes::httpOk, F("text/plain"), metricsTemplate.render(data));
 }
 

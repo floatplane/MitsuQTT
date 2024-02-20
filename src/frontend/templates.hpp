@@ -9,10 +9,13 @@ extern const __FlashStringHelper *header;
 
 namespace views {
 extern const __FlashStringHelper *autoconfig;
+extern const __FlashStringHelper *metrics;
+
 namespace mqtt {
 extern const __FlashStringHelper *index;
 extern const __FlashStringHelper *textField;
 }  // namespace mqtt
+
 extern const __FlashStringHelper *others;
 };  // namespace views
 

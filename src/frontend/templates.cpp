@@ -15,19 +15,25 @@ const __FlashStringHelper *header = FPSTR(headerData);
 };  // namespace partials
 
 INCTXT(autoconfig, "src/frontend/" STRINGIFY(LANGUAGE) "/views/autoconfig.mst");
-INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
+INCTXT(metrics, "src/frontend/" STRINGIFY(LANGUAGE) "/views/metrics.mst");
 INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
+INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
+
 namespace views {
 const __FlashStringHelper *autoconfig = FPSTR(autoconfigData);
+const __FlashStringHelper *metrics = FPSTR(metricsData);
+
 namespace mqtt {
 const __FlashStringHelper *index = FPSTR(mqttIndexData);
 const __FlashStringHelper *textField = FPSTR(mqttTextFieldData);
 }  // namespace mqtt
+
 const __FlashStringHelper *others = FPSTR(othersData);
 };  // namespace views
 
 INCTXT(css, "src/frontend/statics/mvp.css");
+
 namespace statics {
 const __FlashStringHelper *css = FPSTR(cssData);
 }
