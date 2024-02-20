@@ -4,12 +4,9 @@
 namespace partials {
 
 const char *footer PROGMEM = R"====(
-    <br/>
-    <div style='text-align:right;font-size:10px;color: grey;'>
-      <hr/>
-      Mitsubishi2MQTT {{footer.version}} ({{footer.git_hash}})
-    </div>
-  </div>
+  <footer>
+    Mitsubishi2MQTT build date <code>{{footer.version}}</code> revision <a href="https://github.com/floatplane/mitsubishi2MQTT/commit/{{footer.git_hash}}"><code>{{footer.git_hash}}</code></a>
+  </footer>
 </body>
 </html>
 )====";

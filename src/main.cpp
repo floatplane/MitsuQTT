@@ -339,6 +339,12 @@ void logConfig() {
   }
 }
 
+#include "incbin.h"
+// This macro will include the file src/mvp.css in the binary as a NULL-terminated flash string
+// named gCSSData. It also generates a pointer to the end of the data (gCSSEnd) and a size (gCSSSize).
+// The file gets served up by the `/css` endpoint.
+INCTXT(CSS, "src/mvp.css");
+
 void setup() {
   // Start serial for debug before HVAC connect to serial
   Serial.begin(115200);
@@ -380,6 +386,7 @@ void setup() {
     server.on(F("/others"), handleOthers);
     server.on(F("/metrics"), handleMetrics);
     server.on(F("/metrics.json"), handleMetricsJson);
+    server.on(F("/css"), HTTPMethod::HTTP_GET, []() { server.send(200, F("text/css"), gCSSData); });
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
       server.on(F("/login"), handleLogin);
