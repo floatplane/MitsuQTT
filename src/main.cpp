@@ -42,7 +42,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
 #include "html_common.hpp"        // common code HTML (like header, footer)
-#include "html_init.hpp"          // code html for initial config
 #include "html_menu.hpp"          // code html for menu
 #include "html_pages.hpp"         // code html for pages
 #include "javascript_common.hpp"  // common code javascript (like refresh page)
@@ -557,6 +556,8 @@ void initCaptivePortal() {
   server.on(F("/"), handleInitSetup);
   server.on(F("/save"), handleSaveWifi);
   server.on(F("/reboot"), handleReboot);
+  server.on(F("/css"), HTTPMethod::HTTP_GET,
+            []() { server.send(200, F("text/css"), statics::css); });
   server.onNotFound(handleNotFound);
   server.begin();
   captive = true;
@@ -620,9 +621,30 @@ void sendWrappedHTML(const String &content) {
   server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
 }
 
+void renderView(const Ministache &view, JsonDocument &data,
+                const std::vector<std::pair<String, String>> &partials = {}) {
+  auto header = data[F("header")].to<JsonObject>();
+  header[F("hostname")] = config.network.hostname;
+
+  auto footer = data[F("footer")].to<JsonObject>();
+  footer[F("version")] = BUILD_DATE;
+  footer[F("git_hash")] = COMMIT_HASH;
+
+  server.send(HttpStatusCodes::httpOk, F("text/html"), view.render(data, partials));
+}
+
 void handleNotFound() {
   LOG(F("handleNotFound()"));
   server.send(HttpStatusCodes::httpNotFound, "text/plain", "Not found.");
+}
+
+void handleInitSetup() {
+  LOG(F("handleInitSetup()"));
+
+  JsonDocument data;
+  data[F("hostname")] = config.network.hostname;
+  renderView(Ministache(views::captive::index), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleSaveWifi() {
@@ -640,10 +662,11 @@ void handleSaveWifi() {
     config.network.otaUpdatePassword = server.arg("otapwd");
     saveWifiConfig(config);
   }
-  String initSavePage = FPSTR(html_init_save);
-  initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
-  sendWrappedHTML(initSavePage);
-  restartAfterDelay(500);
+  JsonDocument data;
+  data[F("hostname")] = config.network.hostname;
+  renderView(Ministache(views::captive::save), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
+  restartAfterDelay(2000);
 }
 
 void handleReboot() {
@@ -653,10 +676,10 @@ void handleReboot() {
 
   LOG(F("handleReboot()"));
 
-  String initRebootPage = FPSTR(html_init_reboot);
-  initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
-  sendWrappedHTML(initRebootPage);
-  restartAfterDelay(500);
+  JsonDocument data;
+  renderView(Ministache(views::captive::reboot), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
+  restartAfterDelay(2000);
 }
 
 void handleRoot() {
@@ -685,21 +708,6 @@ void handleRoot() {
     menuRootPage.replace("_TXT_LOGOUT_", FPSTR(txt_logout));
     sendWrappedHTML(menuRootPage);
   }
-}
-
-void handleInitSetup() {
-  LOG(F("handleInitSetup()"));
-
-  String initSetupPage = FPSTR(html_init_setup);
-  initSetupPage.replace("_TXT_INIT_TITLE_", FPSTR(txt_init_title));
-  initSetupPage.replace("_TXT_INIT_HOST_", FPSTR(txt_wifi_hostname));
-  initSetupPage.replace("_TXT_INIT_SSID_", FPSTR(txt_wifi_SSID));
-  initSetupPage.replace("_TXT_INIT_PSK_", FPSTR(txt_wifi_psk));
-  initSetupPage.replace("_TXT_INIT_OTA_", FPSTR(txt_wifi_otap));
-  initSetupPage.replace("_TXT_SAVE_", FPSTR(txt_save));
-  initSetupPage.replace("_TXT_REBOOT_", FPSTR(txt_reboot));
-
-  sendWrappedHTML(initSetupPage);
 }
 
 void handleSetup() {
@@ -736,18 +744,6 @@ void rebootAndSendPage() {
   saveRebootPage.replace("_TXT_M_SAVE_", FPSTR(txt_m_save));
   sendWrappedHTML(saveRebootPage + countDown);
   restartAfterDelay(500);
-}
-
-void renderView(const Ministache &view, JsonDocument &data,
-                const std::vector<std::pair<String, String>> &partials = {}) {
-  auto header = data[F("header")].to<JsonObject>();
-  header[F("hostname")] = config.network.hostname;
-
-  auto footer = data[F("footer")].to<JsonObject>();
-  footer[F("version")] = BUILD_DATE;
-  footer[F("git_hash")] = COMMIT_HASH;
-
-  server.send(HttpStatusCodes::httpOk, F("text/html"), view.render(data, partials));
 }
 
 void handleOthers() {

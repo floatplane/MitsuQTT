@@ -1,0 +1,27 @@
+{{> header}}
+<main>
+    <h2>Initial setup</h2>
+    <form method='post' action='save'>
+        <p><b>Hostname</b>
+            <br/>
+            <input id='hn' name='hn' placeholder=' ' value='{{hostname}}'>
+        </p>
+        <p><b>SSID</b> ()
+            <br/>
+            <input id='ssid' name='ssid' placeholder=' '>
+        </p>
+        <p><b>PSK</b> ()
+            <br/>
+            <input id='psk' name='psk' placeholder=' '>
+        </p>
+        <p><b>OTA Password</b>
+            <br/>
+            <input id='otapwd' name='otapwd' placeholder=' '>
+        </p>
+        </p>
+        <br/>
+        <button name='submit' type='submit' class='button bgrn'>Save & Reboot</button>
+        <a class="buttonLink" href="/reboot">Reboot</a>
+    </form>
+</main>
+{{> footer}}

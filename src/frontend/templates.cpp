@@ -15,6 +15,9 @@ const __FlashStringHelper *header = FPSTR(headerData);
 };  // namespace partials
 
 INCTXT(autoconfig, "src/frontend/" STRINGIFY(LANGUAGE) "/views/autoconfig.mst");
+INCTXT(captiveIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/index.mst");
+INCTXT(captiveReboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/reboot.mst");
+INCTXT(captiveSave, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/save.mst");
 INCTXT(metrics, "src/frontend/" STRINGIFY(LANGUAGE) "/views/metrics.mst");
 INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
@@ -22,6 +25,13 @@ INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
 
 namespace views {
 const __FlashStringHelper *autoconfig = FPSTR(autoconfigData);
+
+namespace captive {
+const __FlashStringHelper *index = FPSTR(captiveIndexData);
+const __FlashStringHelper *reboot = FPSTR(captiveRebootData);
+const __FlashStringHelper *save = FPSTR(captiveSaveData);
+}  // namespace captive
+
 const __FlashStringHelper *metrics = FPSTR(metricsData);
 
 namespace mqtt {

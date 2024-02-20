@@ -1,0 +1,6 @@
+{{> header}}
+<main>
+    <h2>Rebooting...</h2>
+    <p>Rebooting and connecting to <pre>{{hostname}}</pre>! You should see it listed on your access point.</p>
+</main>
+{{> footer}}
