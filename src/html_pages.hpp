@@ -281,14 +281,3 @@ const char html_page_login[] PROGMEM =
 "</div>"
 ;
 // clang-format on
-
-const char html_page_upload[] PROGMEM =
-    // clang-format off
-"<div id='l1' name='l1'>"
-    "<br>_UPLOAD_MSG_"
-    "<p>"
-        "<a class='button back' href='/upgrade'>_TXT_BACK_</a>"
-    "</p>"
-"</div>"
-;
-// clang-format on

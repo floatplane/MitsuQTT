@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 namespace partials {
+extern const __FlashStringHelper *countdown;
 extern const __FlashStringHelper *footer;
 extern const __FlashStringHelper *header;
 };  // namespace partials
@@ -25,6 +26,7 @@ extern const __FlashStringHelper *textField;
 
 extern const __FlashStringHelper *others;
 extern const __FlashStringHelper *upgrade;
+extern const __FlashStringHelper *upload;
 };  // namespace views
 
 namespace statics {

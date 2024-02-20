@@ -380,8 +380,12 @@ void setup() {
     server.on(F("/others"), handleOthers);
     server.on(F("/metrics"), handleMetrics);
     server.on(F("/metrics.json"), handleMetricsJson);
-    server.on(F("/css"), HTTPMethod::HTTP_GET,
-              []() { server.send(200, F("text/css"), statics::css); });
+    server.on(F("/css"), HTTPMethod::HTTP_GET, []() {
+      // We use the git_hash as a query param on the CSS request, so we can
+      // use a very long cache expiry here. This makes browsing way faster.
+      server.sendHeader(F("Cache-Control"), F("public, max-age=604800, immutable"));
+      server.send(200, F("text/css"), statics::css);
+    });
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
       server.on(F("/login"), handleLogin);
@@ -625,6 +629,7 @@ void renderView(const Ministache &view, JsonDocument &data,
                 const std::vector<std::pair<String, String>> &partials = {}) {
   auto header = data[F("header")].to<JsonObject>();
   header[F("hostname")] = config.network.hostname;
+  header[F("git_hash")] = COMMIT_HASH;
 
   auto footer = data[F("footer")].to<JsonObject>();
   footer[F("version")] = BUILD_DATE;
@@ -1339,46 +1344,40 @@ void handleUploadDone() {
 
   // Serial.printl(PSTR("HTTP: Firmware upload done"));
   bool restartflag = false;
-  String uploadDonePage = FPSTR(html_page_upload);
-
-  String content = F("<div style='text-align:center;'><b>Upload ");
+  JsonDocument data;
   if (uploaderror != UploadError::noError) {
-    content += F("<span style='color:#d43535'>failed</span></b><br/><br/>");
+    auto error = data[F("error")].to<JsonObject>();
+    error[F("errorCode")] = uploaderror;
     if (uploaderror == UploadError::noFileSelected) {
-      content += FPSTR(txt_upload_nofile);
+      error[F("noFileSelected")] = true;
     } else if (uploaderror == UploadError::fileTooLarge) {
-      content += FPSTR(txt_upload_filetoolarge);
+      error[F("fileTooLarge")] = true;
     } else if (uploaderror == UploadError::fileMagicHeaderIncorrect) {
-      content += FPSTR(txt_upload_fileheader);
+      error[F("fileMagicHeaderIncorrect")] = true;
     } else if (uploaderror == UploadError::fileTooBigForDeviceFlash) {
-      content += FPSTR(txt_upload_flashsize);
+      error[F("fileTooBigForDeviceFlash")] = true;
     } else if (uploaderror == UploadError::fileUploadBufferMiscompare) {
-      content += FPSTR(txt_upload_buffer);
+      error[F("fileUploadBufferMiscompare")] = true;
     } else if (uploaderror == UploadError::fileUploadFailed) {
-      content += FPSTR(txt_upload_failed);
+      error[F("fileUploadFailed")] = true;
     } else if (uploaderror == UploadError::fileUploadAborted) {
-      content += FPSTR(txt_upload_aborted);
+      error[F("fileUploadAborted")] = true;
     } else {
-      content += FPSTR(txt_upload_error);
-      content += String(uploaderror);
+      error[F("genericError")] = true;
     }
     if (Update.hasError()) {
-      content += FPSTR(txt_upload_code);
-      content += String(Update.getError());
+      error[F("updaterErrorCode")] = Update.getError();
     }
   } else {
-    content += F("<span style='color:#47c266; font-weight: bold;'>");
-    content += FPSTR(txt_upload_sucess);
-    content += F("</span><br/><br/>");
-    content += FPSTR(txt_upload_refresh);
-    content += F("<span id='count'>10s</span>...");
-    content += FPSTR(count_down_script);
+    data["success"] = true;
     restartflag = true;
   }
-  content += F("</div><br/>");
-  uploadDonePage.replace("_UPLOAD_MSG_", content);
-  uploadDonePage.replace("_TXT_BACK_", FPSTR(txt_back));
-  sendWrappedHTML(uploadDonePage);
+
+  renderView(Ministache(views::upload), data,
+             {{"header", partials::header},
+              {"footer", partials::footer},
+              {"countdown", partials::countdown}});
+
   if (restartflag) {
     LOG(F("Restarting in 500ms..."));
     restartAfterDelay(500);
@@ -1403,6 +1402,7 @@ void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
       return;
     }
     // save cpu by disconnect/stop retry mqtt server
+    // TODO(floatplane): should we do this? I feel like we should log to MQTT instead
     if (mqtt_client.state() == MQTT_CONNECTED) {
       mqtt_client.disconnect();
       lastMqttRetry = millis();

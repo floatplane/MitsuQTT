@@ -1,0 +1,17 @@
+<p>
+Refreshing page in <span id='count'>10</span> second(s)...
+</p>
+<script>
+    var count = 10;
+    (function countDown() {
+        document.getElementById('count').innerHTML = count;
+        setTimeout(function() {
+            if(count > 0) {
+                count --;
+                return countDown();
+            } else {
+                window.location.href = '/';
+            }
+        }, 1000);
+    })();
+</script>

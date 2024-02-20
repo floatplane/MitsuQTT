@@ -6,6 +6,7 @@
 #define STRINGIFY_1(s) #s
 #define STRINGIFY(s) STRINGIFY_1(s)
 
+INCTXT(countdown, "src/frontend/" STRINGIFY(LANGUAGE) "/partials/countdown.mst");
 INCTXT(footer, "src/frontend/" STRINGIFY(LANGUAGE) "/partials/footer.mst");
 INCTXT(header, "src/frontend/" STRINGIFY(LANGUAGE) "/partials/header.mst");
 
@@ -18,10 +19,12 @@ INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
 INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
 INCTXT(upgrade, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upgrade.mst");
+INCTXT(upload, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upload.mst");
 
 INCTXT(css, "src/frontend/statics/mvp.css");
 
 namespace partials {
+const __FlashStringHelper *countdown = FPSTR(countdownData);
 const __FlashStringHelper *footer = FPSTR(footerData);
 const __FlashStringHelper *header = FPSTR(headerData);
 };  // namespace partials
@@ -44,6 +47,7 @@ const __FlashStringHelper *textField = FPSTR(mqttTextFieldData);
 
 const __FlashStringHelper *others = FPSTR(othersData);
 const __FlashStringHelper *upgrade = FPSTR(upgradeData);
+const __FlashStringHelper *upload = FPSTR(uploadData);
 };  // namespace views
 
 namespace statics {
