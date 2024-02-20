@@ -1,0 +1,6 @@
+<p><b>{{label}}</b>
+    <br/>
+    <input id='{{param}}' name='{{param}}' 
+    autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' 
+    placeholder='{{placeholder}}' value='{{value}}'>
+</p>

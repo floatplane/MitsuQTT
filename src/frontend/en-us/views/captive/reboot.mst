@@ -1,0 +1,5 @@
+{{> header}}
+<main>
+    <h2>Rebooting...</h2>
+</main>
+{{> footer}}

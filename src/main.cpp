@@ -42,7 +42,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
 #include "html_common.hpp"        // common code HTML (like header, footer)
-#include "html_init.hpp"          // code html for initial config
 #include "html_menu.hpp"          // code html for menu
 #include "html_pages.hpp"         // code html for pages
 #include "javascript_common.hpp"  // common code javascript (like refresh page)
@@ -56,8 +55,9 @@ ESP8266WebServer server(80);  // ESP8266 web
 #define LANG_PATH "languages/en-GB.h"  // default language English
 #endif
 
+#include "frontend/templates.hpp"
 #include "ministache.hpp"
-#include "templates/templates.hpp"
+#include "views/mqtt/strings.hpp"
 
 using ministache::Ministache;
 
@@ -380,6 +380,8 @@ void setup() {
     server.on(F("/others"), handleOthers);
     server.on(F("/metrics"), handleMetrics);
     server.on(F("/metrics.json"), handleMetricsJson);
+    server.on(F("/css"), HTTPMethod::HTTP_GET,
+              []() { server.send(200, F("text/css"), statics::css); });
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
       server.on(F("/login"), handleLogin);
@@ -554,6 +556,8 @@ void initCaptivePortal() {
   server.on(F("/"), handleInitSetup);
   server.on(F("/save"), handleSaveWifi);
   server.on(F("/reboot"), handleReboot);
+  server.on(F("/css"), HTTPMethod::HTTP_GET,
+            []() { server.send(200, F("text/css"), statics::css); });
   server.onNotFound(handleNotFound);
   server.begin();
   captive = true;
@@ -617,9 +621,30 @@ void sendWrappedHTML(const String &content) {
   server.send(HttpStatusCodes::httpOk, F("text/html"), toSend);
 }
 
+void renderView(const Ministache &view, JsonDocument &data,
+                const std::vector<std::pair<String, String>> &partials = {}) {
+  auto header = data[F("header")].to<JsonObject>();
+  header[F("hostname")] = config.network.hostname;
+
+  auto footer = data[F("footer")].to<JsonObject>();
+  footer[F("version")] = BUILD_DATE;
+  footer[F("git_hash")] = COMMIT_HASH;
+
+  server.send(HttpStatusCodes::httpOk, F("text/html"), view.render(data, partials));
+}
+
 void handleNotFound() {
   LOG(F("handleNotFound()"));
   server.send(HttpStatusCodes::httpNotFound, "text/plain", "Not found.");
+}
+
+void handleInitSetup() {
+  LOG(F("handleInitSetup()"));
+
+  JsonDocument data;
+  data[F("hostname")] = config.network.hostname;
+  renderView(Ministache(views::captive::index), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleSaveWifi() {
@@ -637,10 +662,11 @@ void handleSaveWifi() {
     config.network.otaUpdatePassword = server.arg("otapwd");
     saveWifiConfig(config);
   }
-  String initSavePage = FPSTR(html_init_save);
-  initSavePage.replace("_TXT_INIT_REBOOT_MESS_", FPSTR(txt_init_reboot_mes));
-  sendWrappedHTML(initSavePage);
-  restartAfterDelay(500);
+  JsonDocument data;
+  data[F("hostname")] = config.network.hostname;
+  renderView(Ministache(views::captive::save), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
+  restartAfterDelay(2000);
 }
 
 void handleReboot() {
@@ -650,10 +676,10 @@ void handleReboot() {
 
   LOG(F("handleReboot()"));
 
-  String initRebootPage = FPSTR(html_init_reboot);
-  initRebootPage.replace("_TXT_INIT_REBOOT_", FPSTR(txt_init_reboot));
-  sendWrappedHTML(initRebootPage);
-  restartAfterDelay(500);
+  JsonDocument data;
+  renderView(Ministache(views::captive::reboot), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
+  restartAfterDelay(2000);
 }
 
 void handleRoot() {
@@ -682,21 +708,6 @@ void handleRoot() {
     menuRootPage.replace("_TXT_LOGOUT_", FPSTR(txt_logout));
     sendWrappedHTML(menuRootPage);
   }
-}
-
-void handleInitSetup() {
-  LOG(F("handleInitSetup()"));
-
-  String initSetupPage = FPSTR(html_init_setup);
-  initSetupPage.replace("_TXT_INIT_TITLE_", FPSTR(txt_init_title));
-  initSetupPage.replace("_TXT_INIT_HOST_", FPSTR(txt_wifi_hostname));
-  initSetupPage.replace("_TXT_INIT_SSID_", FPSTR(txt_wifi_SSID));
-  initSetupPage.replace("_TXT_INIT_PSK_", FPSTR(txt_wifi_psk));
-  initSetupPage.replace("_TXT_INIT_OTA_", FPSTR(txt_wifi_otap));
-  initSetupPage.replace("_TXT_SAVE_", FPSTR(txt_save));
-  initSetupPage.replace("_TXT_REBOOT_", FPSTR(txt_reboot));
-
-  sendWrappedHTML(initSetupPage);
 }
 
 void handleSetup() {
@@ -733,18 +744,6 @@ void rebootAndSendPage() {
   saveRebootPage.replace("_TXT_M_SAVE_", FPSTR(txt_m_save));
   sendWrappedHTML(saveRebootPage + countDown);
   restartAfterDelay(500);
-}
-
-void renderView(const Ministache &view, JsonDocument &data,
-                const std::vector<std::pair<String, String>> &partials = {}) {
-  auto header = data[F("header")].to<JsonObject>();
-  header[F("hostname")] = config.network.hostname;
-
-  auto footer = data[F("footer")].to<JsonObject>();
-  footer[F("version")] = BUILD_DATE;
-  footer[F("git_hash")] = COMMIT_HASH;
-
-  server.send(HttpStatusCodes::httpOk, F("text/html"), view.render(data, partials));
 }
 
 void handleOthers() {
@@ -819,12 +818,12 @@ void handleMqtt() {
   } else {
     JsonDocument data;
     auto friendlyName = data[F("friendlyName")].to<JsonObject>();
-    friendlyName[F("label")] = views::mqttFriendlyNameLabel;
+    friendlyName[F("label")] = views::mqtt::friendlyNameLabel;
     friendlyName[F("value")] = config.mqtt.friendlyName;
     friendlyName[F("param")] = F("fn");
 
     auto mqttServer = data[F("server")].to<JsonObject>();
-    mqttServer[F("label")] = views::mqttHostLabel;
+    mqttServer[F("label")] = views::mqtt::hostLabel;
     mqttServer[F("value")] = config.mqtt.server;
     mqttServer[F("param")] = F("mh");
 
@@ -835,19 +834,19 @@ void handleMqtt() {
     password[F("value")] = config.mqtt.password;
 
     auto username = data[F("user")].to<JsonObject>();
-    username[F("label")] = views::mqttUserLabel;
+    username[F("label")] = views::mqtt::userLabel;
     username[F("value")] = config.mqtt.username;
     username[F("param")] = F("mu");
     username[F("placeholder")] = F("mqtt_user");
 
     auto topic = data[F("topic")].to<JsonObject>();
-    topic[F("label")] = views::mqttTopicLabel;
+    topic[F("label")] = views::mqtt::topicLabel;
     topic[F("value")] = config.mqtt.rootTopic;
     topic[F("param")] = F("mt");
     topic[F("placeholder")] = F("topic");
 
-    renderView(Ministache(views::mqtt), data,
-               {{"mqttTextField", views::mqttTextFieldPartial},
+    renderView(Ministache(views::mqtt::index), data,
+               {{"mqttTextField", views::mqtt::textField},
                 {"header", partials::header},
                 {"footer", partials::footer}});
   }
@@ -1213,7 +1212,7 @@ void handleMetrics() {
     data["mode"] = "-2";
   }
 
-  Ministache metricsTemplate(views::metricsView);
+  Ministache metricsTemplate(views::metrics);
   server.send(HttpStatusCodes::httpOk, F("text/plain"), metricsTemplate.render(data));
 }
 
@@ -1858,7 +1857,7 @@ void sendHomeAssistantConfig() {
   // For now, only compressorFrequency
   haConfig[F("json_attr_t")] = config.mqtt.ha_state_topic();
 
-  String mqttOutput = Ministache(views::autoConfigTemplate).render(haConfig);
+  String mqttOutput = Ministache(views::autoconfig).render(haConfig);
 
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);
