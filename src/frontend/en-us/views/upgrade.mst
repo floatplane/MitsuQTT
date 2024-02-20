@@ -1,0 +1,20 @@
+{{> header}}
+<script>
+    function eb(s) {
+        return document.getElementById(s);
+    }
+</script>
+<main>
+<h2>Upgrade</h2>
+    <div id='f1' style='display:block;'>
+        <form method='post' action='upload' enctype='multipart/form-data'>
+            <label for='upload'>Select a BIN file containing new firmware</label>
+            <input type='file' accept='.bin' name='upload'>
+            <br>
+            <a class="buttonLink" href='/setup'>&lt; Back</a>
+            <button type='submit' onclick="eb('f1').style.display='none';eb('f2').style.display='block';this.form.submit();" class='button bgrn'>Start upgrade</button>
+        </form>
+    </div>
+    <div id='f2' style='display:none;'><b>Upload started...</b></div>
+</main>
+{{> footer}}

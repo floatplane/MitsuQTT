@@ -35,7 +35,6 @@ const char txt_reset_confirm[] PROGMEM = "Do you really want to reset this unit?
 const char txt_back[] PROGMEM = "Back";
 const char txt_save[] PROGMEM = "Save & Reboot";
 const char txt_logout[] PROGMEM = "Logout";
-const char txt_upgrade[] PROGMEM = "Start upgrade";
 const char txt_login[] PROGMEM = "LOGIN";
 
 // Form choices
@@ -101,25 +100,6 @@ const char txt_login_password[] PROGMEM = "Password";
 const char txt_login_sucess[] PROGMEM =
     "Login successful, you will be redirected in a few seconds.";
 const char txt_login_fail[] PROGMEM = "Wrong username/password! Try again.";
-
-// Page Upgrade
-const char txt_upgrade_title[] PROGMEM = "Upgrade";
-const char txt_upgrade_info[] PROGMEM = "Firmware OTA upgrade by bin file upload";
-const char txt_upgrade_start[] PROGMEM = "Upload started";
-
-// Page Upload
-const char txt_upload_nofile[] PROGMEM = "No file selected";
-const char txt_upload_filetoolarge[] PROGMEM = "File size is larger than available free space";
-const char txt_upload_fileheader[] PROGMEM = "File magic header does not start with 0xE9";
-const char txt_upload_flashsize[] PROGMEM = "File flash size is larger than device flash size";
-const char txt_upload_buffer[] PROGMEM = "File upload buffer miscompare";
-const char txt_upload_failed[] PROGMEM =
-    "Upload failed. Enable logging option 3 for more information";
-const char txt_upload_aborted[] PROGMEM = "Upload aborted";
-const char txt_upload_code[] PROGMEM = "Upload error code ";
-const char txt_upload_error[] PROGMEM = "Update error code (see Updater.cpp) ";
-const char txt_upload_sucess[] PROGMEM = "Successful";
-const char txt_upload_refresh[] PROGMEM = "Refresh in";
 
 // Page Init
 const char txt_init_title[] PROGMEM = "Initial setup";

@@ -1,0 +1,22 @@
+{{> header}}
+<main>
+{{#success}}
+    <h2 style='color:#47c266'>Upload success</h2>
+    {{> countdown}}
+{{/success}}
+{{#error}}
+    <h2 style='color:#d43535'>Upload failed</h2>
+    <p>
+        {{#noFileSelected}}No file was selected.{{/noFileSelected}}
+        {{#fileTooLarge}}File size is larger than available free space.{{/fileTooLarge}}
+        {{#fileMagicHeaderIncorrect}}File magic header does not start with 0xE9.{{/fileMagicHeaderIncorrect}}
+        {{#fileTooBigForDeviceFlash}}File flash size is larger than device flash size.{{/fileTooBigForDeviceFlash}}
+        {{#fileUploadBufferMiscompare}}File upload buffer miscompare.{{/fileUploadBufferMiscompare}}
+        {{#fileUploadFailed}}Upload failed. Enable logging option 3 for more information.{{/fileUploadFailed}}
+        {{#fileUploadAborted}}Upload aborted.{{/fileUploadAborted}}
+        {{#genericError}}Upload error code {{errorCode}}.{{/genericError}}
+    </p>
+    <p>{{#updaterErrorCode}}Updater error code: {{.}} (see Updater.cpp){{/updaterErrorCode}}</p>
+{{/error}}
+    <a class="buttonLink" href='/upgrade'>&lt; Back</a>
+</main>
