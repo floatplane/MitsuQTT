@@ -10,18 +10,18 @@ INCTXT(footer, "src/frontend/" STRINGIFY(LANGUAGE) "/partials/footer.mst");
 INCTXT(header, "src/frontend/" STRINGIFY(LANGUAGE) "/partials/header.mst");
 
 namespace partials {
-const __FlashStringHelper *footer = footerData;
-const __FlashStringHelper *header = headerData;
+const __FlashStringHelper *footer = FPSTR(footerData);
+const __FlashStringHelper *header = FPSTR(headerData);
 };  // namespace partials
 
 INCTXT(autoconfig, "src/frontend/" STRINGIFY(LANGUAGE) "/views/autoconfig.mst");
 INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
 namespace views {
-const __FlashStringHelper *autoconfig = autoconfigData;
-const __FlashStringHelper *others = othersData;
+const __FlashStringHelper *autoconfig = FPSTR(autoconfigData);
+const __FlashStringHelper *others = FPSTR(othersData);
 };  // namespace views
 
 INCTXT(css, "src/frontend/statics/mvp.css");
 namespace statics {
-const __FlashStringHelper *css = cssData;
+const __FlashStringHelper *css = FPSTR(cssData);
 }
