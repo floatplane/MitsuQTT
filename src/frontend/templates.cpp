@@ -16,8 +16,14 @@ const __FlashStringHelper *header = FPSTR(headerData);
 
 INCTXT(autoconfig, "src/frontend/" STRINGIFY(LANGUAGE) "/views/autoconfig.mst");
 INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
+INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
+INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
 namespace views {
 const __FlashStringHelper *autoconfig = FPSTR(autoconfigData);
+namespace mqtt {
+const __FlashStringHelper *index = FPSTR(mqttIndexData);
+const __FlashStringHelper *textField = FPSTR(mqttTextFieldData);
+}  // namespace mqtt
 const __FlashStringHelper *others = FPSTR(othersData);
 };  // namespace views
 

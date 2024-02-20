@@ -59,7 +59,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "frontend/templates.hpp"
 #include "ministache.hpp"
 #include "views/metrics.hpp"
-#include "views/mqtt.hpp"
+#include "views/mqtt/strings.hpp"
 
 using ministache::Ministache;
 
@@ -823,12 +823,12 @@ void handleMqtt() {
   } else {
     JsonDocument data;
     auto friendlyName = data[F("friendlyName")].to<JsonObject>();
-    friendlyName[F("label")] = views::mqttFriendlyNameLabel;
+    friendlyName[F("label")] = views::mqtt::friendlyNameLabel;
     friendlyName[F("value")] = config.mqtt.friendlyName;
     friendlyName[F("param")] = F("fn");
 
     auto mqttServer = data[F("server")].to<JsonObject>();
-    mqttServer[F("label")] = views::mqttHostLabel;
+    mqttServer[F("label")] = views::mqtt::hostLabel;
     mqttServer[F("value")] = config.mqtt.server;
     mqttServer[F("param")] = F("mh");
 
@@ -839,19 +839,19 @@ void handleMqtt() {
     password[F("value")] = config.mqtt.password;
 
     auto username = data[F("user")].to<JsonObject>();
-    username[F("label")] = views::mqttUserLabel;
+    username[F("label")] = views::mqtt::userLabel;
     username[F("value")] = config.mqtt.username;
     username[F("param")] = F("mu");
     username[F("placeholder")] = F("mqtt_user");
 
     auto topic = data[F("topic")].to<JsonObject>();
-    topic[F("label")] = views::mqttTopicLabel;
+    topic[F("label")] = views::mqtt::topicLabel;
     topic[F("value")] = config.mqtt.rootTopic;
     topic[F("param")] = F("mt");
     topic[F("placeholder")] = F("topic");
 
-    renderView(Ministache(views::mqtt), data,
-               {{"mqttTextField", views::mqttTextFieldPartial},
+    renderView(Ministache(views::mqtt::index), data,
+               {{"mqttTextField", views::mqtt::textField},
                 {"header", partials::header},
                 {"footer", partials::footer}});
   }
