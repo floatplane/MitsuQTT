@@ -1,8 +1,12 @@
 #pragma once
 
-#include "templates/partials/footer.hpp"
-#include "templates/partials/header.hpp"
-#include "templates/views/autoconfig.hpp"
-#include "templates/views/metrics.hpp"
-#include "templates/views/mqtt.hpp"
-#include "templates/views/others.hpp"
+#include <Arduino.h>
+
+namespace partials {
+extern const __FlashStringHelper *footer;
+extern const __FlashStringHelper *header;
+};  // namespace partials
+
+namespace views {
+extern const __FlashStringHelper *autoconfig;
+};  // namespace views

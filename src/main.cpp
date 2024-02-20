@@ -58,6 +58,10 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include "ministache.hpp"
 #include "templates/templates.hpp"
+#include "templates/views/autoconfig.hpp"
+#include "templates/views/metrics.hpp"
+#include "templates/views/mqtt.hpp"
+#include "templates/views/others.hpp"
 
 using ministache::Ministache;
 
@@ -339,11 +343,14 @@ void logConfig() {
   }
 }
 
+#define INCBIN_PREFIX
 #include "incbin.h"
 // This macro will include the file src/mvp.css in the binary as a NULL-terminated flash string
-// named gCSSData. It also generates a pointer to the end of the data (gCSSEnd) and a size (gCSSSize).
-// The file gets served up by the `/css` endpoint.
-INCTXT(CSS, "src/mvp.css");
+// named cssData. It also generates a pointer to the end of the data (cssEnd) and a size
+// (cssSize). The file gets served up by the `/css` endpoint.
+namespace statics {
+INCTXT(css, "src/mvp.css");
+}
 
 void setup() {
   // Start serial for debug before HVAC connect to serial
@@ -386,7 +393,8 @@ void setup() {
     server.on(F("/others"), handleOthers);
     server.on(F("/metrics"), handleMetrics);
     server.on(F("/metrics.json"), handleMetricsJson);
-    server.on(F("/css"), HTTPMethod::HTTP_GET, []() { server.send(200, F("text/css"), gCSSData); });
+    server.on(F("/css"), HTTPMethod::HTTP_GET,
+              []() { server.send(200, F("text/css"), statics::cssData); });
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
       server.on(F("/login"), handleLogin);
