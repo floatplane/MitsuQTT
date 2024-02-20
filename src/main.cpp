@@ -60,7 +60,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "ministache.hpp"
 #include "views/metrics.hpp"
 #include "views/mqtt.hpp"
-#include "views/others.hpp"
 
 using ministache::Ministache;
 

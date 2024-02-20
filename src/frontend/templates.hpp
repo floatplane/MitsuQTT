@@ -9,6 +9,7 @@ extern const __FlashStringHelper *header;
 
 namespace views {
 extern const __FlashStringHelper *autoconfig;
+extern const __FlashStringHelper *others;
 };  // namespace views
 
 namespace statics {
