@@ -693,23 +693,19 @@ void handleRoot() {
   LOG(F("handleRoot()"));
 
   if (server.hasArg("REBOOT")) {
-    String rebootPage = FPSTR(html_page_reboot);
-    const String countDown = FPSTR(count_down_script);
-    rebootPage.replace("_TXT_M_REBOOT_", FPSTR(txt_m_reboot));
-    sendWrappedHTML(rebootPage + countDown);
+    JsonDocument data;
+    renderView(Ministache(views::reboot), data,
+               {{"header", partials::header},
+                {"footer", partials::footer},
+                {"countdown", partials::countdown}});
     restartAfterDelay(500);
   } else {
-    String menuRootPage = FPSTR(html_menu_root);
-    menuRootPage.replace("_SHOW_LOGOUT_", String(config.unit.login_password.length() > 0 ? 1 : 0));
-    // not show control button if hp not connected
-    menuRootPage.replace("_SHOW_CONTROL_", String(hp.isConnected() ? 1 : 0));
-    menuRootPage.replace("_TXT_CONTROL_", FPSTR(txt_control));
-    menuRootPage.replace("_TXT_SETUP_", FPSTR(txt_setup));
-    menuRootPage.replace("_TXT_STATUS_", FPSTR(txt_status));
-    menuRootPage.replace("_TXT_FW_UPGRADE_", FPSTR(txt_firmware_upgrade));
-    menuRootPage.replace("_TXT_REBOOT_", FPSTR(txt_reboot));
-    menuRootPage.replace("_TXT_LOGOUT_", FPSTR(txt_logout));
-    sendWrappedHTML(menuRootPage);
+    JsonDocument data;
+    data[F("showControl")] = hp.isConnected();
+    data[F("showControl")] = hp.isConnected();
+    data[F("showLogout")] = config.unit.login_password.length() > 0;
+    renderView(Ministache(views::index), data,
+               {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 

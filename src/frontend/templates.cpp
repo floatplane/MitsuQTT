@@ -14,10 +14,12 @@ INCTXT(autoconfig, "src/frontend/" STRINGIFY(LANGUAGE) "/views/autoconfig.mst");
 INCTXT(captiveIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/index.mst");
 INCTXT(captiveReboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/reboot.mst");
 INCTXT(captiveSave, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/save.mst");
+INCTXT(index, "src/frontend/" STRINGIFY(LANGUAGE) "/views/index.mst");
 INCTXT(metrics, "src/frontend/" STRINGIFY(LANGUAGE) "/views/metrics.mst");
 INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
 INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
+INCTXT(reboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/reboot.mst");
 INCTXT(upgrade, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upgrade.mst");
 INCTXT(upload, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upload.mst");
 
@@ -38,6 +40,7 @@ const __FlashStringHelper *reboot = FPSTR(captiveRebootData);
 const __FlashStringHelper *save = FPSTR(captiveSaveData);
 }  // namespace captive
 
+const __FlashStringHelper *index = FPSTR(indexData);
 const __FlashStringHelper *metrics = FPSTR(metricsData);
 
 namespace mqtt {
@@ -46,6 +49,7 @@ const __FlashStringHelper *textField = FPSTR(mqttTextFieldData);
 }  // namespace mqtt
 
 const __FlashStringHelper *others = FPSTR(othersData);
+const __FlashStringHelper *reboot = FPSTR(rebootData);
 const __FlashStringHelper *upgrade = FPSTR(upgradeData);
 const __FlashStringHelper *upload = FPSTR(uploadData);
 };  // namespace views

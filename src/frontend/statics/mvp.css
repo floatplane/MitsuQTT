@@ -546,7 +546,7 @@ blockquote footer {
 /* Project-specific customizations */
 header, main, footer {
     padding: 1rem;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card);
     min-width: var(--width-card);
 }
 

@@ -1,0 +1,26 @@
+{{> header}}
+<main>
+    {{#showControl}}
+    <form action='/control' method='get'>
+        <button>Control</button>
+    </form>
+    {{/showControl}}
+    <form action='/setup' method='get'>
+        <button>Setup</button>
+    </form>
+    <form action='/status' method='get'>
+        <button>Status</button>
+    </form>
+    <form action='/upgrade' method='get'>
+        <button>Firmware Upgrade</button>
+    </form>
+    <form>
+        <button type='submit' name='REBOOT' class='button bred'>Reboot</button>
+    </form>
+    {{#showLogout}}
+    <form action='/login?LOGOUT=YES' method='post'>
+        <button type='submit' name='Logout' class='button bred'>Logout</button>
+    </form>
+    {{/showLogout}}
+</main>
+{{> footer}}

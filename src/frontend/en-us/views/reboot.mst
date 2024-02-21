@@ -1,0 +1,6 @@
+{{> header}}
+<main>
+    <h2>Rebooting</h2>
+    {{> countdown}}
+</main>
+{{> footer}}
