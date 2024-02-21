@@ -560,6 +560,6 @@ input[type="submit"] {
     margin-right: 1rem;
 }
 
-form button {
+form button, form a.buttonLink {
     width: 100%;
 }
