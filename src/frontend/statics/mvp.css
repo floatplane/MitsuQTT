@@ -559,3 +559,7 @@ button,
 input[type="submit"] {
     margin-right: 1rem;
 }
+
+form button {
+    width: 100%;
+}
