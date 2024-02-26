@@ -34,6 +34,13 @@ class Moment {
     normalize();
   }
 
+  int32_t operator-(const Moment &other) const {
+    // TODO(floatplane) should eventually worry about clamping here
+    // Probably should establish a max value for a moment that fits comfortably in a 32-bit int
+    return (static_cast<int32_t>(hours) - static_cast<int32_t>(other.hours)) * millisecondsPerHour +
+           (static_cast<int32_t>(milliseconds) - static_cast<int32_t>(other.milliseconds));
+  }
+
  public:
   MomentParts get() const {
     return {
