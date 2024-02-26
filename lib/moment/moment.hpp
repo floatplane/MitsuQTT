@@ -29,45 +29,29 @@ class Moment {
       _rolloverCount++;
     }
     _lastValue = value;
-    hours = value / millisecondsPerHour + _rolloverCount * hoursPerRollover;
-    milliseconds = value % millisecondsPerHour + _rolloverCount * millisecondsPerRollover;
-    normalize();
+    _milliseconds =
+        static_cast<int64_t>(value) + static_cast<int64_t>(_rolloverCount) * 0xFFFFFFFFLL;
   }
 
-  int32_t operator-(const Moment &other) const {
-    // TODO(floatplane) should eventually worry about clamping here
-    // Probably should establish a max value for a moment that fits comfortably in a 32-bit int
-    return (static_cast<int32_t>(hours) - static_cast<int32_t>(other.hours)) * millisecondsPerHour +
-           (static_cast<int32_t>(milliseconds) - static_cast<int32_t>(other.milliseconds));
+  int64_t operator-(const Moment &other) const {
+    return _milliseconds - other._milliseconds;
   }
 
  public:
   MomentParts get() const {
     return {
-        .milliseconds = static_cast<uint16_t>(milliseconds % 1000UL),
-        .seconds = static_cast<uint8_t>((milliseconds / 1000UL) % 60UL),
-        .minutes = static_cast<uint8_t>(milliseconds / 1000UL / 60UL),
-        .hours = static_cast<uint8_t>(hours % 24UL),
-        .days = static_cast<uint16_t>((hours / 24UL) % 365UL),
-        .years = static_cast<uint8_t>(hours / 24UL / 365UL),
+        .milliseconds = static_cast<uint16_t>(_milliseconds % 1000UL),
+        .seconds = static_cast<uint8_t>(_milliseconds / 1000UL % 60UL),
+        .minutes = static_cast<uint8_t>(_milliseconds / 1000UL / 60UL % 60UL),
+        .hours = static_cast<uint8_t>(_milliseconds / 1000UL / 60UL / 60UL % 24UL),
+        .days = static_cast<uint16_t>(_milliseconds / 1000UL / 60UL / 60UL / 24UL % 365UL),
+        .years = static_cast<uint8_t>(_milliseconds / 1000UL / 60UL / 60UL / 24UL / 365UL),
     };
   }
 
  private:
-  static constexpr uint32_t millisecondsPerHour = 60UL * 60UL * 1000UL;
-  static constexpr uint32_t millisecondsPerRollover = 0xFFFFFFFFUL % millisecondsPerHour;
-  static constexpr uint32_t hoursPerRollover = 0xFFFFFFFFUL / millisecondsPerHour;
+  int64_t _milliseconds;
 
-  void normalize() {
-    while (milliseconds > millisecondsPerHour) {
-      milliseconds -= millisecondsPerHour;
-      hours++;
-    }
-    printf("post normalize: %u milliseconds, %u hours\n", milliseconds, hours);
-  }
-
-  uint32_t milliseconds;
-  uint32_t hours;
   static uint32_t _rolloverCount;
   static uint32_t _lastValue;
 };

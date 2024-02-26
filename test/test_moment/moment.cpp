@@ -66,7 +66,7 @@ TEST_CASE("Moment") {
   }
 
   SUBCASE("test subtraction of larger values") {
-    constexpr uint32_t millisecondsPerHour = 60UL * 60UL * 1000UL;
+    constexpr auto millisecondsPerHour = 60 * 60 * 1000;
     const auto one = Moment(2 * millisecondsPerHour + 250);
     const auto two = Moment(5 * millisecondsPerHour + 600);
 
