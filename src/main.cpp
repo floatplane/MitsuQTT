@@ -42,7 +42,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
 #include "html_common.hpp"        // common code HTML (like header, footer)
-#include "html_menu.hpp"          // code html for menu
 #include "html_pages.hpp"         // code html for pages
 #include "javascript_common.hpp"  // common code javascript (like refresh page)
 #include "logger.hpp"
@@ -725,15 +724,9 @@ void handleSetup() {
     FileSystem::format();
     restartAfterDelay(500);
   } else {
-    String menuSetupPage = FPSTR(html_menu_setup);
-    menuSetupPage.replace("_TXT_MQTT_", FPSTR(txt_MQTT));
-    menuSetupPage.replace("_TXT_WIFI_", FPSTR(txt_WIFI));
-    menuSetupPage.replace("_TXT_UNIT_", FPSTR(txt_unit));
-    menuSetupPage.replace("_TXT_OTHERS_", FPSTR(txt_others));
-    menuSetupPage.replace("_TXT_RESET_", FPSTR(txt_reset));
-    menuSetupPage.replace("_TXT_BACK_", FPSTR(txt_back));
-    menuSetupPage.replace("_TXT_RESETCONFIRM_", FPSTR(txt_reset_confirm));
-    sendWrappedHTML(menuSetupPage);
+    JsonDocument data;
+    renderView(Ministache(views::setup), data,
+               {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 
