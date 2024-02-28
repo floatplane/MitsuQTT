@@ -1,3 +1,6 @@
+{{#saving}}
+<p>Saving configuration and rebooting...</p>
+{{/saving}}
 <p>
 Refreshing page in <span id='count'>10</span> second(s)...
 </p>

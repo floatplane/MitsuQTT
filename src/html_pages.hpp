@@ -16,12 +16,6 @@
 #pragma once
 #include <Arduino.h>
 
-const char html_page_reboot[] PROGMEM = "<p>_TXT_M_REBOOT_ <span id='count'>10s</span>...</p>";
-
-const char html_page_reset[] PROGMEM = "<p>_TXT_M_RESET_ _SSID_...</p>";
-
-const char html_page_save_reboot[] PROGMEM = "<p>_TXT_M_SAVE_ <span id='count'>10s</span>...</p>";
-
 const char html_page_status[] PROGMEM =
     // clang-format off
 "<div id='l1' name='l1'>"

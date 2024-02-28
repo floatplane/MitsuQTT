@@ -41,9 +41,8 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
-#include "html_common.hpp"        // common code HTML (like header, footer)
-#include "html_pages.hpp"         // code html for pages
-#include "javascript_common.hpp"  // common code javascript (like refresh page)
+#include "html_common.hpp"  // common code HTML (like header, footer)
+#include "html_pages.hpp"   // code html for pages
 #include "logger.hpp"
 #include "main.hpp"
 #include "ota.hpp"
@@ -716,11 +715,12 @@ void handleSetup() {
   LOG(F("handleSetup()"));
 
   if (server.hasArg("RESET")) {
-    String pageReset = FPSTR(html_page_reset);
-    const String ssid = Config::Network::defaultHostname();
-    pageReset.replace("_TXT_M_RESET_", FPSTR(txt_m_reset));
-    pageReset.replace("_SSID_", ssid);
-    sendWrappedHTML(pageReset);
+    JsonDocument data;
+    data["SSID"] = Config::Network::defaultHostname();
+    renderView(Ministache(views::reset), data,
+               {{"header", partials::header},
+                {"footer", partials::footer},
+                {"countdown", partials::countdown}});
     FileSystem::format();
     restartAfterDelay(500);
   } else {
@@ -731,10 +731,12 @@ void handleSetup() {
 }
 
 void rebootAndSendPage() {
-  String saveRebootPage = FPSTR(html_page_save_reboot);
-  const String countDown = FPSTR(count_down_script);
-  saveRebootPage.replace("_TXT_M_SAVE_", FPSTR(txt_m_save));
-  sendWrappedHTML(saveRebootPage + countDown);
+  JsonDocument data;
+  data["saving"] = true;
+  renderView(Ministache(views::reboot), data,
+             {{"header", partials::header},
+              {"footer", partials::footer},
+              {"countdown", partials::countdown}});
   restartAfterDelay(500);
 }
 

@@ -28,6 +28,7 @@ extern const __FlashStringHelper *textField;
 
 extern const __FlashStringHelper *others;
 extern const __FlashStringHelper *reboot;
+extern const __FlashStringHelper *reset;
 extern const __FlashStringHelper *upgrade;
 extern const __FlashStringHelper *upload;
 };  // namespace views

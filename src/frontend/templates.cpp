@@ -21,6 +21,7 @@ INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
 INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
 INCTXT(reboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/reboot.mst");
+INCTXT(reset, "src/frontend/" STRINGIFY(LANGUAGE) "/views/reset.mst");
 INCTXT(upgrade, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upgrade.mst");
 INCTXT(upload, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upload.mst");
 
@@ -52,6 +53,7 @@ const __FlashStringHelper *textField = FPSTR(mqttTextFieldData);
 
 const __FlashStringHelper *others = FPSTR(othersData);
 const __FlashStringHelper *reboot = FPSTR(rebootData);
+const __FlashStringHelper *reset = FPSTR(resetData);
 const __FlashStringHelper *upgrade = FPSTR(upgradeData);
 const __FlashStringHelper *upload = FPSTR(uploadData);
 };  // namespace views
