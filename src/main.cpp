@@ -57,6 +57,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include "frontend/templates.hpp"
 #include "ministache.hpp"
+#include "moment.hpp"
 #include "views/mqtt/strings.hpp"
 
 using ministache::Ministache;
@@ -231,7 +232,8 @@ struct Config {
 
 // Define global variables for network
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
-uint64_t wifi_timeout;
+Moment wifi_timeout(Moment::now());
+const Moment uptime(Moment::now());
 
 enum HttpStatusCodes {
   httpOk = 200,
@@ -260,7 +262,7 @@ String ha_config_topic;
 // sketch settings
 const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000;  // 5 minutes
 const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;           // 1 second
-const PROGMEM uint64_t HP_RETRY_INTERVAL_MS = 1000UL;           // 1 second
+const PROGMEM int64_t HP_RETRY_INTERVAL_MS = 1000LL;            // 1 second
 const PROGMEM uint32_t HP_MAX_RETRIES =
     10;  // Double the interval between retries up to this many times, then keep
          // retrying forever at that maximum interval.
@@ -287,12 +289,12 @@ boolean remoteTempActive = false;
 
 // HVAC
 HeatPump hp;  // NOLINT(readability-identifier-length)
-uint64_t lastMqttStatePacketSend;
-uint64_t lastMqttRetry;
-uint64_t lastHpSync;
+Moment lastMqttStatePacketSend(Moment::never());
+Moment lastMqttRetry(Moment::never());
+Moment lastHpSync(Moment::never());
 unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
-uint64_t lastRemoteTemp;
+Moment lastRemoteTemp(Moment::never());
 
 // Web OTA
 enum UploadError {
@@ -399,8 +401,6 @@ void setup() {
     server.on(F("/upload"), HTTP_POST, handleUploadDone, handleUploadLoop);
 
     server.begin();
-    lastMqttRetry = 0;
-    lastHpSync = 0;
     hpConnectionRetries = 0;
     hpConnectionTotalRetries = 0;
     if (config.mqtt.configured()) {
@@ -429,8 +429,6 @@ void setup() {
     hp.enableAutoUpdate();
 
     hp.connect(&Serial);
-
-    lastMqttStatePacketSend = millis();
   } else {
     dnsServer.start(DNS_PORT, "*", apIP);
     initCaptivePortal();
@@ -584,7 +582,7 @@ bool initWifi() {
 
   // Serial.println(F("\n\r \n\rStarting in AP mode"));
   WiFi.mode(WIFI_AP);
-  wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
+  wifi_timeout = Moment::now().offset(WIFI_RETRY_INTERVAL_MS);
   WiFi.persistent(false);  // fix crash esp32
                            // https://github.com/espressif/arduino-esp32/issues/2025
   WiFi.softAPConfig(apIP, apIP, netMsk);
@@ -606,7 +604,7 @@ bool initWifi() {
 }
 
 bool remoteTempStale() {
-  return (millis() - lastRemoteTemp > CHECK_REMOTE_TEMP_INTERVAL_MS);
+  return (Moment::now() - lastRemoteTemp > CHECK_REMOTE_TEMP_INTERVAL_MS);
 }
 
 bool safeModeActive() {
@@ -1405,7 +1403,7 @@ void handleUploadLoop() {  // NOLINT(readability-function-cognitive-complexity)
     // TODO(floatplane): should we do this? I feel like we should log to MQTT instead
     if (mqtt_client.state() == MQTT_CONNECTED) {
       mqtt_client.disconnect();
-      lastMqttRetry = millis();
+      lastMqttRetry = Moment::now();
     }
     // snprintf_P(log, sizeof(log), PSTR("Upload: File %s ..."),
     // upload.filename.c_str()); Serial.printl(log);
@@ -1575,7 +1573,7 @@ void pushHeatPumpStateToMqtt() {
   // If we're not pushing optimistic updates on every incoming change, then we should send the
   // state to MQTT at a higher cadence
   const uint32_t interval = config.other.optimisticUpdates ? 30000UL : 10000UL;
-  if (millis() - lastMqttStatePacketSend > interval) {
+  if (Moment::now() - lastMqttStatePacketSend > interval) {
     String mqttOutput;
     serializeJson(getHeatPumpStatusJson(), mqttOutput);
 
@@ -1583,7 +1581,7 @@ void pushHeatPumpStateToMqtt() {
       LOG(F("Failed to publish hp status change"));
     }
 
-    lastMqttStatePacketSend = millis();
+    lastMqttStatePacketSend = Moment::now();
   }
 }
 
@@ -1638,7 +1636,7 @@ void publishOptimisticStateChange(JsonDocument &override) {
 
   // Restart counter for waiting enought time for the unit to update before
   // sending a state packet
-  lastMqttStatePacketSend = millis();
+  lastMqttStatePacketSend = Moment::now();
 }
 
 static std::map<String, std::function<void(const char *)>> mqttTopicHandlers;
@@ -1726,8 +1724,8 @@ void onSetRemoteTemp(const char *message) {
     if (safeModeActive()) {
       LOG(F("Safe mode lockout turned off: we got a remote temp message to %f"), temperature);
     }
-    remoteTempActive = true;    // Remote temp has been pushed.
-    lastRemoteTemp = millis();  // Note time
+    remoteTempActive = true;         // Remote temp has been pushed.
+    lastRemoteTemp = Moment::now();  // Note time
     hp.setRemoteTemperature(Temperature(temperature, config.unit.tempUnit).getCelsius());
   }
 }
@@ -1872,7 +1870,7 @@ void mqttConnect() {
     // then waiting for MQTT_RETRY_INTERVAL_MS and retry reapeatly
     if (mqtt_client.state() < MQTT_CONNECTED) {
       if (attempts == maxAttempts) {
-        lastMqttRetry = millis();
+        lastMqttRetry = Moment::now();
         return;
       }
       delay(10);
@@ -1922,8 +1920,8 @@ bool connectWifi() {
 #endif
   WiFi.begin(config.network.accessPointSsid.c_str(), config.network.accessPointPassword.c_str());
   // Serial.println("Connecting to " + ap_ssid);
-  wifi_timeout = millis() + connectTimeoutMs;
-  while (WiFi.status() != WL_CONNECTED && millis() < wifi_timeout) {
+  wifi_timeout = Moment::now().offset(connectTimeoutMs);
+  while (WiFi.status() != WL_CONNECTED && Moment::now() < wifi_timeout) {
     Serial.write('.');
     // Serial.print(WiFi.status());
     //  wait 500ms, flashing the blue LED to indicate WiFi connecting...
@@ -2022,8 +2020,8 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
   // dropped out and time limit passed
   if (WiFi.getMode() == WIFI_STA and
       WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
-    wifi_timeout = millis() + WIFI_RETRY_INTERVAL_MS;
-  } else if (config.network.configured() and millis() > wifi_timeout) {
+    wifi_timeout = Moment::now().offset(WIFI_RETRY_INTERVAL_MS);
+  } else if (config.network.configured() and Moment::now() > wifi_timeout) {
     LOG(F("Lost network connection, restarting..."));
     // TODO(floatplane) do we really need to reboot here? Can we just try to reconnect?
     restartAfterDelay(0);
@@ -2057,9 +2055,9 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
     LOG(F("HVAC not connected"));
     // Use exponential backoff for retries, where each retry is double the
     // length of the previous one.
-    const uint64_t durationNextSync = (1UL << hpConnectionRetries) * HP_RETRY_INTERVAL_MS;
-    if (((millis() - lastHpSync > durationNextSync) or lastHpSync == 0)) {
-      lastHpSync = millis();
+    const int64_t durationNextSync = (1LL << hpConnectionRetries) * HP_RETRY_INTERVAL_MS;
+    if (Moment::now() - lastHpSync > durationNextSync) {
+      lastHpSync = Moment::now();
       // If we've retried more than the max number of tries, keep retrying at
       // that fixed interval, which is several minutes.
       hpConnectionRetries = min(hpConnectionRetries + 1U, HP_MAX_RETRIES);
@@ -2072,7 +2070,7 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
   if (config.mqtt.configured()) {
     // MQTT failed retry to connect
     if (mqtt_client.state() < MQTT_CONNECTED) {
-      if ((millis() - lastMqttRetry > MQTT_RETRY_INTERVAL_MS) or lastMqttRetry == 0) {
+      if (Moment::now() - lastMqttRetry > MQTT_RETRY_INTERVAL_MS) {
         mqttConnect();
       }
     }
