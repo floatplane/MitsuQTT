@@ -546,7 +546,7 @@ blockquote footer {
 /* Project-specific customizations */
 header, main, footer {
     padding: 1rem;
-    max-width: var(--width-card);
+    max-width: var(--width-card-wide);
     min-width: var(--width-card);
 }
 
@@ -562,4 +562,9 @@ input[type="submit"] {
 
 form button, form a.buttonLink {
     width: 100%;
+}
+
+a.buttonLink {
+    max-width: var(--width-card-wide);
+    min-width: var(--width-card);
 }
