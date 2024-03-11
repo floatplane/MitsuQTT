@@ -11,16 +11,14 @@ class Template < Mustache
         begin
             path = case name.to_s
             when "mqttTextField" 
-                puts "HIIIIIIII"
                 File.expand_path("_text_field.mst", "src/frontend/en-us/views/mqtt")
             else 
-                puts "NOOOOOOOO"
                 File.expand_path("#{name}.mst", "src/frontend/en-us/partials")
             end
-            puts "loading partial '#{name}' from file '#{path}'"        
+            # puts "loading partial '#{name}' from file '#{path}'"
             File.read path
         rescue
-            puts "partial not found #{name}"
+            puts "partial not found #{name}: tried #{path}"
             raise if raise_on_context_miss?
             ""
         end
@@ -51,7 +49,7 @@ def render(path, context = {})
 end
 
 server.mount_proc '/' do |req, res|
-    puts req.path
+    # puts req.path
     case req.path
     when "/css" then res.body = File.read File.expand_path("mvp.css", "src/frontend/statics")
     
@@ -109,7 +107,9 @@ server.mount_proc '/' do |req, res|
     when "/upgrade" then res.body = render("upgrade")
     when "/upload" then res.body = render("upload")
         
-    else res.body = "not found"
+    else
+        res.body = "not found"
+        res.status = 404
     end
 end
 
