@@ -386,7 +386,7 @@ form {
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow) var(--color-shadow); */
     display: block;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
     min-width: var(--width-card);
     /* padding: 1.5rem; */
     text-align: var(--justify-normal);
@@ -403,7 +403,7 @@ select,
 textarea {
     display: block;
     font-size: inherit;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
 }
 
 input[type="checkbox"],
@@ -552,7 +552,7 @@ blockquote footer {
 /* Project-specific customizations */
 header, main, footer {
     padding: 1rem;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
     min-width: var(--width-card);
 }
 
@@ -574,7 +574,7 @@ form > button, form > a.buttonLink {
 
 a.buttonLink {
     text-align: center;
-    /* max-width: var(--width-card-wide);
+    /* max-width: var(--width-card-medium);
     min-width: var(--width-card); */
 }
 
