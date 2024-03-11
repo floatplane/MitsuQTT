@@ -231,7 +231,6 @@ struct Config {
 // Define global variables for network
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
 Moment wifi_timeout(Moment::now());
-const Moment uptime(Moment::now());
 
 enum HttpStatusCodes {
   httpOk = 200,
@@ -976,18 +975,18 @@ void handleStatus() {
   LOG(F("handleStatus()"));
 
   JsonDocument data;
-  const auto uptimeParts = uptime.get();
+  const auto uptime = Moment::now().get();
   auto uptimeData = data[F("uptime")].to<JsonObject>();
-  if (uptimeParts.years > 0) {
-    uptimeData[F("years")] = uptimeParts.years;
+  if (uptime.years > 0) {
+    uptimeData[F("years")] = uptime.years;
   }
-  uptimeData[F("days")] = uptimeParts.days;
-  uptimeData[F("hours")] = uptimeParts.hours;
-  uptimeData[F("minutes")] = uptimeParts.minutes;
-  uptimeData[F("seconds")] = String((static_cast<float>(uptimeParts.seconds) * 1000.f +
-                                     static_cast<float>(uptimeParts.milliseconds)) /
-                                        1000.f,
-                                    3);
+  uptimeData[F("days")] = uptime.days;
+  uptimeData[F("hours")] = uptime.hours;
+  uptimeData[F("minutes")] = uptime.minutes;
+  uptimeData[F("seconds")] = String(
+      (static_cast<float>(uptime.seconds) * 1000.f + static_cast<float>(uptime.milliseconds)) /
+          1000.f,
+      3);
 
   data[F("hvac_connected")] = (Serial) and hp.isConnected();
   data[F("hvac_retries")] = hpConnectionTotalRetries;
