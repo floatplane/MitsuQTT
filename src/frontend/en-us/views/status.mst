@@ -5,7 +5,7 @@
         {{#uptime}}
         <tr>
             <td class="bold">Uptime</td>
-            <td class="left">{{#years}}{{years}} years, {{/years}}{{days}} days, {{hours}} hours, {{minutes}} minutes, {{seconds}} seconds</td>
+            <td class="left" style="text-wrap: wrap">{{#years}}{{years}} years, {{/years}}{{days}} days, {{hours}} hours, {{minutes}} minutes, {{seconds}} seconds</td>
         </tr>
         {{/uptime}}
         <tr>
