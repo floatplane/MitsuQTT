@@ -97,7 +97,7 @@ class Moment {
     never,
   };
 
-  explicit Moment([[maybe_unused]] Never never) : _milliseconds(LLONG_MIN) {
+  explicit Moment(Never /*never*/) : _milliseconds(LLONG_MIN) {
   }
 
   int64_t _milliseconds;
