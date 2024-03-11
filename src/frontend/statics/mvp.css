@@ -295,6 +295,7 @@ a:hover {
 
 a.buttonLink {
     text-decoration: none;
+    box-sizing: border-box;
 }
 
 a.buttonLink,
@@ -560,11 +561,27 @@ input[type="submit"] {
     margin-right: 1rem;
 }
 
-form button, form a.buttonLink {
+form > button, form > a.buttonLink {
     width: 100%;
+    max-width: var(--width-card-wide);
+    min-width: var(--width-card);
 }
 
 a.buttonLink {
+    text-align: center;
+    /* max-width: var(--width-card-wide);
+    min-width: var(--width-card); */
+}
+
+div.buttons {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 0rem 1rem;
+}
+
+div.buttons button, div.buttons a.buttonLink {
+    flex: 1 1 auto;
+    margin-right: 0rem;
     max-width: var(--width-card-wide);
     min-width: var(--width-card);
 }

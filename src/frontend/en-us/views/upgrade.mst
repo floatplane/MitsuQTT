@@ -11,8 +11,10 @@
             <label for='upload'>Select a BIN file containing new firmware</label>
             <input type='file' accept='.bin' name='upload'>
             <br>
-            <a class="buttonLink" href='/setup'>&lt; Back</a>
-            <button type='submit' onclick="eb('f1').style.display='none';eb('f2').style.display='block';this.form.submit();" class='button bgrn'>Start upgrade</button>
+            <div class="buttons">
+                <a class="buttonLink" href='/setup'>&lt; Back</a>
+                <button type='submit' onclick="eb('f1').style.display='none';eb('f2').style.display='block';this.form.submit();" class='button bgrn'>Start upgrade</button>
+            </div>
         </form>
     </div>
     <div id='f2' style='display:none;'><b>Upload started...</b></div>

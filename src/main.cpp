@@ -664,6 +664,7 @@ void handleSaveWifi() {
     saveWifiConfig(config);
   }
   JsonDocument data;
+  data[F("access_point")] = config.network.accessPointSsid;
   data[F("hostname")] = config.network.hostname;
   renderView(Ministache(views::captive::save), data,
              {{"header", partials::header}, {"footer", partials::footer}});
@@ -699,7 +700,6 @@ void handleRoot() {
     restartAfterDelay(500);
   } else {
     JsonDocument data;
-    data[F("showControl")] = hp.isConnected();
     data[F("showControl")] = hp.isConnected();
     data[F("showLogout")] = config.unit.login_password.length() > 0;
     renderView(Ministache(views::index), data,

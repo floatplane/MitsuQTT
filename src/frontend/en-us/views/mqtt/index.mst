@@ -15,8 +15,10 @@
         </p>
         {{#topic}}{{> mqttTextField}}{{/topic}}
         <br/>
-        <a class="buttonLink" href='/setup'>&lt; Back</a>
-        <button name='save' type='submit' class='button bgrn'>Save & Reboot</button>
+        <div class="buttons">
+            <a class="buttonLink" href='/setup'>&lt; Back</a>
+            <button name='save' type='submit' class='button bgrn'>Save & Reboot</button>
+        </div>
     </form>
 </main>
 {{> footer}}
