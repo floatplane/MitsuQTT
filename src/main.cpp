@@ -294,7 +294,7 @@ Moment lastMqttRetry(Moment::never());
 Moment lastHpSync(Moment::never());
 unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
-Moment lastRemoteTemp(Moment::never());
+Moment lastRemoteTemp(Moment::now());
 
 // Web OTA
 enum UploadError {
