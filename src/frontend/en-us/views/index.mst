@@ -14,13 +14,13 @@
     <form action='/upgrade' method='get'>
         <button>Firmware Upgrade</button>
     </form>
+    {{#showLogout}}
+    <form action='/login?LOGOUT=YES' method='post'>
+        <button type='submit' name='Logout'>Logout</button>
+    </form>
+    {{/showLogout}}
     <form>
         <button type='submit' name='REBOOT' class='button bred'>Reboot</button>
     </form>
-    {{#showLogout}}
-    <form action='/login?LOGOUT=YES' method='post'>
-        <button type='submit' name='Logout' class='button bred'>Logout</button>
-    </form>
-    {{/showLogout}}
 </main>
 {{> footer}}

@@ -15,6 +15,8 @@
     --color-table: #118bee;
     --color-text: #000;
     --color-text-secondary: #999;
+    --color-success: #47c266;
+    --color-danger: #e20d0d;
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     --hover-brightness: 1.2;
     --justify-important: center;
@@ -347,6 +349,18 @@ a i {
     color: var(--color-link);
     display: inline-block;
     padding: 1rem 2rem;
+}
+
+.bred {
+    border: 2px solid var(--color-danger);
+    border-radius: var(--border-radius);
+    background-color: var(--color-danger);
+    color: var(---color-bg);
+}
+
+.bgrn {
+    border: 2px solid var(--color-success);
+    background-color: var(--color-success);
 }
 
 article aside a {
