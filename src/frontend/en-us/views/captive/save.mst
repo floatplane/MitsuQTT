@@ -1,6 +1,7 @@
 {{> header}}
 <main>
-    <h2>Rebooting...</h2>
-    <p>Rebooting and connecting to <pre>{{hostname}}</pre>! You should see it listed on your access point.</p>
+    <h2>Saving config and rebooting</h2>
+    <p>Rebooting and connecting to <b>{{access_point}}</b>! You should see <b>{{hostname}}</b> listed there.</p>
+    {{> countdown}}
 </main>
 {{> footer}}

@@ -20,8 +20,10 @@
         </p>
         </p>
         <br/>
-        <button name='submit' type='submit' class='button bgrn'>Save & Reboot</button>
-        <a class="buttonLink" href="/reboot">Reboot</a>
+        <div class="buttons">
+            <button name='submit' type='submit' class='button bgrn'>Save & Reboot</button>
+            <a class="buttonLink" href="/reboot">Reboot</a>
+        </div
     </form>
 </main>
 {{> footer}}

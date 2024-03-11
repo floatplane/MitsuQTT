@@ -1,5 +1,6 @@
+
 <p>
-Refreshing page in <span id='count'>10</span> second(s)...
+{{#saving}}Saving configuration and rebooting. {{/saving}}Refreshing page in <span id='count'>10</span> second(s)...
 </p>
 <script>
     var count = 10;

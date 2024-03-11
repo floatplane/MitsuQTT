@@ -20,3 +20,5 @@
 {{/error}}
     <a class="buttonLink" href='/upgrade'>&lt; Back</a>
 </main>
+{{> footer}}
+

@@ -1,0 +1,22 @@
+{{> header}}
+<main>
+    <form action='/mqtt' method='get'>
+        <button>MQTT</button>
+    </form>
+    <form action='/wifi' method='get'>
+        <button>Wifi</button>
+    </form>
+    <form action='/unit' method='get'>
+        <button>Unit</button>
+    </form>
+    <form action='/others' method='get'>
+        <button>Others</button>
+    </form>
+    <form onsubmit="return confirm('Do you really want to reset this unit?');">
+        <button type='submit' name='RESET' class='button bred'>Reset configuration</button>
+    </form>
+    <form>
+        <a class="buttonLink" href='/'>&lt; Back</a>
+    </form>
+</main>
+{{> footer}}

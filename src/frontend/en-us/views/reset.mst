@@ -1,0 +1,7 @@
+{{> header}}
+<main>
+    <h2>Resetting</h2>
+    After reset, connect to SSID {{SSID}}
+    {{> countdown}}
+</main>
+{{> footer}}

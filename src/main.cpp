@@ -41,10 +41,8 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
-#include "html_common.hpp"        // common code HTML (like header, footer)
-#include "html_menu.hpp"          // code html for menu
-#include "html_pages.hpp"         // code html for pages
-#include "javascript_common.hpp"  // common code javascript (like refresh page)
+#include "html_common.hpp"  // common code HTML (like header, footer)
+#include "html_pages.hpp"   // code html for pages
 #include "logger.hpp"
 #include "main.hpp"
 #include "ota.hpp"
@@ -233,7 +231,6 @@ struct Config {
 // Define global variables for network
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
 Moment wifi_timeout(Moment::now());
-const Moment uptime(Moment::now());
 
 enum HttpStatusCodes {
   httpOk = 200,
@@ -666,6 +663,7 @@ void handleSaveWifi() {
     saveWifiConfig(config);
   }
   JsonDocument data;
+  data[F("access_point")] = config.network.accessPointSsid;
   data[F("hostname")] = config.network.hostname;
   renderView(Ministache(views::captive::save), data,
              {{"header", partials::header}, {"footer", partials::footer}});
@@ -693,23 +691,18 @@ void handleRoot() {
   LOG(F("handleRoot()"));
 
   if (server.hasArg("REBOOT")) {
-    String rebootPage = FPSTR(html_page_reboot);
-    const String countDown = FPSTR(count_down_script);
-    rebootPage.replace("_TXT_M_REBOOT_", FPSTR(txt_m_reboot));
-    sendWrappedHTML(rebootPage + countDown);
+    JsonDocument data;
+    renderView(Ministache(views::reboot), data,
+               {{"header", partials::header},
+                {"footer", partials::footer},
+                {"countdown", partials::countdown}});
     restartAfterDelay(500);
   } else {
-    String menuRootPage = FPSTR(html_menu_root);
-    menuRootPage.replace("_SHOW_LOGOUT_", String(config.unit.login_password.length() > 0 ? 1 : 0));
-    // not show control button if hp not connected
-    menuRootPage.replace("_SHOW_CONTROL_", String(hp.isConnected() ? 1 : 0));
-    menuRootPage.replace("_TXT_CONTROL_", FPSTR(txt_control));
-    menuRootPage.replace("_TXT_SETUP_", FPSTR(txt_setup));
-    menuRootPage.replace("_TXT_STATUS_", FPSTR(txt_status));
-    menuRootPage.replace("_TXT_FW_UPGRADE_", FPSTR(txt_firmware_upgrade));
-    menuRootPage.replace("_TXT_REBOOT_", FPSTR(txt_reboot));
-    menuRootPage.replace("_TXT_LOGOUT_", FPSTR(txt_logout));
-    sendWrappedHTML(menuRootPage);
+    JsonDocument data;
+    data[F("showControl")] = hp.isConnected();
+    data[F("showLogout")] = config.unit.login_password.length() > 0;
+    renderView(Ministache(views::index), data,
+               {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 
@@ -721,31 +714,28 @@ void handleSetup() {
   LOG(F("handleSetup()"));
 
   if (server.hasArg("RESET")) {
-    String pageReset = FPSTR(html_page_reset);
-    const String ssid = Config::Network::defaultHostname();
-    pageReset.replace("_TXT_M_RESET_", FPSTR(txt_m_reset));
-    pageReset.replace("_SSID_", ssid);
-    sendWrappedHTML(pageReset);
+    JsonDocument data;
+    data["SSID"] = Config::Network::defaultHostname();
+    renderView(Ministache(views::reset), data,
+               {{"header", partials::header},
+                {"footer", partials::footer},
+                {"countdown", partials::countdown}});
     FileSystem::format();
     restartAfterDelay(500);
   } else {
-    String menuSetupPage = FPSTR(html_menu_setup);
-    menuSetupPage.replace("_TXT_MQTT_", FPSTR(txt_MQTT));
-    menuSetupPage.replace("_TXT_WIFI_", FPSTR(txt_WIFI));
-    menuSetupPage.replace("_TXT_UNIT_", FPSTR(txt_unit));
-    menuSetupPage.replace("_TXT_OTHERS_", FPSTR(txt_others));
-    menuSetupPage.replace("_TXT_RESET_", FPSTR(txt_reset));
-    menuSetupPage.replace("_TXT_BACK_", FPSTR(txt_back));
-    menuSetupPage.replace("_TXT_RESETCONFIRM_", FPSTR(txt_reset_confirm));
-    sendWrappedHTML(menuSetupPage);
+    JsonDocument data;
+    renderView(Ministache(views::setup), data,
+               {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 
 void rebootAndSendPage() {
-  String saveRebootPage = FPSTR(html_page_save_reboot);
-  const String countDown = FPSTR(count_down_script);
-  saveRebootPage.replace("_TXT_M_SAVE_", FPSTR(txt_m_save));
-  sendWrappedHTML(saveRebootPage + countDown);
+  JsonDocument data;
+  data["saving"] = true;
+  renderView(Ministache(views::reboot), data,
+             {{"header", partials::header},
+              {"footer", partials::footer},
+              {"countdown", partials::countdown}});
   restartAfterDelay(500);
 }
 
@@ -984,38 +974,33 @@ void handleStatus() {
   }
   LOG(F("handleStatus()"));
 
-  String statusPage = FPSTR(html_page_status);
-  statusPage.replace("_TXT_BACK_", FPSTR(txt_back));
-  statusPage.replace("_TXT_STATUS_TITLE_", FPSTR(txt_status_title));
-  statusPage.replace("_TXT_STATUS_HVAC_", FPSTR(txt_status_hvac));
-  statusPage.replace("_TXT_STATUS_MQTT_", FPSTR(txt_status_mqtt));
-  statusPage.replace("_TXT_STATUS_WIFI_", FPSTR(txt_status_wifi));
-  statusPage.replace("_TXT_RETRIES_HVAC_", FPSTR(txt_retries_hvac));
+  JsonDocument data;
+  const auto uptime = Moment::now().get();
+  auto uptimeData = data[F("uptime")].to<JsonObject>();
+  if (uptime.years > 0) {
+    uptimeData[F("years")] = uptime.years;
+  }
+  uptimeData[F("days")] = uptime.days;
+  uptimeData[F("hours")] = uptime.hours;
+  uptimeData[F("minutes")] = uptime.minutes;
+  uptimeData[F("seconds")] = String(
+      (static_cast<float>(uptime.seconds) * 1000.f + static_cast<float>(uptime.milliseconds)) /
+          1000.f,
+      3);
+
+  data[F("hvac_connected")] = (Serial) and hp.isConnected();
+  data[F("hvac_retries")] = hpConnectionTotalRetries;
+  data[F("mqtt_connected")] = mqtt_client.connected();
+  data[F("mqtt_error_code")] = mqtt_client.state();
+  data[F("wifi_access_point")] = WiFi.SSID();
+  data[F("wifi_signal_strength")] = WiFi.RSSI();
 
   if (server.hasArg("mrconn")) {
     mqttConnect();
   }
 
-  const String connected =
-      String(F("<span style='color:#47c266'><b>")) + FPSTR(txt_status_connect) + F("</b><span>");
-
-  const String disconnected = String(F("<span style='color:#d43535'><b>")) +
-                              FPSTR(txt_status_disconnect) + F("</b></span>");
-
-  if ((Serial) and hp.isConnected()) {
-    statusPage.replace(F("_HVAC_STATUS_"), connected);
-  } else {
-    statusPage.replace(F("_HVAC_STATUS_"), disconnected);
-  }
-  if (mqtt_client.connected()) {
-    statusPage.replace(F("_MQTT_STATUS_"), connected);
-  } else {
-    statusPage.replace(F("_MQTT_STATUS_"), disconnected);
-  }
-  statusPage.replace(F("_HVAC_RETRIES_"), String(hpConnectionTotalRetries));
-  statusPage.replace(F("_MQTT_REASON_"), String(mqtt_client.state()));
-  statusPage.replace(F("_WIFI_STATUS_"), String(WiFi.RSSI()));
-  sendWrappedHTML(statusPage);
+  renderView(Ministache(views::status), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleControl() {  // NOLINT(readability-function-cognitive-complexity)

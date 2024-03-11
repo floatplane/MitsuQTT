@@ -54,20 +54,6 @@ const char txt_f_fh[] PROGMEM = "Fahrenheit";
 const char txt_f_allmodes[] PROGMEM = "All modes";
 const char txt_f_noheat[] PROGMEM = "All modes except heat";
 
-// Page Reboot, save & Resseting
-const char txt_m_reboot[] PROGMEM = "Rebooting... Refresh in";
-const char txt_m_reset[] PROGMEM = "Resetting... Connect to SSID";
-const char txt_m_save[] PROGMEM = "Saving configuration and rebooting... Refresh in";
-
-// Page Status
-const char txt_status_title[] PROGMEM = "Status";
-const char txt_status_hvac[] PROGMEM = "HVAC Status";
-const char txt_retries_hvac[] PROGMEM = "HVAC Connection Retries";
-const char txt_status_mqtt[] PROGMEM = "MQTT Status";
-const char txt_status_wifi[] PROGMEM = "WIFI RSSI";
-const char txt_status_connect[] PROGMEM = "CONNECTED";
-const char txt_status_disconnect[] PROGMEM = "DISCONNECTED";
-
 // Page WIFI
 const char txt_wifi_title[] PROGMEM = "WIFI Parameters";
 const char txt_wifi_hostname[] PROGMEM = "Hostname";

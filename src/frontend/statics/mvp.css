@@ -15,6 +15,8 @@
     --color-table: #118bee;
     --color-text: #000;
     --color-text-secondary: #999;
+    --color-success: #47c266;
+    --color-danger: #e20d0d;
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     --hover-brightness: 1.2;
     --justify-important: center;
@@ -295,6 +297,7 @@ a:hover {
 
 a.buttonLink {
     text-decoration: none;
+    box-sizing: border-box;
 }
 
 a.buttonLink,
@@ -348,6 +351,18 @@ a i {
     padding: 1rem 2rem;
 }
 
+.bred {
+    border: 2px solid var(--color-danger);
+    border-radius: var(--border-radius);
+    background-color: var(--color-danger);
+    color: var(---color-bg);
+}
+
+.bgrn {
+    border: 2px solid var(--color-success);
+    background-color: var(--color-success);
+}
+
 article aside a {
     color: var(--color-secondary);
 }
@@ -381,13 +396,13 @@ input[type="submit"][disabled]:hover {
 }
 
 form {
-    border: 1px solid var(--color-bg-secondary);
+    /* border: 1px solid var(--color-bg-secondary);
     border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow) var(--color-shadow);
+    box-shadow: var(--box-shadow) var(--color-shadow); */
     display: block;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
     min-width: var(--width-card);
-    padding: 1.5rem;
+    /* padding: 1.5rem; */
     text-align: var(--justify-normal);
 }
 
@@ -402,7 +417,7 @@ select,
 textarea {
     display: block;
     font-size: inherit;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
 }
 
 input[type="checkbox"],
@@ -461,9 +476,9 @@ dialog {
 
 /* Tables */
 table {
-    border: 1px solid var(--color-bg-secondary);
+    /* border: 1px solid var(--color-bg-secondary);
     border-radius: var(--border-radius);
-    border-spacing: 0;
+    border-spacing: 0; */
     display: inline-block;
     max-width: 100%;
     overflow-x: auto;
@@ -500,9 +515,14 @@ table tr td:first-child {
     text-align: var(--justify-normal);
 }
 
-table tr:nth-child(even) {
-    background-color: var(--color-accent);
+table thead th:first-child,
+table tr td:first-child {
+    padding-left: 0rem;
 }
+
+/* table tr:nth-child(even) {
+    background-color: var(--color-accent);
+} */
 
 /* Quotes */
 blockquote {
@@ -546,7 +566,7 @@ blockquote footer {
 /* Project-specific customizations */
 header, main, footer {
     padding: 1rem;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
     min-width: var(--width-card);
 }
 
@@ -558,4 +578,37 @@ a strong,
 button,
 input[type="submit"] {
     margin-right: 1rem;
+}
+
+form > button, form > a.buttonLink {
+    width: 100%;
+    max-width: var(--width-card-medium);
+    min-width: var(--width-card);
+}
+
+a.buttonLink {
+    text-align: center;
+    /* max-width: var(--width-card-medium);
+    min-width: var(--width-card); */
+}
+
+div.buttons {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 0rem 1rem;
+}
+
+div.buttons button, div.buttons a.buttonLink {
+    flex: 1 1 auto;
+    margin-right: 0rem;
+    max-width: var(--width-card-medium);
+    min-width: var(--width-card);
+}
+
+td.bold {
+    font-weight: bold;
+}
+
+td.left {
+    text-align: var(--justify-normal);
 }
