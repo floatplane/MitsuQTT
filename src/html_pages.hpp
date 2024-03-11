@@ -16,36 +16,6 @@
 #pragma once
 #include <Arduino.h>
 
-const char html_page_status[] PROGMEM =
-    // clang-format off
-"<div id='l1' name='l1'>"
-    "<fieldset>"
-    "<legend><b>&nbsp; _TXT_STATUS_TITLE_ &nbsp;</b></legend>"
-    "<p><b>_TXT_STATUS_HVAC_</b>"
-        " ==> "
-        "_HVAC_STATUS_"
-    "</p>"
-     "<p><b>_TXT_RETRIES_HVAC_</b>"
-        " ==> "
-        "_HVAC_RETRIES_"
-    "</p>"
-     "<p><b>_TXT_STATUS_MQTT_</b>"
-        " ==> " 
-        "_MQTT_STATUS_ ( _MQTT_REASON_ )"
-    "</p>"
-     "<p><b>_TXT_STATUS_WIFI_</b>"
-        " ==> "
-        "_WIFI_STATUS_ dBm"
-    "</p>"
-    "</fieldset>"
-    "<br />"
-    "<p>"
-        "<a class='button back' href='/'>_TXT_BACK_</a>"
-    "</p>"
-"</div>"
-;
-// clang-format on
-
 const char html_page_wifi[] PROGMEM =
     // clang-format off
 "<div id='l1' name='l1'>"

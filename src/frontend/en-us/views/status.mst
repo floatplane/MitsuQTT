@@ -1,0 +1,36 @@
+{{> header}}
+<main>
+    <h2>Status</h2>
+    <table>
+        {{#uptime}}
+        <tr>
+            <td class="bold">Uptime</td>
+            <td class="left">{{#years}}{{years}} years, {{/years}}{{days}} days, {{hours}} hours, {{minutes}} minutes, {{seconds}} seconds</td>
+        </tr>
+        {{/uptime}}
+        <tr>
+            <td class="bold">HVAC status</td>
+            <td class="left">{{#hvac_connected}}<span style='color:#47c266'>Connected</span>{{/hvac_connected}}{{^hvac_connected}}<span style='color:#d43535'>Disconnected</span>{{/hvac_connected}}</td>
+        </tr>
+        <tr>
+            <td class="bold">HVAC connection retries</td>
+            <td class="left">{{hvac_retries}}</td>
+        </tr>
+        <tr>
+            <td class="bold">MQTT status</td>
+            <td class="left">{{#mqtt_connected}}<span style='color:#47c266'>Connected</span>{{/mqtt_connected}}{{^mqtt_connected}}<span style='color:#d43535'>Disconnected</span>{{/mqtt_connected}} (error code: {{mqtt_error_code}})</td>
+        </tr>
+        <tr>
+            <td class="bold">Wifi access point</td>
+            <td class="left">{{wifi_access_point}}</td>
+        </tr>
+        <tr>
+            <td class="bold">Wifi signal strength</td>
+            <td class="left">{{wifi_signal_strength}} dBm</td>
+        </tr>
+    </table>
+    <div class="buttons">
+        <a class="buttonLink" href='/'>&lt; Back</a>
+    </div>
+</main>
+{{> footer}}

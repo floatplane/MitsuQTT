@@ -16,12 +16,13 @@ INCTXT(captiveReboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/reboot
 INCTXT(captiveSave, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/save.mst");
 INCTXT(index, "src/frontend/" STRINGIFY(LANGUAGE) "/views/index.mst");
 INCTXT(metrics, "src/frontend/" STRINGIFY(LANGUAGE) "/views/metrics.mst");
-INCTXT(setup, "src/frontend/" STRINGIFY(LANGUAGE) "/views/setup.mst");
 INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
 INCTXT(others, "src/frontend/" STRINGIFY(LANGUAGE) "/views/others.mst");
 INCTXT(reboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/reboot.mst");
 INCTXT(reset, "src/frontend/" STRINGIFY(LANGUAGE) "/views/reset.mst");
+INCTXT(setup, "src/frontend/" STRINGIFY(LANGUAGE) "/views/setup.mst");
+INCTXT(status, "src/frontend/" STRINGIFY(LANGUAGE) "/views/status.mst");
 INCTXT(upgrade, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upgrade.mst");
 INCTXT(upload, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upload.mst");
 
@@ -44,7 +45,6 @@ const __FlashStringHelper *save = FPSTR(captiveSaveData);
 
 const __FlashStringHelper *index = FPSTR(indexData);
 const __FlashStringHelper *metrics = FPSTR(metricsData);
-const __FlashStringHelper *setup = FPSTR(setupData);
 
 namespace mqtt {
 const __FlashStringHelper *index = FPSTR(mqttIndexData);
@@ -54,6 +54,8 @@ const __FlashStringHelper *textField = FPSTR(mqttTextFieldData);
 const __FlashStringHelper *others = FPSTR(othersData);
 const __FlashStringHelper *reboot = FPSTR(rebootData);
 const __FlashStringHelper *reset = FPSTR(resetData);
+const __FlashStringHelper *setup = FPSTR(setupData);
+const __FlashStringHelper *status = FPSTR(statusData);
 const __FlashStringHelper *upgrade = FPSTR(upgradeData);
 const __FlashStringHelper *upload = FPSTR(uploadData);
 };  // namespace views

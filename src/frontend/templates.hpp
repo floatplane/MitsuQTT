@@ -18,7 +18,6 @@ extern const __FlashStringHelper *save;
 }  // namespace captive
 
 extern const __FlashStringHelper *index;
-extern const __FlashStringHelper *setup;
 extern const __FlashStringHelper *metrics;
 
 namespace mqtt {
@@ -29,6 +28,8 @@ extern const __FlashStringHelper *textField;
 extern const __FlashStringHelper *others;
 extern const __FlashStringHelper *reboot;
 extern const __FlashStringHelper *reset;
+extern const __FlashStringHelper *setup;
+extern const __FlashStringHelper *status;
 extern const __FlashStringHelper *upgrade;
 extern const __FlashStringHelper *upload;
 };  // namespace views

@@ -975,38 +975,33 @@ void handleStatus() {
   }
   LOG(F("handleStatus()"));
 
-  String statusPage = FPSTR(html_page_status);
-  statusPage.replace("_TXT_BACK_", FPSTR(txt_back));
-  statusPage.replace("_TXT_STATUS_TITLE_", FPSTR(txt_status_title));
-  statusPage.replace("_TXT_STATUS_HVAC_", FPSTR(txt_status_hvac));
-  statusPage.replace("_TXT_STATUS_MQTT_", FPSTR(txt_status_mqtt));
-  statusPage.replace("_TXT_STATUS_WIFI_", FPSTR(txt_status_wifi));
-  statusPage.replace("_TXT_RETRIES_HVAC_", FPSTR(txt_retries_hvac));
+  JsonDocument data;
+  const auto uptimeParts = uptime.get();
+  auto uptimeData = data[F("uptime")].to<JsonObject>();
+  if (uptimeParts.years > 0) {
+    uptimeData[F("years")] = uptimeParts.years;
+  }
+  uptimeData[F("days")] = uptimeParts.days;
+  uptimeData[F("hours")] = uptimeParts.hours;
+  uptimeData[F("minutes")] = uptimeParts.minutes;
+  uptimeData[F("seconds")] = String((static_cast<float>(uptimeParts.seconds) * 1000.f +
+                                     static_cast<float>(uptimeParts.milliseconds)) /
+                                        1000.f,
+                                    3);
+
+  data[F("hvac_connected")] = (Serial) and hp.isConnected();
+  data[F("hvac_retries")] = hpConnectionTotalRetries;
+  data[F("mqtt_connected")] = mqtt_client.connected();
+  data[F("mqtt_error_code")] = mqtt_client.state();
+  data[F("wifi_access_point")] = WiFi.SSID();
+  data[F("wifi_signal_strength")] = WiFi.RSSI();
 
   if (server.hasArg("mrconn")) {
     mqttConnect();
   }
 
-  const String connected =
-      String(F("<span style='color:#47c266'><b>")) + FPSTR(txt_status_connect) + F("</b><span>");
-
-  const String disconnected = String(F("<span style='color:#d43535'><b>")) +
-                              FPSTR(txt_status_disconnect) + F("</b></span>");
-
-  if ((Serial) and hp.isConnected()) {
-    statusPage.replace(F("_HVAC_STATUS_"), connected);
-  } else {
-    statusPage.replace(F("_HVAC_STATUS_"), disconnected);
-  }
-  if (mqtt_client.connected()) {
-    statusPage.replace(F("_MQTT_STATUS_"), connected);
-  } else {
-    statusPage.replace(F("_MQTT_STATUS_"), disconnected);
-  }
-  statusPage.replace(F("_HVAC_RETRIES_"), String(hpConnectionTotalRetries));
-  statusPage.replace(F("_MQTT_REASON_"), String(mqtt_client.state()));
-  statusPage.replace(F("_WIFI_STATUS_"), String(WiFi.RSSI()));
-  sendWrappedHTML(statusPage);
+  renderView(Ministache(views::status), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleControl() {  // NOLINT(readability-function-cognitive-complexity)

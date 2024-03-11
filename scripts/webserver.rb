@@ -104,6 +104,21 @@ server.mount_proc '/' do |req, res|
     when "/reboot" then res.body = render("reboot", {saving: true})
     when "/reset" then res.body = render("reset", {SSID: "the_ssid"})
     when "/setup" then res.body = render("setup")
+    when "/status" then res.body = render("status", {
+        uptime: {
+            years: 1,
+            days: 2,
+            hours: 3,
+            minutes: 4,
+            seconds: "5.060",
+        },
+        hvac_connected: true,
+        hvac_retries: "0",
+        mqtt_connected: false,
+        mqtt_error_code: 0,
+        wifi_access_point: "the_ssid",
+        wifi_signal_strength: "-66",
+    })
     when "/upgrade" then res.body = render("upgrade")
     when "/upload" then res.body = render("upload")
         

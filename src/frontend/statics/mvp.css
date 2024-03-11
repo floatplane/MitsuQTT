@@ -462,9 +462,9 @@ dialog {
 
 /* Tables */
 table {
-    border: 1px solid var(--color-bg-secondary);
+    /* border: 1px solid var(--color-bg-secondary);
     border-radius: var(--border-radius);
-    border-spacing: 0;
+    border-spacing: 0; */
     display: inline-block;
     max-width: 100%;
     overflow-x: auto;
@@ -501,9 +501,14 @@ table tr td:first-child {
     text-align: var(--justify-normal);
 }
 
-table tr:nth-child(even) {
-    background-color: var(--color-accent);
+table thead th:first-child,
+table tr td:first-child {
+    padding-left: 0rem;
 }
+
+/* table tr:nth-child(even) {
+    background-color: var(--color-accent);
+} */
 
 /* Quotes */
 blockquote {
@@ -563,7 +568,7 @@ input[type="submit"] {
 
 form > button, form > a.buttonLink {
     width: 100%;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
     min-width: var(--width-card);
 }
 
@@ -582,6 +587,14 @@ div.buttons {
 div.buttons button, div.buttons a.buttonLink {
     flex: 1 1 auto;
     margin-right: 0rem;
-    max-width: var(--width-card-wide);
+    max-width: var(--width-card-medium);
     min-width: var(--width-card);
+}
+
+td.bold {
+    font-weight: bold;
+}
+
+td.left {
+    text-align: var(--justify-normal);
 }
