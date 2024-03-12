@@ -14,11 +14,6 @@
             <br/>
             <input id='psk' name='psk' placeholder=' '>
         </p>
-        <p><b>OTA Password</b>
-            <br/>
-            <input id='otapwd' name='otapwd' placeholder=' '>
-        </p>
-        </p>
         <br/>
         <div class="buttons">
             <button name='submit' type='submit' class='button bgrn'>Save & Reboot</button>

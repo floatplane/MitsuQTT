@@ -45,7 +45,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "html_pages.hpp"   // code html for pages
 #include "logger.hpp"
 #include "main.hpp"
-#include "ota.hpp"
 #include "timer.hpp"
 
 // BEGIN include the contents of config.h
@@ -91,7 +90,6 @@ struct Config {
     String hostname{defaultHostname()};
     String accessPointSsid;
     String accessPointPassword;
-    String otaUpdatePassword;
 
     bool configured() const {
       return accessPointSsid.length() > 0;
@@ -430,8 +428,6 @@ void setup() {
     dnsServer.start(DNS_PORT, "*", apIP);
     initCaptivePortal();
   }
-  LOG(F("calling initOTA"));
-  initOTA(config.network.hostname, config.network.otaUpdatePassword);
   LOG(F("Setup complete"));
   logConfig();
 }
@@ -448,12 +444,6 @@ void loadWifiConfig() {
   config.network.hostname = doc["hostname"].as<String>();
   config.network.accessPointSsid = doc["ap_ssid"].as<String>();
   config.network.accessPointPassword = doc["ap_pwd"].as<String>();
-  // prevent ota password is "null" if not exist key
-  if (doc.containsKey("ota_pwd")) {
-    config.network.otaUpdatePassword = doc["ota_pwd"].as<String>();
-  } else {
-    config.network.otaUpdatePassword = "";
-  }
 }
 
 void loadMqttConfig() {
@@ -659,7 +649,6 @@ void handleSaveWifi() {
     config.network.accessPointSsid = server.arg("ssid");
     config.network.accessPointPassword = server.arg("psk");
     config.network.hostname = server.arg("hn");
-    config.network.otaUpdatePassword = server.arg("otapwd");
     saveWifiConfig(config);
   }
   JsonDocument data;
@@ -943,17 +932,14 @@ void handleWifi() {
     config.network.accessPointSsid = server.arg("ssid");
     config.network.accessPointPassword = server.arg("psk");
     config.network.hostname = server.arg("hn");
-    config.network.otaUpdatePassword = server.arg("otapwd");
     saveWifiConfig(config);
     rebootAndSendPage();
   } else {
     String wifiPage = FPSTR(html_page_wifi);
     String str_ap_ssid = config.network.accessPointSsid;
     String str_ap_pwd = config.network.accessPointPassword;
-    String str_ota_pwd = config.network.otaUpdatePassword;
     str_ap_ssid.replace("'", F("&apos;"));
     str_ap_pwd.replace("'", F("&apos;"));
-    str_ota_pwd.replace("'", F("&apos;"));
     wifiPage.replace("_TXT_SAVE_", FPSTR(txt_save));
     wifiPage.replace("_TXT_BACK_", FPSTR(txt_back));
     wifiPage.replace("_TXT_WIFI_TITLE_", FPSTR(txt_wifi_title));
@@ -963,7 +949,6 @@ void handleWifi() {
     wifiPage.replace("_TXT_WIFI_OTAP_", FPSTR(txt_wifi_otap));
     wifiPage.replace(F("_SSID_"), str_ap_ssid);
     wifiPage.replace(F("_PSK_"), str_ap_pwd);
-    wifiPage.replace(F("_OTA_PWD_"), str_ota_pwd);
     sendWrappedHTML(wifiPage);
   }
 }
@@ -1999,7 +1984,6 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
   }
 
   server.handleClient();
-  processOTALoop();
 
   // reset board to attempt to connect to wifi again if in ap mode or wifi
   // dropped out and time limit passed
