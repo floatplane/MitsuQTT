@@ -841,37 +841,15 @@ void handleUnitGet() {
 
   LOG(F("handleUnitGet()"));
 
-  String unitPage = FPSTR(html_page_unit);
-  unitPage.replace("_TXT_SAVE_", FPSTR(txt_save));
-  unitPage.replace("_TXT_BACK_", FPSTR(txt_back));
-  unitPage.replace("_TXT_UNIT_TITLE_", FPSTR(txt_unit_title));
-  unitPage.replace("_TXT_UNIT_TEMP_", FPSTR(txt_unit_temp));
-  unitPage.replace("_TXT_UNIT_MINTEMP_", FPSTR(txt_unit_mintemp));
-  unitPage.replace("_TXT_UNIT_MAXTEMP_", FPSTR(txt_unit_maxtemp));
-  unitPage.replace("_TXT_UNIT_STEPTEMP_", FPSTR(txt_unit_steptemp));
-  unitPage.replace("_TXT_UNIT_MODES_", FPSTR(txt_unit_modes));
-  unitPage.replace("_TXT_UNIT_PASSWORD_", FPSTR(txt_unit_password));
-  unitPage.replace("_TXT_F_CELSIUS_", FPSTR(txt_f_celsius));
-  unitPage.replace("_TXT_F_FH_", FPSTR(txt_f_fh));
-  unitPage.replace("_TXT_F_ALLMODES_", FPSTR(txt_f_allmodes));
-  unitPage.replace("_TXT_F_NOHEAT_", FPSTR(txt_f_noheat));
-  unitPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit));
-  unitPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit));
-  unitPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
-  // temp
-  if (config.unit.tempUnit == TempUnit::F) {
-    unitPage.replace(F("_TU_FAH_"), F("selected"));
-  } else {
-    unitPage.replace(F("_TU_CEL_"), F("selected"));
-  }
-  // mode
-  if (config.unit.supportHeatMode) {
-    unitPage.replace(F("_MD_ALL_"), F("selected"));
-  } else {
-    unitPage.replace(F("_MD_NONHEAT_"), F("selected"));
-  }
-  unitPage.replace(F("_LOGIN_PASSWORD_"), config.unit.login_password);
-  sendWrappedHTML(unitPage);
+  JsonDocument data;
+  data[F("min_temp")] = config.unit.minTemp.toString(config.unit.tempUnit);
+  data[F("max_temp")] = config.unit.maxTemp.toString(config.unit.tempUnit);
+  data[F("temp_step")] = config.unit.tempStep;
+  data[F("temp_unit_c")] = config.unit.tempUnit == TempUnit::C;
+  data[F("mode_selection_all")] = config.unit.supportHeatMode;
+  data[F("login_password")] = config.unit.login_password;
+  renderView(Ministache(views::unit), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleUnitPost() {
@@ -887,7 +865,8 @@ void handleUnitPost() {
   if (!server.arg("md").isEmpty()) {
     config.unit.supportHeatMode = server.arg("md") == "all";
   }
-  if (!server.arg("lpw").isEmpty()) {
+  if (server.hasArg("lpw")) {
+    // an empty value in "lpw" means we clear the password
     config.unit.login_password = server.arg("lpw");
   }
   if (!server.arg("temp_step").isEmpty()) {

@@ -16,21 +16,6 @@
 #pragma once
 #include <Arduino.h>
 
-// Main Menu
-const char txt_control[] PROGMEM = "Control";
-const char txt_setup[] PROGMEM = "Setup";
-const char txt_status[] PROGMEM = "Status";
-const char txt_firmware_upgrade[] PROGMEM = "Firmware Upgrade";
-const char txt_reboot[] PROGMEM = "Reboot";
-
-// Setup Menu
-const char txt_MQTT[] PROGMEM = "MQTT";
-const char txt_WIFI[] PROGMEM = "WIFI";
-const char txt_unit[] PROGMEM = "Unit";
-const char txt_others[] PROGMEM = "Others";
-const char txt_reset[] PROGMEM = "Reset configuration";
-const char txt_reset_confirm[] PROGMEM = "Do you really want to reset this unit?";
-
 // Buttons
 const char txt_back[] PROGMEM = "Back";
 const char txt_save[] PROGMEM = "Save & Reboot";
@@ -49,10 +34,6 @@ const char txt_f_quiet[] PROGMEM = "QUIET";
 const char txt_f_speed[] PROGMEM = "SPEED";
 const char txt_f_swing[] PROGMEM = "SWING";
 const char txt_f_pos[] PROGMEM = "POSITION";
-const char txt_f_celsius[] PROGMEM = "Celsius";
-const char txt_f_fh[] PROGMEM = "Fahrenheit";
-const char txt_f_allmodes[] PROGMEM = "All modes";
-const char txt_f_noheat[] PROGMEM = "All modes except heat";
 
 // Page Control
 const char txt_ctrl_title[] PROGMEM = "Control Unit";
@@ -64,25 +45,9 @@ const char txt_ctrl_vane[] PROGMEM = "Vane";
 const char txt_ctrl_wvane[] PROGMEM = "Wide Vane";
 const char txt_ctrl_ctemp[] PROGMEM = "Current temperature";
 
-// Page Unit
-const char txt_unit_title[] PROGMEM = "Unit configuration";
-const char txt_unit_temp[] PROGMEM = "Temperature unit";
-const char txt_unit_maxtemp[] PROGMEM = "Maximum temperature";
-const char txt_unit_mintemp[] PROGMEM = "Minimum temperature";
-const char txt_unit_steptemp[] PROGMEM = "Temperature step";
-const char txt_unit_modes[] PROGMEM = "Mode support";
-const char txt_unit_password[] PROGMEM = "Web password";
-
 // Page Login
 const char txt_login_title[] PROGMEM = "Authentication";
 const char txt_login_password[] PROGMEM = "Password";
 const char txt_login_sucess[] PROGMEM =
     "Login successful, you will be redirected in a few seconds.";
 const char txt_login_fail[] PROGMEM = "Wrong username/password! Try again.";
-
-// Page Init
-const char txt_init_title[] PROGMEM = "Initial setup";
-const char txt_init_reboot_mes[] PROGMEM =
-    "Rebooting and connecting to your WiFi network! You should see it listed "
-    "in on your access point.";
-const char txt_init_reboot[] PROGMEM = "Rebooting...";

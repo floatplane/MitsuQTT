@@ -123,53 +123,6 @@ const char html_page_control[] PROGMEM =
 ;
 // clang-format on
 
-const char html_page_unit[] PROGMEM =
-    // clang-format off
-"<div id='l1' name='l1'>"
-    "<fieldset>"
-        "<legend><b>&nbsp; _TXT_UNIT_TITLE_ &nbsp;</b></legend>"
-        "<form method='post'>"
-            "<p>"
-                "<b>_TXT_UNIT_TEMP_</b>"
-                "<select name='tu'>"
-                    "<option value='cel' _TU_CEL_>_TXT_F_CELSIUS_</option>"
-                    "<option value='fah' _TU_FAH_>_TXT_F_FH_</option>"
-                "</select>"
-            "</p>"
-            "<p><b>_TXT_UNIT_MINTEMP_</b>"
-                "<br/>"
-                "<input type='number' id='min_temp' name='min_temp' placeholder=' ' value='_MIN_TEMP_'>"
-            "</p>"
-            "<p><b>_TXT_UNIT_MAXTEMP_</b>"
-                "<br/>"
-                "<input type='number' id='max_temp' name='max_temp' placeholder=' ' value='_MAX_TEMP_'>"
-            "</p>"
-            "<p><b>_TXT_UNIT_STEPTEMP_</b>"
-                "<br/>"
-                "<input type='number' id='temp_step' step='0.1' name='temp_step' placeholder=' ' value='_TEMP_STEP_'>"
-            "</p>"
-            "<p>"
-                "<b>_TXT_UNIT_MODES_</b>"
-                "<select name='md'>"
-                    "<option value='all' _MD_ALL_>_TXT_F_ALLMODES_</option>"
-                    "<option value='nht' _MD_NONHEAT_>_TXT_F_NOHEAT_</option>"
-                "</select>"
-            "</p>"
-            "<p><b>_TXT_UNIT_PASSWORD_</b>"
-                "<br/>"
-                "<input id='lpw' name='lpw' type='password' placeholder=' ' value='_LOGIN_PASSWORD_'>"
-            "</p>"
-            "<br/>"
-            "<button name='save' type='submit' class='button bgrn'>_TXT_SAVE_</button>"
-        "</form>"
-    "</fieldset>"
-    "<p>"
-        "<a class='button' href='/setup' class='back'>_TXT_BACK_</a>"
-    "</p>"
-"</div>"
-;
-// clang-format on
-
 const char html_page_login[] PROGMEM =
     // clang-format off
 "<script>"
