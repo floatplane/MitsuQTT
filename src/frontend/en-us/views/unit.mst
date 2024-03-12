@@ -1,0 +1,46 @@
+{{> header}}
+<main>
+    <h2>Unit configuration</h2>
+    <form method='post'>
+        <p>
+            <b>Temperature unit</b>
+            <select name="tu">
+            <option value="cel"{{#temp_unit_c}} selected{{/temp_unit_c}}>Celsius</option>
+            <option value="fah"{{^temp_unit_c}} selected{{/temp_unit_c}}>Fahrenheit</option>
+            </select>
+        </p>
+        <p>
+            <b>Minimum temperature</b>
+            <br>
+            <input type="number" id="min_temp" name="min_temp" placeholder=" " value="{{min_temp}}">
+        </p>
+        <p>
+            <b>Maximum temperature</b>
+            <br>
+            <input type="number" id="max_temp" name="max_temp" placeholder=" " value="{{max_temp}}">
+        </p>
+        <p>
+            <b>Temperature step</b>
+            <br>
+            <input type="number" id="temp_step" step="0.1" name="temp_step" placeholder=" " value="{{temp_step}}">
+        </p>
+        <p>
+            <b>Mode support</b>
+            <select name="md">
+            <option value="all"{{#mode_selection_all}} selected{{/mode_selection_all}}>All modes</option>
+            <option value="nht"{{^mode_selection_all}} selected{{/mode_selection_all}}>All modes except heat</option>
+            </select>
+        </p>
+        <p>
+            <b>Web password</b>
+            <br>
+            <input id="lpw" name="lpw" type="password" placeholder=" " value="{{login_password}}">
+        </p>
+        <br/>
+        <div class="buttons">
+            <a class="buttonLink" href='/setup'>&lt; Back</a>
+            <button name='save' type='submit' class='button bgrn'>Save & Reboot</button>
+        </div>
+    </form>
+</main>
+{{> footer}}

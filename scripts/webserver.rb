@@ -119,6 +119,22 @@ server.mount_proc '/' do |req, res|
         wifi_access_point: "the_ssid",
         wifi_signal_strength: "-66",
     })
+    when "/unit" then res.body = render("unit", {
+        min_temp: "16",
+        max_temp: "30",
+        temp_step: "0.5",
+        temp_unit_c: true,
+        mode_selection_all: true,
+        login_password: "",
+    })
+    when "/unit_alt" then res.body = render("unit", {
+        min_temp: "55",
+        max_temp: "72",
+        temp_step: "1",
+        temp_unit_c: false,
+        mode_selection_all: false,
+        login_password: "abc123",
+    })
     when "/upgrade" then res.body = render("upgrade")
     when "/upload" then res.body = render("upload")
     when "/wifi" then res.body = render("wifi", {access_point: "the_ssid", hostname: "the_hostname", password: "abc123"})

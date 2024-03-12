@@ -30,6 +30,7 @@ extern const __FlashStringHelper *reboot;
 extern const __FlashStringHelper *reset;
 extern const __FlashStringHelper *setup;
 extern const __FlashStringHelper *status;
+extern const __FlashStringHelper *unit;
 extern const __FlashStringHelper *upgrade;
 extern const __FlashStringHelper *upload;
 extern const __FlashStringHelper *wifi;
