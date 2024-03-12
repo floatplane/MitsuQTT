@@ -25,6 +25,7 @@ INCTXT(setup, "src/frontend/" STRINGIFY(LANGUAGE) "/views/setup.mst");
 INCTXT(status, "src/frontend/" STRINGIFY(LANGUAGE) "/views/status.mst");
 INCTXT(upgrade, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upgrade.mst");
 INCTXT(upload, "src/frontend/" STRINGIFY(LANGUAGE) "/views/upload.mst");
+INCTXT(wifi, "src/frontend/" STRINGIFY(LANGUAGE) "/views/wifi.mst");
 
 INCTXT(css, "src/frontend/statics/mvp.css");
 
@@ -58,6 +59,7 @@ const __FlashStringHelper *setup = FPSTR(setupData);
 const __FlashStringHelper *status = FPSTR(statusData);
 const __FlashStringHelper *upgrade = FPSTR(upgradeData);
 const __FlashStringHelper *upload = FPSTR(uploadData);
+const __FlashStringHelper *wifi = FPSTR(wifiData);
 };  // namespace views
 
 namespace statics {
