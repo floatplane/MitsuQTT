@@ -1,0 +1,24 @@
+{{> header}}
+<main>
+    <h2>Wifi settings</h2>
+    <form method='post'>
+        <p><b>Hostname</b>
+            <br/>
+            <input id='hn' name='hn' placeholder=' ' value='{{hostname}}' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false'>
+        </p>
+        <p><b>Wifi network</b>
+            <br/>
+            <input id='ssid' name='ssid' placeholder=' ' value='{{access_point}}' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false'>
+        </p>
+        <p><b>Network password</b>
+            <br/>
+            <input id='psk' name='psk' type="password" placeholder=' ' value='{{password}}' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false'>
+        </p>
+        <br/>
+        <div class="buttons">
+            <a class="buttonLink" href='/setup'>&lt; Back</a>
+            <button name='save' type='submit' class='button bgrn'>Save & Reboot</button>
+        </div>
+    </form>
+</main>
+{{> footer}}

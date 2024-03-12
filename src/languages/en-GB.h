@@ -54,13 +54,6 @@ const char txt_f_fh[] PROGMEM = "Fahrenheit";
 const char txt_f_allmodes[] PROGMEM = "All modes";
 const char txt_f_noheat[] PROGMEM = "All modes except heat";
 
-// Page WIFI
-const char txt_wifi_title[] PROGMEM = "WIFI Parameters";
-const char txt_wifi_hostname[] PROGMEM = "Hostname";
-const char txt_wifi_SSID[] PROGMEM = "SSID";
-const char txt_wifi_psk[] PROGMEM = "PSK";
-const char txt_wifi_otap[] PROGMEM = "OTA Password";
-
 // Page Control
 const char txt_ctrl_title[] PROGMEM = "Control Unit";
 const char txt_ctrl_temp[] PROGMEM = "Temperature";

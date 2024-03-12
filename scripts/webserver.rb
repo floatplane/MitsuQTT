@@ -121,6 +121,7 @@ server.mount_proc '/' do |req, res|
     })
     when "/upgrade" then res.body = render("upgrade")
     when "/upload" then res.body = render("upload")
+    when "/wifi" then res.body = render("wifi", {access_point: "the_ssid", hostname: "the_hostname", password: "abc123"})
         
     else
         res.body = "not found"

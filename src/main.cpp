@@ -378,7 +378,7 @@ void setup() {
     server.on(F("/metrics"), handleMetrics);
     server.on(F("/metrics.json"), handleMetricsJson);
     server.on(F("/css"), HTTPMethod::HTTP_GET, []() {
-      // We use the git_hash as a query param on the CSS request, so we can
+      // We always add the git_hash as a query param on the CSS request, so we can
       // use a very long cache expiry here. This makes browsing way faster.
       server.sendHeader(F("Cache-Control"), F("public, max-age=604800, immutable"));
       server.send(200, F("text/css"), statics::css);
@@ -935,21 +935,12 @@ void handleWifi() {
     saveWifiConfig(config);
     rebootAndSendPage();
   } else {
-    String wifiPage = FPSTR(html_page_wifi);
-    String str_ap_ssid = config.network.accessPointSsid;
-    String str_ap_pwd = config.network.accessPointPassword;
-    str_ap_ssid.replace("'", F("&apos;"));
-    str_ap_pwd.replace("'", F("&apos;"));
-    wifiPage.replace("_TXT_SAVE_", FPSTR(txt_save));
-    wifiPage.replace("_TXT_BACK_", FPSTR(txt_back));
-    wifiPage.replace("_TXT_WIFI_TITLE_", FPSTR(txt_wifi_title));
-    wifiPage.replace("_TXT_WIFI_HOST_", FPSTR(txt_wifi_hostname));
-    wifiPage.replace("_TXT_WIFI_SSID_", FPSTR(txt_wifi_SSID));
-    wifiPage.replace("_TXT_WIFI_PSK_", FPSTR(txt_wifi_psk));
-    wifiPage.replace("_TXT_WIFI_OTAP_", FPSTR(txt_wifi_otap));
-    wifiPage.replace(F("_SSID_"), str_ap_ssid);
-    wifiPage.replace(F("_PSK_"), str_ap_pwd);
-    sendWrappedHTML(wifiPage);
+    JsonDocument data;
+    data[F("access_point")] = config.network.accessPointSsid;
+    data[F("hostname")] = config.network.hostname;
+    data[F("password")] = config.network.accessPointPassword;
+    renderView(Ministache(views::wifi), data,
+               {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 

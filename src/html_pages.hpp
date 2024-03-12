@@ -16,39 +16,6 @@
 #pragma once
 #include <Arduino.h>
 
-const char html_page_wifi[] PROGMEM =
-    // clang-format off
-"<div id='l1' name='l1'>"
-    "<fieldset>"
-        "<legend><b>&nbsp; _TXT_WIFI_TITLE_ &nbsp;</b></legend>"
-        "<form method='post'>"
-            "<p><b>_TXT_WIFI_HOST_</b>"
-                "<br/>"
-                "<input id='hn' "
-                "autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' "
-                " name='hn' placeholder=' ' value='_UNIT_NAME_'>"
-            "</p>"
-            "<p><b>_TXT_WIFI_SSID_</b>"
-                "<br/>"
-                "<input id='ssid' "
-                "autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' "
-                "name='ssid' placeholder=' ' value='_SSID_'>"
-            "</p>"
-            "<p><b>_TXT_WIFI_PSK_</b>"
-                "<br/>"
-                "<input id='psk' type='password' name='psk' placeholder=' ' value='_PSK_'>"
-            "</p>"
-            "<br/>"
-            "<button name='save' type='submit' class='button bgrn'>_TXT_SAVE_</button>"
-        "</form>"
-    "</fieldset>"
-    "<p>"
-        "<a class='button back' href='/setup'>_TXT_BACK_</a>"
-    "</p>"
-"</div>"
-;
-// clang-format on
-
 const char html_page_control[] PROGMEM =
     // clang-format off
 "<h2>_TXT_CTRL_CTEMP_ _ROOMTEMP_&#176;</h2>"

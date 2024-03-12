@@ -32,6 +32,7 @@ extern const __FlashStringHelper *setup;
 extern const __FlashStringHelper *status;
 extern const __FlashStringHelper *upgrade;
 extern const __FlashStringHelper *upload;
+extern const __FlashStringHelper *wifi;
 };  // namespace views
 
 namespace statics {

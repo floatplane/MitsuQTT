@@ -4,21 +4,21 @@
     <form method='post' action='save'>
         <p><b>Hostname</b>
             <br/>
-            <input id='hn' name='hn' placeholder=' ' value='{{hostname}}'>
+            <input id='hn' name='hn' placeholder=' ' value='{{hostname}}' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false'>
         </p>
-        <p><b>SSID</b> ()
+        <p><b>Wifi network</b>
             <br/>
-            <input id='ssid' name='ssid' placeholder=' '>
+            <input id='ssid' name='ssid' placeholder=' ' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false'>
         </p>
-        <p><b>PSK</b> ()
+        <p><b>Network password</b>
             <br/>
-            <input id='psk' name='psk' placeholder=' '>
+            <input id='psk' name='psk' placeholder=' ' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false'>
         </p>
         <br/>
         <div class="buttons">
             <button name='submit' type='submit' class='button bgrn'>Save & Reboot</button>
             <a class="buttonLink" href="/reboot">Reboot</a>
-        </div
+        </div>
     </form>
 </main>
 {{> footer}}
