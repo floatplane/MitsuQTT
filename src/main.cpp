@@ -1247,15 +1247,7 @@ void handleLogin() {
     if (is_authenticated() or config.unit.login_password.length() == 0) {
       server.sendHeader("Location", "/");
       server.sendHeader("Cache-Control", "no-cache");
-      // use javascript in the case browser disable redirect
-      String redirectPage = F("<html lang=\"en\" class=\"\"><head><meta charset='utf-8'>");
-      redirectPage += F("<script>");
-      redirectPage += F("setTimeout(function () {");
-      redirectPage += F("window.location.href= '/';");
-      redirectPage += F("}, 1000);");
-      redirectPage += F("</script>");
-      redirectPage += F("</body></html>");
-      server.send(httpFound, F("text/html"), redirectPage);
+      server.send(httpFound, F("text/plain"), "Redirect to home page");
       return;
     }
   }
@@ -1930,15 +1922,7 @@ bool checkLogin() {
   if (!is_authenticated() and config.unit.login_password.length() > 0) {
     server.sendHeader("Location", "/login");
     server.sendHeader("Cache-Control", "no-cache");
-    // use javascript in the case browser disable redirect
-    String redirectPage = F("<html lang=\"en\" class=\"\"><head><meta charset='utf-8'>");
-    redirectPage += F("<script>");
-    redirectPage += F("setTimeout(function () {");
-    redirectPage += F("window.location.href= '/login';");
-    redirectPage += F("}, 1000);");
-    redirectPage += F("</script>");
-    redirectPage += F("</body></html>");
-    server.send(httpFound, F("text/html"), redirectPage);
+    server.send(httpFound, F("text/plain"), "Login required");
     return false;
   }
   return true;
