@@ -865,7 +865,8 @@ void handleUnitPost() {
   if (!server.arg("md").isEmpty()) {
     config.unit.supportHeatMode = server.arg("md") == "all";
   }
-  if (!server.arg("lpw").isEmpty()) {
+  if (server.hasArg("lpw")) {
+    // an empty value in "lpw" means we clear the password
     config.unit.login_password = server.arg("lpw");
   }
   if (!server.arg("temp_step").isEmpty()) {
