@@ -122,36 +122,3 @@ const char html_page_control[] PROGMEM =
 "</script>"
 ;
 // clang-format on
-
-const char html_page_login[] PROGMEM =
-    // clang-format off
-"<script>"
-    "var loginSucess = _LOGIN_SUCCESS_;"
-    "document.onreadystatechange = function() {"
-        "if (document.readyState === 'complete') {"
-            "if (loginSucess == 1) {"
-                "var element = document.getElementById('login_form');"
-                "element.parentNode.removeChild(element);"
-            "}"
-        "}"
-    "}"
-"</script>"
-"<div id='login_form' name='login_form'>"
-    "<fieldset>"
-        "<legend><b>&nbsp; _TXT_LOGIN_TITLE_ &nbsp;</b></legend>"
-        "<form action='/login' method='post'>"
-            "<p><b>_TXT_LOGIN_PASSWORD_</b>"
-                "<input type='password' name='PASSWORD' placeholder='_TXT_LOGIN_PASSWORD_'>"
-            "</p>"
-            "<br/>"
-            "<button name='SUBMIT' type='submit' class='button bgrn'>_TXT_LOGIN_</button>"
-        "</form>"
-        "<!-- <br> You can go to <a href='/status'>status page</a>-->"
-        "<br>"
-    "</fieldset>"
-"</div>"
-"<div>"
-    "_LOGIN_MSG_"
-"</div>"
-;
-// clang-format on

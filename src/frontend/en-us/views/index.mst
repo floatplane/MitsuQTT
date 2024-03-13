@@ -15,7 +15,7 @@
         <button>Firmware Upgrade</button>
     </form>
     {{#showLogout}}
-    <form action='/login?LOGOUT=YES' method='post'>
+    <form action='/logout' method='post'>
         <button type='submit' name='Logout'>Logout</button>
     </form>
     {{/showLogout}}

@@ -385,9 +385,11 @@ void setup() {
     });
     server.onNotFound(handleNotFound);
     if (config.unit.login_password.length() > 0) {
-      server.on(F("/login"), handleLogin);
+      server.on(F("/login"), HTTPMethod::HTTP_GET, handleLogin);
+      server.on(F("/login"), HTTPMethod::HTTP_POST, handleAuth);
+      server.on(F("/logout"), HTTPMethod::HTTP_POST, handleLogout);
       // here the list of headers to be recorded, use for authentication
-      const char *headerkeys[] = {"User-Agent", "Cookie"};
+      const char *headerkeys[] = {"Cookie"};
       const size_t headerkeyssize = sizeof(headerkeys) / sizeof(char *);
       // ask server to track these headers
       server.collectHeaders(headerkeys, headerkeyssize);
@@ -1203,56 +1205,43 @@ void handleMetricsJson() {
   server.send(HttpStatusCodes::httpOk, F("application/json"), response);
 }
 
-// login page, also called for logout
+// Render the login form
 void handleLogin() {
   LOG(F("handleLogin()"));
 
-  bool loginSuccess = false;
-  String msg{};
-  String loginPage = FPSTR(html_page_login);
-  loginPage.replace("_TXT_LOGIN_TITLE_", FPSTR(txt_login_title));
-  loginPage.replace("_TXT_LOGIN_PASSWORD_", FPSTR(txt_login_password));
-  loginPage.replace("_TXT_LOGIN_", FPSTR(txt_login));
+  JsonDocument data;
+  data[F("authError")] = server.hasArg("authError");
+  renderView(Ministache(views::login), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
+}
 
-  if (server.hasArg("PASSWORD") || server.hasArg("LOGOUT")) {
-    if (server.hasArg("LOGOUT")) {
-      // logout
-      server.sendHeader("Cache-Control", "no-cache");
-      server.sendHeader("Set-Cookie", "M2MSESSIONID=0");
-      loginSuccess = false;
-    }
-    if (server.hasArg("PASSWORD")) {
-      if (server.arg("PASSWORD") == config.unit.login_password) {
-        server.sendHeader("Cache-Control", "no-cache");
-        server.sendHeader("Set-Cookie", "M2MSESSIONID=1");
-        loginSuccess = true;
-        msg = F("<span style='color:#47c266;font-weight:bold;'>");
-        msg += FPSTR(txt_login_sucess);
-        msg += F("<span>");
-        loginPage += F("<script>");
-        loginPage += F("setTimeout(function () {");
-        loginPage += F("window.location.href= '/';");
-        loginPage += F("}, 3000);");
-        loginPage += F("</script>");
-        // Log in Successful;
-      } else {
-        msg = F("<span style='color:#d43535;font-weight:bold;'>");
-        msg += FPSTR(txt_login_fail);
-        msg += F("</span>");
-        // Log in Failed;
-      }
-    }
+// Handle the auth via POST
+// If the password is correct, set the session cookie and redirect to the home page
+// If the password is incorrect, redirect back to the login page with an error message
+void handleAuth() {
+  LOG(F("handleAuth()"));
+
+  if (server.hasArg("PASSWORD") && server.arg("PASSWORD") == config.unit.login_password) {
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("Set-Cookie", "M2MSESSIONID=1");
+    server.sendHeader("Location", "/");
+    server.send(httpFound, F("text/plain"), "Redirect to home page");
   } else {
-    if (is_authenticated() or config.unit.login_password.length() == 0) {
-      server.sendHeader("Location", "/");
-      server.sendHeader("Cache-Control", "no-cache");
-      server.send(httpFound, F("text/plain"), "Redirect to home page");
-      return;
-    }
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("Set-Cookie", "M2MSESSIONID=0");
+    server.sendHeader("Location", "/login?authError");
+    server.send(httpFound, F("text/plain"), "Redirect to login");
   }
-  loginPage.replace(F("_LOGIN_SUCCESS_"), String(loginSuccess ? 1 : 0));
-  loginPage.replace(F("_LOGIN_MSG_"), msg);
-  sendWrappedHTML(loginPage);
+}
+
+// Handle logout via POST
+void handleLogout() {
+  LOG(F("handleLogout()"));
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.sendHeader("Set-Cookie", "M2MSESSIONID=0");
+  server.sendHeader("Location", "/login");
+  server.send(httpFound, F("text/plain"), "Redirect to login");
 }
 
 void handleUpgrade() {

@@ -44,10 +44,3 @@ const char txt_ctrl_fan[] PROGMEM = "Fan";
 const char txt_ctrl_vane[] PROGMEM = "Vane";
 const char txt_ctrl_wvane[] PROGMEM = "Wide Vane";
 const char txt_ctrl_ctemp[] PROGMEM = "Current temperature";
-
-// Page Login
-const char txt_login_title[] PROGMEM = "Authentication";
-const char txt_login_password[] PROGMEM = "Password";
-const char txt_login_sucess[] PROGMEM =
-    "Login successful, you will be redirected in a few seconds.";
-const char txt_login_fail[] PROGMEM = "Wrong username/password! Try again.";

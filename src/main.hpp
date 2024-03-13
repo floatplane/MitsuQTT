@@ -27,6 +27,8 @@ void handleOthers();
 void handleMetrics();
 void handleMetricsJson();
 void handleLogin();
+void handleAuth();
+void handleLogout();
 void handleUpgrade();
 void handleUploadDone();
 void handleUploadLoop();

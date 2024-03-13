@@ -15,6 +15,7 @@ INCTXT(captiveIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/index.m
 INCTXT(captiveReboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/reboot.mst");
 INCTXT(captiveSave, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/save.mst");
 INCTXT(index, "src/frontend/" STRINGIFY(LANGUAGE) "/views/index.mst");
+INCTXT(login, "src/frontend/" STRINGIFY(LANGUAGE) "/views/login.mst");
 INCTXT(metrics, "src/frontend/" STRINGIFY(LANGUAGE) "/views/metrics.mst");
 INCTXT(mqttIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/index.mst");
 INCTXT(mqttTextField, "src/frontend/" STRINGIFY(LANGUAGE) "/views/mqtt/_text_field.mst");
@@ -46,6 +47,7 @@ const __FlashStringHelper *save = FPSTR(captiveSaveData);
 }  // namespace captive
 
 const __FlashStringHelper *index = FPSTR(indexData);
+const __FlashStringHelper *login = FPSTR(loginData);
 const __FlashStringHelper *metrics = FPSTR(metricsData);
 
 namespace mqtt {
