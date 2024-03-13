@@ -89,11 +89,8 @@
 <script>
     function submitForm(e) {
         e.preventDefault();
-        
-        const data = new FormData(e.currentTarget);
-        console.log('Submitting form data', e, data);
         document.getElementById('delayWarning').style.visibility = 'visible';
-        fetch('/control_new', {
+        fetch(window.location.pathname, {
             method: 'POST',
             body: new FormData(e.currentTarget),
             cache: 'no-cache',
@@ -101,14 +98,9 @@
             mode: 'same-origin',
             redirect: 'manual',
         }).then((response) => {
-            console.log('success')
-            if (response.ok) {
-                return response.text();
-            } else {
-                throw new Error('Something went wrong');
+            if (!response.ok) {
+                throw new Error(`Unexpected response: ${response.status} ${response.statusText}`);
             }
-        }).then((text) => {
-            console.log('Submit succeeded:', text);
         }).catch((error) => {
             console.error('Submit failed:', error);
         });
