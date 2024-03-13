@@ -1,0 +1,15 @@
+{{> header}}
+<main>
+    <h2>Authentication</h2>
+    <form method='post'>
+        <p><b>Password</b>
+            <br/>
+            <input type='password' name='PASSWORD' placeholder='password'>
+        </p>
+        {{#authError}}
+        <span style='color:#d43535;font-weight:bold;'>Incorrect password</span>
+        {{/authError}}
+        <button type='submit' class='button bgrn'>Login</button>
+    </form>
+</main>
+{{> footer}}
