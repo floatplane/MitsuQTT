@@ -1214,16 +1214,15 @@ void handleLogin() {
   loginPage.replace("_TXT_LOGIN_PASSWORD_", FPSTR(txt_login_password));
   loginPage.replace("_TXT_LOGIN_", FPSTR(txt_login));
 
-  if (server.hasArg("USERNAME") || server.hasArg("PASSWORD") || server.hasArg("LOGOUT")) {
+  if (server.hasArg("PASSWORD") || server.hasArg("LOGOUT")) {
     if (server.hasArg("LOGOUT")) {
       // logout
       server.sendHeader("Cache-Control", "no-cache");
       server.sendHeader("Set-Cookie", "M2MSESSIONID=0");
       loginSuccess = false;
     }
-    if (server.hasArg("USERNAME") && server.hasArg("PASSWORD")) {
-      if (server.arg("USERNAME") == "admin" &&
-          server.arg("PASSWORD") == config.unit.login_password) {
+    if (server.hasArg("PASSWORD")) {
+      if (server.arg("PASSWORD") == config.unit.login_password) {
         server.sendHeader("Cache-Control", "no-cache");
         server.sendHeader("Set-Cookie", "M2MSESSIONID=1");
         loginSuccess = true;
