@@ -17,6 +17,7 @@ extern const __FlashStringHelper *reboot;
 extern const __FlashStringHelper *save;
 }  // namespace captive
 
+extern const __FlashStringHelper *control;
 extern const __FlashStringHelper *index;
 extern const __FlashStringHelper *login;
 extern const __FlashStringHelper *metrics;

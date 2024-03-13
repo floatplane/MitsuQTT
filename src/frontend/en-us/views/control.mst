@@ -1,0 +1,112 @@
+{{> header}}
+<script>
+    function setTemp(b) {
+        var t = document.getElementById('TEMP');
+        if (b && t.value < {{max_temp}}) {
+            t.value = Number(t.value) + 1;
+        } else if (!b && t.value > {{min_temp}}) {
+            t.value = Number(t.value) - 1;
+        }
+        // Important: use requestSubmit so that submit handler gets invoked
+        document.getElementById('temperatureForm').requestSubmit();
+    }
+</script>
+<main>
+    <h2>Control</h2>
+    <form class="controlForm" id='temperatureForm' style='display:inline' method="POST">
+        <p>
+            <b>Current temperature</b>  {{current_temp}} &#176;{{temp_unit}}</br>
+            <div style="display: flex; flex-flow: row nowrap; gap: 0.5rem; align-items: stretch">
+            <button onclick='setTemp(0)' class='temp bgrn' style="margin: 0; padding: 0 8px; flex: 0 1 0">-</button>
+            <input name='TEMP' id='TEMP' type='number' value='{{target_temp}}' style="margin-bottom: 0" />
+            <button onclick='setTemp(1)' class='temp bgrn' style="margin: 0; padding: 0 8px; flex: 0 1 0">+</button>
+            </div>
+        </p>
+    </form>
+    <form class="controlForm" onchange='return submitForm(event);' method='POST'>
+        <p>
+            <b>Power</b>
+            <select name='POWER'>
+                <option value='ON' {{#power}}selected{{/power}}>ON</option>
+                <option value='OFF' {{^power}}selected{{/power}}>OFF</option>
+            </select>
+        </p>
+        <p>
+            <b>Mode</b>
+            <select name='MODE' id='MODE'>
+                <option value='AUTO' {{#mode.auto}}selected{{/mode.auto}}>&#9851; AUTO</option>
+                <option value='DRY' {{#mode.dry}}selected{{/mode.dry}}>&#128167; DRY</option>
+                <option value='COOL' {{#mode.cool}}selected{{/mode.cool}}>&#10052;&#65039; COOL</option>
+                <option value='HEAT' {{#mode.heat}}selected{{/mode.heat}} {{^supportHeatMode}}disabled{{/supportHeatMode}}>&#9728;&#65039; HEAT</option>
+                <option value='FAN' {{#mode.fan}}selected{{/mode.fan}}>&#10051; FAN</option>
+            </select>
+        </p>
+        <p>
+            <b>Fan</b>
+            <select name='FAN'>
+                <option value='AUTO' {{#fan.auto}}selected{{/fan.auto}}>&#9851; AUTO</option>
+                <option value='QUIET' {{#fan.quiet}}selected{{/fan.quiet}}>.... QUIET</option>
+                <option value='1' {{#fan.1}}selected{{/fan.1}}>...: SPEED 1</option>
+                <option value='2' {{#fan.2}}selected{{/fan.2}}>..:: SPEED 2</option>
+                <option value='3' {{#fan.3}}selected{{/fan.3}}>.::: SPEED 3</option>
+                <option value='4' {{#fan.4}}selected{{/fan.4}}>:::: SPEED 4</option>
+            </select>
+        </p>
+        <p>
+            <b>Vane</b>
+            <select name='VANE'>
+                <option value='AUTO' {{#vane.auto}}selected{{/vane.auto}}>&#9851; AUTO</option>
+                <option value='SWING' {{#vane.swing}}selected{{/vane.swing}}>&#9887; SWING</option>
+                <option value='1' {{#vane.1}}selected{{/vane.1}}>&#10143; POSITION 1</option>
+                <option value='2' {{#vane.2}}selected{{/vane.2}}>&#10143; POSITION 2</option>
+                <option value='3' {{#vane.3}}selected{{/vane.3}}>&#10143; POSITION 3</option>
+                <option value='4' {{#vane.4}}selected{{/vane.4}}>&#10143; POSITION 4</option>
+                <option value='5' {{#vane.5}}selected{{/vane.5}}>&#10143; POSITION 5</option>
+            </select>
+        </p>
+        <p>
+            <b>Wide Vane</b>
+            <select name='WIDEVANE'>
+                <option value='SWING' {{#widevane.swing}}selected{{/widevane.swing}}>&#9887; SWING</option>
+                <option value='<<' {{#widevane.1}}selected{{/widevane.1}}>
+                    << POSITION 1 </option>
+                <option value='<' {{#widevane.2}}selected{{/widevane.2}}>
+                    < POSITION 2 </option>
+                <option value='|' {{#widevane.3}}selected{{/widevane.3}}>| POSITION 3</option>
+                <option value='>' {{#widevane.4}}selected{{/widevane.4}}>> POSITION 4</option>
+                <option value='>>' {{#widevane.5}}selected{{/widevane.5}}>>> POSITION 5</option>
+                <option value='<>' {{#widevane.6}}selected{{/widevane.6}}>
+                    <> POSITION 6
+                </option>
+            </select>
+        </p>
+    </form>
+    <p id="delayWarning" style="visibility: hidden;">Note: changes may take up to 30 seconds to be synced to the heat pump</p>
+    <div class="buttons">
+        <a class="buttonLink" href='/'>&lt; Back</a>
+    </div>
+</main>
+<script>
+    function submitForm(e) {
+        e.preventDefault();
+        document.getElementById('delayWarning').style.visibility = 'visible';
+        fetch(window.location.pathname, {
+            method: 'POST',
+            body: new FormData(e.currentTarget),
+            cache: 'no-cache',
+            credentials: 'same-origin',
+            mode: 'same-origin',
+            redirect: 'manual',
+        }).then((response) => {
+            if (!response.ok) {
+                throw new Error(`Unexpected response: ${response.status} ${response.statusText}`);
+            }
+        }).catch((error) => {
+            console.error('Submit failed:', error);
+        });
+    }
+    document.querySelectorAll(".controlForm").forEach((form) => {
+        form.addEventListener('submit', submitForm);
+    });
+</script>
+{{> footer}}
