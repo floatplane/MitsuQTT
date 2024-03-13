@@ -1159,17 +1159,12 @@ void handleControlPost() {
 
   LOG(F("handleControlPost()"));
 
-  // Apply changes
+  // Apply changes and try to flush them
   HeatpumpSettings settings(hp.getSettings());
   settings = change_states(settings);
-
-  // Sync the heatpump after changes
   hp.sync();
 
-  // Redirect to GET page
-  server.sendHeader("Location", "/control_new");
-  server.sendHeader("Cache-Control", "no-cache");
-  server.send(httpFound);
+  server.send(httpOk);
 }
 
 void handleControl() {  // NOLINT(readability-function-cognitive-complexity)

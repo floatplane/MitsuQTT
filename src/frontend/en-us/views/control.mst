@@ -7,12 +7,13 @@
         } else if (!b && t.value > {{min_temp}}) {
             t.value = Number(t.value) - 1;
         }
-        document.getElementById('temperatureForm').submit();
+        // Important: use requestSubmit so that submit handler gets invoked
+        document.getElementById('temperatureForm').requestSubmit();
     }
 </script>
 <main>
     <h2>Control</h2>
-    <form id='temperatureForm' style='display:inline' method="POST">
+    <form class="controlForm" id='temperatureForm' style='display:inline' method="POST">
         <p>
             <b>Current temperature</b>  {{current_temp}} &#176;{{temp_unit}}</br>
             <div style="display: flex; flex-flow: row nowrap; gap: 0.5rem; align-items: stretch">
@@ -22,7 +23,7 @@
             </div>
         </p>
     </form>
-    <form onchange='this.submit()' method='POST'>
+    <form class="controlForm" onchange='return submitForm(event);' method='POST'>
         <p>
             <b>Power</b>
             <select name='POWER'>
@@ -84,4 +85,34 @@
         <a class="buttonLink" href='/'>&lt; Back</a>
     </div>
 </main>
+<script>
+    function submitForm(e) {
+        e.preventDefault();
+        
+        const data = new FormData(e.currentTarget);
+        console.log('Submitting form data', e, data);
+        fetch('/control_new', {
+            method: 'POST',
+            body: new FormData(e.currentTarget),
+            cache: 'no-cache',
+            credentials: 'same-origin',
+            mode: 'same-origin',
+            redirect: 'manual',
+        }).then((response) => {
+            console.log('success')
+            if (response.ok) {
+                return response.text();
+            } else {
+                throw new Error('Something went wrong');
+            }
+        }).then((text) => {
+            console.log('Submit succeeded:', text);
+        }).catch((error) => {
+            console.error('Submit failed:', error);
+        });
+    }
+    document.querySelectorAll(".controlForm").forEach((form) => {
+        form.addEventListener('submit', submitForm);
+    });
+</script>
 {{> footer}}
