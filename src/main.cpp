@@ -1209,6 +1209,13 @@ void handleMetricsJson() {
 void handleLogin() {
   LOG(F("handleLogin()"));
 
+  // Don't render the login form if login is not required; just redirect back to the home page
+  if (is_authenticated() || config.unit.login_password.length() == 0) {
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("Location", "/");
+    server.send(httpFound, F("text/plain"), "Redirect to home page");
+  }
+
   JsonDocument data;
   data[F("authError")] = server.hasArg("authError");
   renderView(Ministache(views::login), data,
