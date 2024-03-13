@@ -81,6 +81,7 @@
             </select>
         </p>
     </form>
+    <p id="delayWarning" style="visibility: hidden;">Note: changes may take up to 30 seconds to be synced to the heat pump</p>
     <div class="buttons">
         <a class="buttonLink" href='/'>&lt; Back</a>
     </div>
@@ -91,6 +92,7 @@
         
         const data = new FormData(e.currentTarget);
         console.log('Submitting form data', e, data);
+        document.getElementById('delayWarning').style.visibility = 'visible';
         fetch('/control_new', {
             method: 'POST',
             body: new FormData(e.currentTarget),
