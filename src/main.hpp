@@ -32,7 +32,6 @@ void handleLogout();
 void handleUpgrade();
 void handleUploadDone();
 void handleUploadLoop();
-void handleControl();
 void handleControlGet();
 void handleControlPost();
 void initMqtt();

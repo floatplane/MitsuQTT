@@ -41,18 +41,12 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
 #include "filesystem.hpp"
+#include "frontend/templates.hpp"
 #include "logger.hpp"
 #include "main.hpp"
-#include "timer.hpp"
-
-// BEGIN include the contents of config.h
-#ifndef LANG_PATH
-#define LANG_PATH "languages/en-GB.h"  // default language English
-#endif
-
-#include "frontend/templates.hpp"
 #include "ministache.hpp"
 #include "moment.hpp"
+#include "timer.hpp"
 #include "views/mqtt/strings.hpp"
 
 using ministache::Ministache;
@@ -263,9 +257,6 @@ const PROGMEM uint32_t HP_MAX_RETRIES =
 // seconds, about 17 minutes.
 
 // END include the contents of config.h
-
-// Languages
-#include LANG_PATH  // defined in config.h
 
 // wifi, mqtt and heatpump client instances
 WiFiClient espClient;
