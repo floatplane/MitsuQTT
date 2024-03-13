@@ -14,6 +14,7 @@ INCTXT(autoconfig, "src/frontend/" STRINGIFY(LANGUAGE) "/views/autoconfig.mst");
 INCTXT(captiveIndex, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/index.mst");
 INCTXT(captiveReboot, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/reboot.mst");
 INCTXT(captiveSave, "src/frontend/" STRINGIFY(LANGUAGE) "/views/captive/save.mst");
+INCTXT(control, "src/frontend/" STRINGIFY(LANGUAGE) "/views/control.mst");
 INCTXT(index, "src/frontend/" STRINGIFY(LANGUAGE) "/views/index.mst");
 INCTXT(login, "src/frontend/" STRINGIFY(LANGUAGE) "/views/login.mst");
 INCTXT(metrics, "src/frontend/" STRINGIFY(LANGUAGE) "/views/metrics.mst");
@@ -46,6 +47,7 @@ const __FlashStringHelper *reboot = FPSTR(captiveRebootData);
 const __FlashStringHelper *save = FPSTR(captiveSaveData);
 }  // namespace captive
 
+const __FlashStringHelper *control = FPSTR(controlData);
 const __FlashStringHelper *index = FPSTR(indexData);
 const __FlashStringHelper *login = FPSTR(loginData);
 const __FlashStringHelper *metrics = FPSTR(metricsData);

@@ -90,6 +90,28 @@ server.mount_proc '/' do |req, res|
     })
 
     when "/" then res.body = render("index")
+    when "/control" then res.body = render("control", {
+        min_temp: "16",
+        current_temp: "20.1",
+        target_temp: "22",
+        max_temp: "30",
+        temp_step: "0.5",
+        temp_unit: "C",
+        supportHeatMode: false,
+        power: true,
+        mode: {
+            cool: true,
+        },
+        fan: {
+            "3": true,
+        },
+        vane: {
+            auto: true,
+        },
+        widevane: {
+            "1": true,
+        },
+    })
     when "/others" then res.body = render("others", {
         topic: "the_topic",
         dumpPacketsToMqtt: true,

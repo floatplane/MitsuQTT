@@ -33,6 +33,8 @@ void handleUpgrade();
 void handleUploadDone();
 void handleUploadLoop();
 void handleControl();
+void handleControlGet();
+void handleControlPost();
 void initMqtt();
 void initCaptivePortal();
 void hpPacketDebug(byte *packet_, unsigned int length, char *packetDirection_);

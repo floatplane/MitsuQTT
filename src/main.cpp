@@ -367,7 +367,9 @@ void setup() {
     LOG(F("Starting Mitsubishi2MQTT"));
     // Web interface
     server.on(F("/"), handleRoot);
-    server.on(F("/control"), handleControl);
+    server.on(F("/control"), HTTPMethod::HTTP_GET, handleControl);
+    server.on(F("/control_new"), HTTPMethod::HTTP_GET, handleControlGet);
+    server.on(F("/control_new"), HTTPMethod::HTTP_POST, handleControlPost);
     server.on(F("/setup"), handleSetup);
     server.on(F("/mqtt"), handleMqtt);
     server.on(F("/wifi"), handleWifi);
@@ -958,6 +960,216 @@ void handleStatus() {
 
   renderView(Ministache(views::status), data,
              {{"header", partials::header}, {"footer", partials::footer}});
+}
+
+void handleControlGet() {
+  if (!checkLogin()) {
+    return;
+  }
+
+  // not connected to hp, redirect to status page
+  if (!hp.isConnected()) {
+    server.sendHeader("Location", "/status");
+    server.sendHeader("Cache-Control", "no-cache");
+    server.send(httpFound);
+    return;
+  }
+
+  LOG(F("handleControlGet()"));
+
+  HeatpumpSettings settings(hp.getSettings());
+  JsonDocument data;
+  data[F("min_temp")] = config.unit.minTemp.toString(config.unit.tempUnit);
+  data[F("max_temp")] = config.unit.maxTemp.toString(config.unit.tempUnit);
+  data[F("current_temp")] =
+      Temperature(hp.getRoomTemperature(), TempUnit::C).toString(config.unit.tempUnit, 0.1f);
+  data[F("target_temp")] =
+      Temperature(hp.getTemperature(), TempUnit::C).toString(config.unit.tempUnit);
+  data[F("temp_step")] = config.unit.tempStep;
+  data[F("temp_unit")] = config.unit.tempUnit == TempUnit::C ? "C" : "F";
+  data[F("supportHeatMode")] = config.unit.supportHeatMode;
+  data[F("power")] = settings.power;
+
+  const auto mode = data[F("mode")].to<JsonObject>();
+  mode[F("cool")] = settings.mode == "COOL";
+  mode[F("heat")] = settings.mode == "HEAT";
+  mode[F("dry")] = settings.mode == "DRY";
+  mode[F("fan")] = settings.mode == "FAN";
+  mode[F("auto")] = settings.mode == "AUTO";
+
+  const auto fan = data[F("fan")].to<JsonObject>();
+  fan[F("auto")] = settings.fan == "AUTO";
+  fan[F("quiet")] = settings.fan == "QUIET";
+  fan[F("1")] = settings.fan == "1";
+  fan[F("2")] = settings.fan == "2";
+  fan[F("3")] = settings.fan == "3";
+  fan[F("4")] = settings.fan == "4";
+
+  const auto vane = data[F("vane")].to<JsonObject>();
+  vane[F("auto")] = settings.vane == "AUTO";
+  vane[F("1")] = settings.vane == "1";
+  vane[F("2")] = settings.vane == "2";
+  vane[F("3")] = settings.vane == "3";
+  vane[F("4")] = settings.vane == "4";
+  vane[F("5")] = settings.vane == "5";
+  vane[F("swing")] = settings.vane == "SWING";
+
+  const auto widevane = data[F("widevane")].to<JsonObject>();
+  widevane[F("swing")] = settings.wideVane == "SWING";
+  widevane[F("1")] = settings.wideVane == "<<";
+  widevane[F("2")] = settings.wideVane == "<";
+  widevane[F("3")] = settings.wideVane == "|";
+  widevane[F("4")] = settings.wideVane == ">";
+  widevane[F("5")] = settings.wideVane == ">>";
+  widevane[F("6")] = settings.wideVane == "<>";
+
+  // settings = change_states(settings);
+  // String controlPage = FPSTR(html_page_control);
+  // String headerContent = FPSTR(html_common_header);
+  // String footerContent = FPSTR(html_common_footer);
+  // headerContent.replace("_UNIT_NAME_", config.network.hostname);
+  // footerContent.replace("_VERSION_", BUILD_DATE);
+  // footerContent.replace("_GIT_HASH_", COMMIT_HASH);
+  // controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
+  // controlPage.replace("_UNIT_NAME_", config.network.hostname);
+  // controlPage.replace("_RATE_", "60");
+  // controlPage.replace(
+  //     "_ROOMTEMP_",
+  //     Temperature(hp.getRoomTemperature(), TempUnit::C).toString(config.unit.tempUnit, 0.1f));
+  // controlPage.replace("_USE_FAHRENHEIT_", String(config.unit.tempUnit == TempUnit::F ? 1 : 0));
+  // controlPage.replace("_TEMP_SCALE_", getTemperatureScale());
+  // controlPage.replace("_HEAT_MODE_SUPPORT_", String(config.unit.supportHeatMode ? 1 : 0));
+  // controlPage.replace(F("_MIN_TEMP_"), config.unit.minTemp.toString(config.unit.tempUnit));
+  // controlPage.replace(F("_MAX_TEMP_"), config.unit.maxTemp.toString(config.unit.tempUnit));
+  // controlPage.replace(F("_TEMP_STEP_"), String(config.unit.tempStep));
+  // controlPage.replace("_TXT_CTRL_CTEMP_", FPSTR(txt_ctrl_ctemp));
+  // controlPage.replace("_TXT_CTRL_TEMP_", FPSTR(txt_ctrl_temp));
+  // controlPage.replace("_TXT_CTRL_TITLE_", FPSTR(txt_ctrl_title));
+  // controlPage.replace("_TXT_CTRL_POWER_", FPSTR(txt_ctrl_power));
+  // controlPage.replace("_TXT_CTRL_MODE_", FPSTR(txt_ctrl_mode));
+  // controlPage.replace("_TXT_CTRL_FAN_", FPSTR(txt_ctrl_fan));
+  // controlPage.replace("_TXT_CTRL_VANE_", FPSTR(txt_ctrl_vane));
+  // controlPage.replace("_TXT_CTRL_WVANE_", FPSTR(txt_ctrl_wvane));
+  // controlPage.replace("_TXT_F_ON_", FPSTR(txt_f_on));
+  // controlPage.replace("_TXT_F_OFF_", FPSTR(txt_f_off));
+  // controlPage.replace("_TXT_F_AUTO_", FPSTR(txt_f_auto));
+  // controlPage.replace("_TXT_F_HEAT_", FPSTR(txt_f_heat));
+  // controlPage.replace("_TXT_F_DRY_", FPSTR(txt_f_dry));
+  // controlPage.replace("_TXT_F_COOL_", FPSTR(txt_f_cool));
+  // controlPage.replace("_TXT_F_FAN_", FPSTR(txt_f_fan));
+  // controlPage.replace("_TXT_F_QUIET_", FPSTR(txt_f_quiet));
+  // controlPage.replace("_TXT_F_SPEED_", FPSTR(txt_f_speed));
+  // controlPage.replace("_TXT_F_SWING_", FPSTR(txt_f_swing));
+  // controlPage.replace("_TXT_F_POS_", FPSTR(txt_f_pos));
+
+  // if (settings.power == "ON") {
+  //   controlPage.replace("_POWER_ON_", "selected");
+  // } else if (settings.power == "OFF") {
+  //   controlPage.replace("_POWER_OFF_", "selected");
+  // }
+
+  // if (settings.mode == "HEAT") {
+  //   controlPage.replace("_MODE_H_", "selected");
+  // } else if (settings.mode == "DRY") {
+  //   controlPage.replace("_MODE_D_", "selected");
+  // } else if (settings.mode == "COOL") {
+  //   controlPage.replace("_MODE_C_", "selected");
+  // } else if (settings.mode == "FAN") {
+  //   controlPage.replace("_MODE_F_", "selected");
+  // } else if (settings.mode == "AUTO") {
+  //   controlPage.replace("_MODE_A_", "selected");
+  // }
+
+  // if (settings.fan == "AUTO") {
+  //   controlPage.replace("_FAN_A_", "selected");
+  // } else if (settings.fan == "QUIET") {
+  //   controlPage.replace("_FAN_Q_", "selected");
+  // } else if (settings.fan == "1") {
+  //   controlPage.replace("_FAN_1_", "selected");
+  // } else if (settings.fan == "2") {
+  //   controlPage.replace("_FAN_2_", "selected");
+  // } else if (settings.fan == "3") {
+  //   controlPage.replace("_FAN_3_", "selected");
+  // } else if (settings.fan == "4") {
+  //   controlPage.replace("_FAN_4_", "selected");
+  // }
+
+  // controlPage.replace("_VANE_V_", settings.vane);
+  // if (settings.vane == "AUTO") {
+  //   controlPage.replace("_VANE_A_", "selected");
+  // } else if (settings.vane == "1") {
+  //   controlPage.replace("_VANE_1_", "selected");
+  // } else if (settings.vane == "2") {
+  //   controlPage.replace("_VANE_2_", "selected");
+  // } else if (settings.vane == "3") {
+  //   controlPage.replace("_VANE_3_", "selected");
+  // } else if (settings.vane == "4") {
+  //   controlPage.replace("_VANE_4_", "selected");
+  // } else if (settings.vane == "5") {
+  //   controlPage.replace("_VANE_5_", "selected");
+  // } else if (settings.vane == "SWING") {
+  //   controlPage.replace("_VANE_S_", "selected");
+  // }
+
+  // controlPage.replace("_WIDEVANE_V_", settings.wideVane);
+  // if (settings.wideVane == "<<") {
+  //   controlPage.replace("_WVANE_1_", "selected");
+  // } else if (settings.wideVane == "<") {
+  //   controlPage.replace("_WVANE_2_", "selected");
+  // } else if (settings.wideVane == "|") {
+  //   controlPage.replace("_WVANE_3_", "selected");
+  // } else if (settings.wideVane == ">") {
+  //   controlPage.replace("_WVANE_4_", "selected");
+  // } else if (settings.wideVane == ">>") {
+  //   controlPage.replace("_WVANE_5_", "selected");
+  // } else if (settings.wideVane == "<>") {
+  //   controlPage.replace("_WVANE_6_", "selected");
+  // } else if (settings.wideVane == "SWING") {
+  //   controlPage.replace("_WVANE_S_", "selected");
+  // }
+  // controlPage.replace("_TEMP_",
+  //                     Temperature(hp.getTemperature(),
+  //                     TempUnit::C).toString(config.unit.tempUnit));
+
+  // // We need to send the page content in chunks to overcome
+  // // a limitation on the maximum size we can send at one
+  // // time (approx 6k).
+  // server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  // server.send(HttpStatusCodes::httpOk, "text/html", headerContent);
+  // server.sendContent(controlPage);
+  // server.sendContent(footerContent);
+  // // Signal the end of the content
+  // server.sendContent("");
+  renderView(Ministache(views::control), data,
+             {{"header", partials::header}, {"footer", partials::footer}});
+}
+
+void handleControlPost() {
+  if (!checkLogin()) {
+    return;
+  }
+
+  // not connected to hp, redirect to status page
+  if (!hp.isConnected()) {
+    server.sendHeader("Location", "/status");
+    server.sendHeader("Cache-Control", "no-cache");
+    server.send(httpFound);
+    return;
+  }
+
+  LOG(F("handleControlPost()"));
+
+  // Apply changes
+  HeatpumpSettings settings(hp.getSettings());
+  settings = change_states(settings);
+
+  // Sync the heatpump after changes
+  hp.sync();
+
+  // Redirect to GET page
+  server.sendHeader("Location", "/control_new");
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(httpFound);
 }
 
 void handleControl() {  // NOLINT(readability-function-cognitive-complexity)
