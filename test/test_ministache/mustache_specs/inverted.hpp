@@ -5,7 +5,7 @@
 
 // clang-format off
 /* generated via
-cat test/test_template/mustache_specs/inverted.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"-(\(.data))-\"); CHECK_MESSAGE(Ministache(R\"-(\(.template))-\").render(data) == R\"-(\(.expected))-\", R\"-(\(.desc))-\"); }\n"' | pbcopy
+cat test/test_ministache/mustache_specs/inverted.json| jq -r '.tests[] | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"-(\(.data))-\"); CHECK_MESSAGE(ministache::render(R\"-(\(.template))-\", data) == R\"-(\(.expected))-\", R\"-(\(.desc))-\"); }\n"' | pbcopy
 */
 // clang-format on
 
@@ -14,25 +14,23 @@ TEST_SUITE_BEGIN("minimustache/specs/inverted");
 TEST_CASE("Falsey") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(
-      Ministache(R"-("{{^boolean}}This should be rendered.{{/boolean}}")-").render(data) ==
-          R"-("This should be rendered.")-",
-      R"-(Falsey sections should have their contents rendered.)-");
+  CHECK_MESSAGE(ministache::render(R"-("{{^boolean}}This should be rendered.{{/boolean}}")-",
+                                   data) == R"-("This should be rendered.")-",
+                R"-(Falsey sections should have their contents rendered.)-");
 }
 
 TEST_CASE("Truthy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":true})-");
-  CHECK_MESSAGE(
-      Ministache(R"-("{{^boolean}}This should not be rendered.{{/boolean}}")-").render(data) ==
-          R"-("")-",
-      R"-(Truthy sections should have their contents omitted.)-");
+  CHECK_MESSAGE(ministache::render(R"-("{{^boolean}}This should not be rendered.{{/boolean}}")-",
+                                   data) == R"-("")-",
+                R"-(Truthy sections should have their contents omitted.)-");
 }
 
 TEST_CASE("Null is falsey") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"null":null})-");
-  CHECK_MESSAGE(Ministache(R"-("{{^null}}This should be rendered.{{/null}}")-").render(data) ==
+  CHECK_MESSAGE(ministache::render(R"-("{{^null}}This should be rendered.{{/null}}")-", data) ==
                     R"-("This should be rendered.")-",
                 R"-(Null is falsey.)-");
 }
@@ -40,14 +38,15 @@ TEST_CASE("Null is falsey") {
 TEST_CASE("Context") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"context":{"name":"Joe"}})-");
-  CHECK_MESSAGE(Ministache(R"-("{{^context}}Hi {{name}}.{{/context}}")-").render(data) == R"-("")-",
-                R"-(Objects and hashes should behave like truthy values.)-");
+  CHECK_MESSAGE(
+      ministache::render(R"-("{{^context}}Hi {{name}}.{{/context}}")-", data) == R"-("")-",
+      R"-(Objects and hashes should behave like truthy values.)-");
 }
 
 TEST_CASE("List") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"list":[{"n":1},{"n":2},{"n":3}]})-");
-  CHECK_MESSAGE(Ministache(R"-("{{^list}}{{n}}{{/list}}")-").render(data) == R"-("")-",
+  CHECK_MESSAGE(ministache::render(R"-("{{^list}}{{n}}{{/list}}")-", data) == R"-("")-",
                 R"-(Lists should behave like truthy values.)-");
 }
 
@@ -55,22 +54,22 @@ TEST_CASE("Empty List") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"list":[]})-");
   CHECK_MESSAGE(
-      Ministache(R"-("{{^list}}Yay lists!{{/list}}")-").render(data) == R"-("Yay lists!")-",
+      ministache::render(R"-("{{^list}}Yay lists!{{/list}}")-", data) == R"-("Yay lists!")-",
       R"-(Empty lists should behave like falsey values.)-");
 }
 
 TEST_CASE("Doubled") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"bool":false,"two":"second"})-");
-  CHECK_MESSAGE(Ministache(R"-({{^bool}}
+  CHECK_MESSAGE(ministache::render(R"-({{^bool}}
 * first
 {{/bool}}
 * {{two}}
 {{^bool}}
 * third
 {{/bool}}
-)-")
-                        .render(data) == R"-(* first
+)-",
+                                   data) == R"-(* first
 * second
 * third
 )-",
@@ -80,40 +79,39 @@ TEST_CASE("Doubled") {
 TEST_CASE("Nested (Falsey)") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"bool":false})-");
-  CHECK_MESSAGE(Ministache(R"-(| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |)-").render(data) ==
-                    R"-(| A B C D E |)-",
+  CHECK_MESSAGE(ministache::render(R"-(| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |)-",
+                                   data) == R"-(| A B C D E |)-",
                 R"-(Nested falsey sections should have their contents rendered.)-");
 }
 
 TEST_CASE("Nested (Truthy)") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"bool":true})-");
-  CHECK_MESSAGE(Ministache(R"-(| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |)-").render(data) ==
-                    R"-(| A  E |)-",
+  CHECK_MESSAGE(ministache::render(R"-(| A {{^bool}}B {{^bool}}C{{/bool}} D{{/bool}} E |)-",
+                                   data) == R"-(| A  E |)-",
                 R"-(Nested truthy sections should be omitted.)-");
 }
 
 TEST_CASE("Context Misses") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({})-");
-  CHECK_MESSAGE(
-      Ministache(R"-([{{^missing}}Cannot find key 'missing'!{{/missing}}])-").render(data) ==
-          R"-([Cannot find key 'missing'!])-",
-      R"-(Failed context lookups should be considered falsey.)-");
+  CHECK_MESSAGE(ministache::render(R"-([{{^missing}}Cannot find key 'missing'!{{/missing}}])-",
+                                   data) == R"-([Cannot find key 'missing'!])-",
+                R"-(Failed context lookups should be considered falsey.)-");
 }
 
 TEST_CASE("Dotted Names - Truthy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"a":{"b":{"c":true}}})-");
   CHECK_MESSAGE(
-      Ministache(R"-("{{^a.b.c}}Not Here{{/a.b.c}}" == "")-").render(data) == R"-("" == "")-",
+      ministache::render(R"-("{{^a.b.c}}Not Here{{/a.b.c}}" == "")-", data) == R"-("" == "")-",
       R"-(Dotted names should be valid for Inverted Section tags.)-");
 }
 
 TEST_CASE("Dotted Names - Falsey") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"a":{"b":{"c":false}}})-");
-  CHECK_MESSAGE(Ministache(R"-("{{^a.b.c}}Not Here{{/a.b.c}}" == "Not Here")-").render(data) ==
+  CHECK_MESSAGE(ministache::render(R"-("{{^a.b.c}}Not Here{{/a.b.c}}" == "Not Here")-", data) ==
                     R"-("Not Here" == "Not Here")-",
                 R"-(Dotted names should be valid for Inverted Section tags.)-");
 }
@@ -121,7 +119,7 @@ TEST_CASE("Dotted Names - Falsey") {
 TEST_CASE("Dotted Names - Broken Chains") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"a":{}})-");
-  CHECK_MESSAGE(Ministache(R"-("{{^a.b.c}}Not Here{{/a.b.c}}" == "Not Here")-").render(data) ==
+  CHECK_MESSAGE(ministache::render(R"-("{{^a.b.c}}Not Here{{/a.b.c}}" == "Not Here")-", data) ==
                     R"-("Not Here" == "Not Here")-",
                 R"-(Dotted names that cannot be resolved should be considered falsey.)-");
 }
@@ -129,9 +127,9 @@ TEST_CASE("Dotted Names - Broken Chains") {
 TEST_CASE("Surrounding Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-( | {{^boolean}}	|	{{/boolean}} | 
-)-")
-                        .render(data) == R"-( | 	|	 | 
+  CHECK_MESSAGE(ministache::render(R"-( | {{^boolean}}	|	{{/boolean}} | 
+)-",
+                                   data) == R"-( | 	|	 | 
 )-",
                 R"-(Inverted sections should not alter surrounding whitespace.)-");
 }
@@ -139,10 +137,10 @@ TEST_CASE("Surrounding Whitespace") {
 TEST_CASE("Internal Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-( | {{^boolean}} {{! Important Whitespace }}
+  CHECK_MESSAGE(ministache::render(R"-( | {{^boolean}} {{! Important Whitespace }}
  {{/boolean}} | 
-)-")
-                        .render(data) == R"-( |  
+)-",
+                                   data) == R"-( |  
   | 
 )-",
                 R"-(Inverted should not alter internal whitespace.)-");
@@ -151,10 +149,10 @@ TEST_CASE("Internal Whitespace") {
 TEST_CASE("Indented Inline Sections") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-( {{^boolean}}NO{{/boolean}}
+  CHECK_MESSAGE(ministache::render(R"-( {{^boolean}}NO{{/boolean}}
  {{^boolean}}WAY{{/boolean}}
-)-")
-                        .render(data) == R"-( NO
+)-",
+                                   data) == R"-( NO
  WAY
 )-",
                 R"-(Single-line sections should not alter surrounding whitespace.)-");
@@ -163,13 +161,13 @@ TEST_CASE("Indented Inline Sections") {
 TEST_CASE("Standalone Lines") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-(| This Is
+  CHECK_MESSAGE(ministache::render(R"-(| This Is
 {{^boolean}}
 |
 {{/boolean}}
 | A Line
-)-")
-                        .render(data) == R"-(| This Is
+)-",
+                                   data) == R"-(| This Is
 |
 | A Line
 )-",
@@ -179,13 +177,13 @@ TEST_CASE("Standalone Lines") {
 TEST_CASE("Standalone Indented Lines") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-(| This Is
+  CHECK_MESSAGE(ministache::render(R"-(| This Is
   {{^boolean}}
 |
   {{/boolean}}
 | A Line
-)-")
-                        .render(data) == R"-(| This Is
+)-",
+                                   data) == R"-(| This Is
 |
 | A Line
 )-",
@@ -195,11 +193,11 @@ TEST_CASE("Standalone Indented Lines") {
 TEST_CASE("Standalone Line Endings") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-(|
+  CHECK_MESSAGE(ministache::render(R"-(|
 {{^boolean}}
 {{/boolean}}
-|)-")
-                        .render(data) == R"-(|
+|)-",
+                                   data) == R"-(|
 |)-",
                 R"-("\r\n" should be considered a newline for standalone tags.)-");
 }
@@ -207,10 +205,10 @@ TEST_CASE("Standalone Line Endings") {
 TEST_CASE("Standalone Without Previous Line") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-(  {{^boolean}}
+  CHECK_MESSAGE(ministache::render(R"-(  {{^boolean}}
 ^{{/boolean}}
-/)-")
-                        .render(data) == R"-(^
+/)-",
+                                   data) == R"-(^
 /)-",
                 R"-(Standalone tags should not require a newline to precede them.)-");
 }
@@ -218,10 +216,10 @@ TEST_CASE("Standalone Without Previous Line") {
 TEST_CASE("Standalone Without Newline") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-(^{{^boolean}}
+  CHECK_MESSAGE(ministache::render(R"-(^{{^boolean}}
 /
-  {{/boolean}})-")
-                        .render(data) == R"-(^
+  {{/boolean}})-",
+                                   data) == R"-(^
 /
 )-",
                 R"-(Standalone tags should not require a newline to follow them.)-");
@@ -230,7 +228,7 @@ TEST_CASE("Standalone Without Newline") {
 TEST_CASE("Padding") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK_MESSAGE(Ministache(R"-(|{{^ boolean }}={{/ boolean }}|)-").render(data) == R"-(|=|)-",
+  CHECK_MESSAGE(ministache::render(R"-(|{{^ boolean }}={{/ boolean }}|)-", data) == R"-(|=|)-",
                 R"-(Superfluous in-tag whitespace should be ignored.)-");
 }
 

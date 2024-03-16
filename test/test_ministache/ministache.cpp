@@ -6,8 +6,6 @@
 #include <ArduinoJson.h>
 #include <doctest.h>
 
-using namespace ministache;
-
 #include "mustache_specs/comments.hpp"
 #include "mustache_specs/delimiters.hpp"
 #include "mustache_specs/interpolation.hpp"
@@ -20,43 +18,43 @@ TEST_SUITE_BEGIN("minimustache/isFalsy");
 TEST_CASE("Null value is falsy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"null":null})-");
-  CHECK(Ministache::isFalsy(data["null"]));
+  CHECK(ministache::isFalsy(data["null"]));
 }
 
 TEST_CASE("Empty list is falsy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"list":[]})-");
-  CHECK(Ministache::isFalsy(data["list"]));
+  CHECK(ministache::isFalsy(data["list"]));
 }
 
 TEST_CASE("List with items is not falsy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"list":[{"n":1},{"n":2},{"n":3}]})-");
-  CHECK_FALSE(Ministache::isFalsy(data["list"]));
+  CHECK_FALSE(ministache::isFalsy(data["list"]));
 }
 
 TEST_CASE("Object value is not falsy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"context":{"name":"Joe"}})-");
-  CHECK_FALSE(Ministache::isFalsy(data["context"]));
+  CHECK_FALSE(ministache::isFalsy(data["context"]));
 }
 
 TEST_CASE("String is not falsy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"context":"Joe"})-");
-  CHECK_FALSE(Ministache::isFalsy(data["context"]));
+  CHECK_FALSE(ministache::isFalsy(data["context"]));
 }
 
 TEST_CASE("Boolean false is falsy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":false})-");
-  CHECK(Ministache::isFalsy(data["boolean"]));
+  CHECK(ministache::isFalsy(data["boolean"]));
 }
 
 TEST_CASE("Boolean true is not falsy") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"-({"boolean":true})-");
-  CHECK_FALSE(Ministache::isFalsy(data["boolean"]));
+  CHECK_FALSE(ministache::isFalsy(data["boolean"]));
 }
 
 TEST_SUITE_END();

@@ -5,7 +5,7 @@
 
 // clang-format off
 /* generated via
-cat test/test_ministache/mustache_specs/delimiters.json | jq -r '.tests[] | {name: .name, desc: .desc, data: .data|tojson, template: .template, expected: .expected, partials: (.partials // {})|to_entries|map("{\(.key|tojson), \(.value|tojson)}")|join(", ")} | .partials |= "{"+.+"}" | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data))\"); CHECK_MESSAGE(Ministache(R\"(\(.template))\").render(data, \(.partials)) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
+cat test/test_ministache/mustache_specs/delimiters.json | jq -r '.tests[] | {name: .name, desc: .desc, data: .data|tojson, template: .template, expected: .expected, partials: (.partials // {})|to_entries|map("{\(.key|tojson), \(.value|tojson)}")|join(", ")} | .partials |= "{"+.+"}" | "TEST_CASE(\"\(.name)\") { ArduinoJson::JsonDocument data; deserializeJson(data, R\"(\(.data))\"); CHECK_MESSAGE(ministache::render(R\"(\(.template))\", data, \(.partials)) == R\"(\(.expected))\", R\"(\(.desc))\"); }\n"' | pbcopy
 */
 // clang-format on
 
@@ -14,21 +14,21 @@ TEST_SUITE_BEGIN("minimustache/specs/delimiters");
 TEST_CASE("Pair Behavior") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"text":"Hey!"})");
-  CHECK_MESSAGE(Ministache(R"({{=<% %>=}}(<%text%>))").render(data, {}) == R"((Hey!))",
+  CHECK_MESSAGE(ministache::render(R"({{=<% %>=}}(<%text%>))", data, {}) == R"((Hey!))",
                 R"(The equals sign (used on both sides) should permit delimiter changes.)");
 }
 
 TEST_CASE("Special Characters") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"text":"It worked!"})");
-  CHECK_MESSAGE(Ministache(R"(({{=[ ]=}}[text]))").render(data, {}) == R"((It worked!))",
+  CHECK_MESSAGE(ministache::render(R"(({{=[ ]=}}[text]))", data, {}) == R"((It worked!))",
                 R"(Characters with special meaning regexen should be valid delimiters.)");
 }
 
 TEST_CASE("Sections") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"section":true,"data":"I got interpolated."})");
-  CHECK_MESSAGE(Ministache(R"([
+  CHECK_MESSAGE(ministache::render(R"([
 {{#section}}
   {{data}}
   |data|
@@ -40,8 +40,8 @@ TEST_CASE("Sections") {
   |data|
 |/section|
 ]
-)")
-                        .render(data, {}) == R"([
+)",
+                                   data, {}) == R"([
   I got interpolated.
   |data|
 
@@ -55,7 +55,7 @@ TEST_CASE("Sections") {
 TEST_CASE("Inverted Sections") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"section":false,"data":"I got interpolated."})");
-  CHECK_MESSAGE(Ministache(R"([
+  CHECK_MESSAGE(ministache::render(R"([
 {{^section}}
   {{data}}
   |data|
@@ -67,8 +67,8 @@ TEST_CASE("Inverted Sections") {
   |data|
 |/section|
 ]
-)")
-                        .render(data, {}) == R"([
+)",
+                                   data, {}) == R"([
   I got interpolated.
   |data|
 
@@ -82,11 +82,11 @@ TEST_CASE("Inverted Sections") {
 TEST_CASE("Partial Inheritence") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"value":"yes"})");
-  CHECK_MESSAGE(Ministache(R"([ {{>include}} ]
+  CHECK_MESSAGE(ministache::render(R"([ {{>include}} ]
 {{= | | =}}
 [ |>include| ]
-)")
-                        .render(data, {{"include", ".{{value}}."}}) == R"([ .yes. ]
+)",
+                                   data, {{"include", ".{{value}}."}}) == R"([ .yes. ]
 [ .yes. ]
 )",
                 R"(Delimiters set in a parent template should not affect a partial.)");
@@ -95,10 +95,10 @@ TEST_CASE("Partial Inheritence") {
 TEST_CASE("Post-Partial Behavior") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({"value":"yes"})");
-  CHECK_MESSAGE(Ministache(R"([ {{>include}} ]
+  CHECK_MESSAGE(ministache::render(R"([ {{>include}} ]
 [ .{{value}}.  .|value|. ]
-)")
-                        .render(data, {{"include", ".{{value}}. {{= | | =}} .|value|."}}) ==
+)",
+                                   data, {{"include", ".{{value}}. {{= | | =}} .|value|."}}) ==
                     R"([ .yes.  .yes. ]
 [ .yes.  .|value|. ]
 )",
@@ -108,16 +108,16 @@ TEST_CASE("Post-Partial Behavior") {
 TEST_CASE("Surrounding Whitespace") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"(| {{=@ @=}} |)").render(data, {}) == R"(|  |)",
+  CHECK_MESSAGE(ministache::render(R"(| {{=@ @=}} |)", data, {}) == R"(|  |)",
                 R"(Surrounding whitespace should be left untouched.)");
 }
 
 TEST_CASE("Outlying Whitespace (Inline)") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"( | {{=@ @=}}
-)")
-                        .render(data, {}) == R"( | 
+  CHECK_MESSAGE(ministache::render(R"( | {{=@ @=}}
+)",
+                                   data, {}) == R"( | 
 )",
                 R"(Whitespace should be left untouched.)");
 }
@@ -125,11 +125,11 @@ TEST_CASE("Outlying Whitespace (Inline)") {
 TEST_CASE("Standalone Tag") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"(Begin.
+  CHECK_MESSAGE(ministache::render(R"(Begin.
 {{=@ @=}}
 End.
-)")
-                        .render(data, {}) == R"(Begin.
+)",
+                                   data, {}) == R"(Begin.
 End.
 )",
                 R"(Standalone lines should be removed from the template.)");
@@ -138,11 +138,11 @@ End.
 TEST_CASE("Indented Standalone Tag") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"(Begin.
+  CHECK_MESSAGE(ministache::render(R"(Begin.
   {{=@ @=}}
 End.
-)")
-                        .render(data, {}) == R"(Begin.
+)",
+                                   data, {}) == R"(Begin.
 End.
 )",
                 R"(Indented standalone lines should be removed from the template.)");
@@ -151,10 +151,10 @@ End.
 TEST_CASE("Standalone Line Endings") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"(|
+  CHECK_MESSAGE(ministache::render(R"(|
 {{= @ @ =}}
-|)")
-                        .render(data, {}) == R"(|
+|)",
+                                   data, {}) == R"(|
 |)",
                 R"("\r\n" should be considered a newline for standalone tags.)");
 }
@@ -162,18 +162,18 @@ TEST_CASE("Standalone Line Endings") {
 TEST_CASE("Standalone Without Previous Line") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"(  {{=@ @=}}
-=)")
-                        .render(data, {}) == R"(=)",
+  CHECK_MESSAGE(ministache::render(R"(  {{=@ @=}}
+=)",
+                                   data, {}) == R"(=)",
                 R"(Standalone tags should not require a newline to precede them.)");
 }
 
 TEST_CASE("Standalone Without Newline") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"(=
-  {{=@ @=}})")
-                        .render(data, {}) == R"(=
+  CHECK_MESSAGE(ministache::render(R"(=
+  {{=@ @=}})",
+                                   data, {}) == R"(=
 )",
                 R"(Standalone tags should not require a newline to follow them.)");
 }
@@ -181,7 +181,7 @@ TEST_CASE("Standalone Without Newline") {
 TEST_CASE("Pair with Padding") {
   ArduinoJson::JsonDocument data;
   deserializeJson(data, R"({})");
-  CHECK_MESSAGE(Ministache(R"(|{{= @   @ =}}|)").render(data, {}) == R"(||)",
+  CHECK_MESSAGE(ministache::render(R"(|{{= @   @ =}}|)", data, {}) == R"(||)",
                 R"(Superfluous in-tag whitespace should be ignored.)");
 }
 

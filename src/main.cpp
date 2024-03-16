@@ -49,8 +49,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "timer.hpp"
 #include "views/mqtt/strings.hpp"
 
-using ministache::Ministache;
-
 #ifdef ESP32
 const PROGMEM char *const wifi_conf = "/wifi.json";
 const PROGMEM char *const mqtt_conf = "/mqtt.json";
@@ -590,7 +588,7 @@ bool safeModeActive() {
   return config.other.safeMode && remoteTempStale();
 }
 
-void renderView(const Ministache &view, JsonDocument &data,
+void renderView(const String &view, JsonDocument &data,
                 const std::vector<std::pair<String, String>> &partials = {}) {
   auto header = data[F("header")].to<JsonObject>();
   header[F("hostname")] = config.network.hostname;
@@ -600,7 +598,7 @@ void renderView(const Ministache &view, JsonDocument &data,
   footer[F("version")] = BUILD_DATE;
   footer[F("git_hash")] = COMMIT_HASH;
 
-  server.send(HttpStatusCodes::httpOk, F("text/html"), view.render(data, partials));
+  server.send(HttpStatusCodes::httpOk, F("text/html"), ministache::render(view, data, partials));
 }
 
 void handleNotFound() {
@@ -613,7 +611,7 @@ void handleInitSetup() {
 
   JsonDocument data;
   data[F("hostname")] = config.network.hostname;
-  renderView(Ministache(views::captive::index), data,
+  renderView(views::captive::index, data,
              {{"header", partials::header}, {"footer", partials::footer}});
 }
 
@@ -634,7 +632,7 @@ void handleSaveWifi() {
   JsonDocument data;
   data[F("access_point")] = config.network.accessPointSsid;
   data[F("hostname")] = config.network.hostname;
-  renderView(Ministache(views::captive::save), data,
+  renderView(views::captive::save, data,
              {{"header", partials::header}, {"footer", partials::footer}});
   restartAfterDelay(2000);
 }
@@ -647,7 +645,7 @@ void handleReboot() {
   LOG(F("handleReboot()"));
 
   JsonDocument data;
-  renderView(Ministache(views::captive::reboot), data,
+  renderView(views::captive::reboot, data,
              {{"header", partials::header}, {"footer", partials::footer}});
   restartAfterDelay(2000);
 }
@@ -661,7 +659,7 @@ void handleRoot() {
 
   if (server.hasArg("REBOOT")) {
     JsonDocument data;
-    renderView(Ministache(views::reboot), data,
+    renderView(views::reboot, data,
                {{"header", partials::header},
                 {"footer", partials::footer},
                 {"countdown", partials::countdown}});
@@ -670,8 +668,7 @@ void handleRoot() {
     JsonDocument data;
     data[F("showControl")] = hp.isConnected();
     data[F("showLogout")] = config.unit.login_password.length() > 0;
-    renderView(Ministache(views::index), data,
-               {{"header", partials::header}, {"footer", partials::footer}});
+    renderView(views::index, data, {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 
@@ -685,7 +682,7 @@ void handleSetup() {
   if (server.hasArg("RESET")) {
     JsonDocument data;
     data["SSID"] = Config::Network::defaultHostname();
-    renderView(Ministache(views::reset), data,
+    renderView(views::reset, data,
                {{"header", partials::header},
                 {"footer", partials::footer},
                 {"countdown", partials::countdown}});
@@ -693,15 +690,14 @@ void handleSetup() {
     restartAfterDelay(500);
   } else {
     JsonDocument data;
-    renderView(Ministache(views::setup), data,
-               {{"header", partials::header}, {"footer", partials::footer}});
+    renderView(views::setup, data, {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 
 void rebootAndSendPage() {
   JsonDocument data;
   data["saving"] = true;
-  renderView(Ministache(views::reboot), data,
+  renderView(views::reboot, data,
              {{"header", partials::header},
               {"footer", partials::footer},
               {"countdown", partials::countdown}});
@@ -756,8 +752,7 @@ void handleOthers() {
 
     data[F("dumpPacketsToMqtt")] = config.other.dumpPacketsToMqtt;
     data[F("logToMqtt")] = config.other.logToMqtt;
-    renderView(Ministache(views::others), data,
-               {{"header", partials::header}, {"footer", partials::footer}});
+    renderView(views::others, data, {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 
@@ -807,7 +802,7 @@ void handleMqtt() {
     topic[F("param")] = F("mt");
     topic[F("placeholder")] = F("topic");
 
-    renderView(Ministache(views::mqtt::index), data,
+    renderView(views::mqtt::index, data,
                {{"mqttTextField", views::mqtt::textField},
                 {"header", partials::header},
                 {"footer", partials::footer}});
@@ -828,8 +823,7 @@ void handleUnitGet() {
   data[F("temp_unit_c")] = config.unit.tempUnit == TempUnit::C;
   data[F("mode_selection_all")] = config.unit.supportHeatMode;
   data[F("login_password")] = config.unit.login_password;
-  renderView(Ministache(views::unit), data,
-             {{"header", partials::header}, {"footer", partials::footer}});
+  renderView(views::unit, data, {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleUnitPost() {
@@ -898,8 +892,7 @@ void handleWifi() {
     data[F("access_point")] = config.network.accessPointSsid;
     data[F("hostname")] = config.network.hostname;
     data[F("password")] = config.network.accessPointPassword;
-    renderView(Ministache(views::wifi), data,
-               {{"header", partials::header}, {"footer", partials::footer}});
+    renderView(views::wifi, data, {{"header", partials::header}, {"footer", partials::footer}});
   }
 }
 
@@ -934,8 +927,7 @@ void handleStatus() {
     mqttConnect();
   }
 
-  renderView(Ministache(views::status), data,
-             {{"header", partials::header}, {"footer", partials::footer}});
+  renderView(views::status, data, {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleControlGet() {
@@ -1116,8 +1108,7 @@ void handleControlGet() {
   // server.sendContent(footerContent);
   // // Signal the end of the content
   // server.sendContent("");
-  renderView(Ministache(views::control), data,
-             {{"header", partials::header}, {"footer", partials::footer}});
+  renderView(views::control, data, {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleControlPost() {
@@ -1206,8 +1197,7 @@ void handleMetrics() {
     data["mode"] = "-2";
   }
 
-  Ministache metricsTemplate(views::metrics);
-  server.send(HttpStatusCodes::httpOk, F("text/plain"), metricsTemplate.render(data));
+  server.send(HttpStatusCodes::httpOk, F("text/plain"), ministache::render(views::metrics, data));
 }
 
 void handleMetricsJson() {
@@ -1267,8 +1257,7 @@ void handleLogin() {
 
   JsonDocument data;
   data[F("authError")] = server.hasArg("authError");
-  renderView(Ministache(views::login), data,
-             {{"header", partials::header}, {"footer", partials::footer}});
+  renderView(views::login, data, {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 // Handle the auth via POST
@@ -1309,8 +1298,7 @@ void handleUpgrade() {
 
   uploaderror = UploadError::noError;
   JsonDocument data;
-  renderView(Ministache(views::upgrade), data,
-             {{"header", partials::header}, {"footer", partials::footer}});
+  renderView(views::upgrade, data, {{"header", partials::header}, {"footer", partials::footer}});
 }
 
 void handleUploadDone() {
@@ -1347,7 +1335,7 @@ void handleUploadDone() {
     restartflag = true;
   }
 
-  renderView(Ministache(views::upload), data,
+  renderView(views::upload, data,
              {{"header", partials::header},
               {"footer", partials::footer},
               {"countdown", partials::countdown}});
@@ -1826,7 +1814,7 @@ void sendHomeAssistantConfig() {
   // For now, only compressorFrequency
   haConfig[F("json_attr_t")] = config.mqtt.ha_state_topic();
 
-  String mqttOutput = Ministache(views::autoconfig).render(haConfig);
+  String mqttOutput = ministache::render(views::autoconfig, haConfig);
 
   mqtt_client.beginPublish(ha_config_topic.c_str(), mqttOutput.length(), true);
   mqtt_client.print(mqttOutput);
