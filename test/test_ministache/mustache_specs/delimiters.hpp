@@ -9,7 +9,7 @@ cat test/test_ministache/mustache_specs/delimiters.json | jq -r '.tests[] | {nam
 */
 // clang-format on
 
-TEST_SUITE_BEGIN("minimustache/specs/delimiters");
+TEST_SUITE_BEGIN("ministache/specs/delimiters");
 
 TEST_CASE("Pair Behavior") {
   ArduinoJson::JsonDocument data;

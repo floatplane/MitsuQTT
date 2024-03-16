@@ -9,7 +9,7 @@ cat test/test_ministache/mustache_specs/partials.json | jq -r '.tests[] | {name:
 */
 // clang-format on
 
-TEST_SUITE_BEGIN("minimustache/specs/partials");
+TEST_SUITE_BEGIN("ministache/specs/partials");
 
 TEST_CASE("Basic Behavior") {
   ArduinoJson::JsonDocument data;

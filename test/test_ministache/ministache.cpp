@@ -16,7 +16,7 @@
 
 using ministache::internals::isFalsy;
 
-TEST_SUITE_BEGIN("minimustache/isFalsy");
+TEST_SUITE_BEGIN("ministache/isFalsy");
 
 TEST_CASE("Null value is falsy") {
   ArduinoJson::JsonDocument data;

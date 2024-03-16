@@ -9,7 +9,7 @@ cat test/test_ministache/mustache_specs/inverted.json| jq -r '.tests[] | "TEST_C
 */
 // clang-format on
 
-TEST_SUITE_BEGIN("minimustache/specs/inverted");
+TEST_SUITE_BEGIN("ministache/specs/inverted");
 
 TEST_CASE("Falsey") {
   ArduinoJson::JsonDocument data;

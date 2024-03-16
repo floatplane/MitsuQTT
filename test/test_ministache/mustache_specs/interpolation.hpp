@@ -9,7 +9,7 @@ cat test/test_ministache/mustache_specs/interpolation.json| jq -r '.tests[] | "T
 */
 // clang-format on
 
-TEST_SUITE_BEGIN("minimustache/specs/interpolation");
+TEST_SUITE_BEGIN("ministache/specs/interpolation");
 
 TEST_CASE("No Interpolation") {
   ArduinoJson::JsonDocument data;
