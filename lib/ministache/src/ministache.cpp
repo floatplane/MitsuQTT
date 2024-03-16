@@ -9,6 +9,10 @@
 #include <cassert>
 #include <vector>
 
+#include "internals/falsy.hpp"
+
+using ministache::internals::isFalsy;
+
 enum class TokenType {
   Text,
   Comment,
@@ -36,10 +40,8 @@ static std::pair<String, size_t> renderWithContextStack(
     const std::vector<std::pair<String, String>>& partials, bool renderingEnabled,
     const DelimiterPair& initialDelimiters = {.open = "{{", .close = "}}"});
 
-namespace ministache {
-
-String render(const String& templateContents, const ArduinoJson::JsonDocument& data,
-              const std::vector<std::pair<String, String>>& partials) {
+String ministache::render(const String& templateContents, const ArduinoJson::JsonDocument& data,
+                          const std::vector<std::pair<String, String>>& partials) {
   // set up context stack
   // root of stack: object/array/null/string
   // each recursive call to renderWithContextStack does the following:
@@ -54,21 +56,6 @@ String render(const String& templateContents, const ArduinoJson::JsonDocument& d
   const auto result = renderWithContextStack(templateContents, 0, contextStack, partials, true);
   return result.first;
 }
-
-bool isFalsy(const JsonVariantConst& value) {
-  if (value.isNull()) {
-    return true;
-  }
-  if (value.is<JsonArrayConst>()) {
-    const auto asArray = value.as<ArduinoJson::JsonArrayConst>();
-    return asArray.size() == 0;
-  }
-  if (value.is<bool>()) {
-    return !value.as<bool>();
-  }
-  return false;
-}
-};  // namespace ministache
 
 // Tokens that don't output content and are standalone (i.e. not surrounded by non-whitespace)
 // should not leave blank lines in the content. This function returns the range of the template
@@ -333,7 +320,7 @@ static std::pair<String, size_t> renderWithContextStack(
 
       case TokenType::Section: {
         auto context = lookupTokenInContextStack(token.name, contextStack);
-        auto falsy = ministache::isFalsy(context);
+        auto falsy = isFalsy(context);
         if (!falsy && context.is<JsonArrayConst>()) {
           auto array = context.as<JsonArrayConst>();
           for (size_t i = 0; i < array.size(); i++) {
@@ -364,7 +351,7 @@ static std::pair<String, size_t> renderWithContextStack(
       case TokenType::InvertedSection: {
         // check token for falsy value, render if falsy
         auto context = lookupTokenInContextStack(token.name, contextStack);
-        auto falsy = ministache::isFalsy(context);
+        auto falsy = isFalsy(context);
         auto sectionResult =
             renderWithContextStack(templateContents, tokenRenderExtents.end, contextStack, partials,
                                    renderingEnabled && falsy, delimiters);

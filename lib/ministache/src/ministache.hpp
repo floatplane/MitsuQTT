@@ -1,3 +1,7 @@
+#pragma once
+
+#ifndef MINISTACHE_MINISTACHE_HPP
+#define MINISTACHE_MINISTACHE_HPP
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -11,7 +15,6 @@ namespace ministache {
 String render(const String& templateContents, const ArduinoJson::JsonDocument& data,
               const std::vector<std::pair<String, String>>& partials = {});
 
-// This is only public because there are tests for it
-bool isFalsy(const JsonVariantConst& value);
-
 };  // namespace ministache
+
+#endif  // MINISTACHE_MINISTACHE_HPP
