@@ -30,9 +30,10 @@ WebServer server(80);  // ESP32 web
 ESP8266WebServer server(80);  // ESP8266 web
 #endif
 #include <ArduinoJson.h>
-#include <ArduinoOTA.h>    // for Update
-#include <DNSServer.h>     // DNS for captive portal
-#include <HeatPump.h>      // SwiCago library: https://github.com/SwiCago/HeatPump
+#include <ArduinoOTA.h>  // for Update
+#include <DNSServer.h>   // DNS for captive portal
+#include <HeatPump.h>    // SwiCago library: https://github.com/SwiCago/HeatPump
+#include <Ministache.h>
 #include <PubSubClient.h>  // MQTT: PubSubClient 2.8.0
 
 #include <map>
@@ -44,7 +45,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include "frontend/templates.hpp"
 #include "logger.hpp"
 #include "main.hpp"
-#include "ministache.hpp"
 #include "moment.hpp"
 #include "timer.hpp"
 #include "views/mqtt/strings.hpp"
