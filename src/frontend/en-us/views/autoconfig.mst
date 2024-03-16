@@ -55,7 +55,7 @@
   "device": { 
     "ids": "<% friendlyName %>",
     "name": "<% friendlyName %>",
-    "sw": "Mitsubishi2MQTT <% buildDate %> (<% commitHash %>)",
+    "sw": "MitsuQTT <% buildDate %> (<% commitHash %>)",
     "mdl": "HVAC MITSUBISHI",
     "mf": "MITSUBISHI ELECTRIC",
     "configuration_url": "http://<% localIP %>"

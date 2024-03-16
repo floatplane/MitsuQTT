@@ -1,5 +1,3 @@
-# mitsubishi2mqtt - Mitsubishi Heat Pump to MQTT control for Home Assistant.
-
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
 

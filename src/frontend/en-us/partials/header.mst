@@ -4,13 +4,11 @@
         <meta charset='utf-8' />
         <meta name="viewport"
               content="width=device-width,initial-scale=1,user-scalable=no" />
-        <title>Mitsubishi2MQTT - {{header.hostname}}</title>
+        <title>MitsuQTT - {{header.hostname}}</title>
         <link rel="stylesheet" href="/css?version={{header.git_hash}}" />
     </head>
     <body>
         <header>
-            <noscript>To use Mitsubishi2MQTT, you need to activate Javascript
-                <br />
-            </noscript>
+            <noscript>MitsuQTT requires Javascript</noscript>
             <h1>{{header.hostname}}</h1>
         </header>

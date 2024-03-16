@@ -1,6 +1,6 @@
-# HELP mitsubishi2mqtt_version Mitsubishi2MQTT version
-# TYPE mitsubishi2mqtt_version gauge
-mitsubishi2mqtt_version{hostname="{{unit_name}}",version="{{version}}"} 1
+# HELP mitsuqtt_version MitsuQTT version
+# TYPE mitsuqtt_version gauge
+mitsuqtt_version{hostname="{{unit_name}}",version="{{version}}"} 1
 # HELP mitsubishi_power Heat pump power setting
 # TYPE mitsubishi_power gauge
 mitsubishi_power{hostname="{{unit_name}}"} {{power}}
