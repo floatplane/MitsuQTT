@@ -1,15 +1,21 @@
-# mitsubishi2MQTT
+# MitsuQTT
 
-An evolved fork of [gysmo38/mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT)
+_pronounced Mitsu-cute_
 
 [![.github/workflows/build.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml)
 [![.github/workflows/test.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml)
 [![.github/workflows/static_analysis.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml)
 [![.github/workflows/clangformat.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml)
 
-***
-Use MQTT and ESP8266/ESP32 module to control Mitsubishi HVAC unit.
-It use SwiCago libraries: https://github.com/SwiCago/HeatPump
+MitsuQTT is an embedded application that runs on ESP8266/ESP32 hardware and provides the following functionality:
+- Control of an attached Mitsubishi heat pump via the heat pump's CN105 connector
+- An MQTT interface that can both publish the current heat pump state *and* accept commands to change it
+- HomeAssistant autodiscovery - the application can show up in HA as a climate entity
+- An embedded webserver for configuration and communication
+
+## Screenshots
+
+## Setup
 
 
 ***
@@ -72,3 +78,9 @@ Grafana -> Connections -> Add new connection -> Prometheus -> ```Prometheus serv
 Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/floatplane/mitsubishi2MQTT/blob/master/misc/prometheus.json
 
 ![](doc/images/Grafana-screenshot.png)
+
+## Credits
+
+MitsuQTT started as a fork of [gysmo38/mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT), though it's evolved quite a bit since then.
+
+Heat pump control is via [SwiCago/HeatPump](https://github.com/SwiCago/HeatPump).
