@@ -2,10 +2,10 @@
 
 _pronounced Mitsu-cute_
 
-[![.github/workflows/build.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml)
-[![.github/workflows/test.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml)
-[![.github/workflows/static_analysis.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml)
-[![.github/workflows/clangformat.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml)
+[![.github/workflows/build.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml)
+[![.github/workflows/test.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/test.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/test.yml)
+[![.github/workflows/static_analysis.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/static_analysis.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/static_analysis.yml)
+[![.github/workflows/clangformat.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/clangformat.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/clangformat.yml)
 
 MitsuQTT is an embedded application that runs on ESP8266/ESP32 hardware and provides the following functionality:
 - Control of an attached Mitsubishi heat pump via the heat pump's CN105 connector
@@ -44,7 +44,7 @@ How to use:
  - Step 6: (optional): Set MQTT information for use with Home Assistant
  - Step 7: (optional): Set Login password to prevent unwanted access in SETUP->ADVANCE->Login Password
 
-Builds are available for select platforms via GitHub Actions. Go to [the build workflow](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml?query=branch%3Amain) and view the **Artifacts** section for the latest run. 
+Builds are available for select platforms via GitHub Actions. Go to [the build workflow](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml?query=branch%3Amain) and view the **Artifacts** section for the latest run. 
 
 ***
 For nodered fans MQTT topic use cases
@@ -75,7 +75,7 @@ Config for Prometheus:
 Then add Prometheus as a datasource in Grafana
 Grafana -> Connections -> Add new connection -> Prometheus -> ```Prometheus server URL: PROMETHEUS-IP:PORT```
 
-Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/floatplane/mitsubishi2MQTT/blob/master/misc/prometheus.json
+Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/floatplane/MitsuQTT/blob/master/misc/prometheus.json
 
 ![](doc/images/Grafana-screenshot.png)
 
