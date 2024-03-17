@@ -23,7 +23,7 @@ homepage | control | status page
 
 ### Hardware
 You're going to need to get some hardware connected to your heat pump. Here are some links I found helpful:
-- https://chrdavis.github.io/hacking-a-mitsubishi-heat-pump-Part-2/
+- https://www.instructables.com/Wemos-ESP8266-Getting-Started-Guide-Wemos-101/
 - https://community.home-assistant.io/t/mitsubishi-ac-mqtt-temperature/269979/5
 - https://chrdavis.github.io/hacking-a-mitsubishi-heat-pump-Part-2/
 
@@ -36,7 +36,7 @@ https://github.com/floatplane/MitsuQTT/assets/101196/1e14b3e7-e1f5-4804-876f-b56
 You should only have to build and deploy the code once onto your hardware - subsequent updates can be done over-the-air (OTA).
 
 ### Configuration
-If all goes well, the WiFi hardware will create its own access point that you can join. Look for an access point of the form `HVAC_XXXX` and connect to it. Then visit http://192.168.1.1 or http://setup to get to the initial configuration screen. Here, you'll enter a name for your hardware (use a hostname - no spaces!) as well as login information for the wireless network you want the hardware to connect to.
+If all goes well, the WiFi hardware will create its own ad-hoc network that you can join. Look for an access point of the form `HVAC_XXXX` and connect to it. Then visit http://192.168.1.1 or http://setup to get to the initial configuration screen. Here, you'll enter a name for your hardware (use a hostname - no spaces!) as well as login information for the wireless network you want the hardware to connect to.
 
 After saving and restarting, you'll be ready to configure your hardware through the Setup screen - in particular, you'll want to set up an MQTT connection to use this with Home Assistant, Node-RED, or any other automation technology.
 
@@ -79,8 +79,6 @@ Then add Prometheus as a datasource in Grafana
 Grafana -> Connections -> Add new connection -> Prometheus -> ```Prometheus server URL: PROMETHEUS-IP:PORT```
 
 Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/floatplane/MitsuQTT/blob/master/misc/prometheus.json
-
-![](doc/images/Grafana-screenshot.png)
 
 ## Credits
 
