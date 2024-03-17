@@ -11,13 +11,19 @@ _pronounced Mitsu-cute_
 MitsuQTT is an embedded application that runs on ESP8266/ESP32 hardware and provides the following functionality:
 - Control of an attached Mitsubishi heat pump via the heat pump's CN105 connector
 - An MQTT interface that can both publish the current heat pump state *and* accept commands to change it
-- HomeAssistant autodiscovery - the application can show up in HA as a climate entity
+- Home Assistant autodiscovery - the application can show up in HA as a climate entity
 - An embedded webserver for configuration and communication
 
+MitsuQTT is a drop-in replacement for the [mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT) project, with some notable improvements:
+- Automatic dark/light mode support in the UI
+- Web performance greatly improved
+- More rigorous testing - unit tests, automated testing via clang-tidy and cppcheck
+
 ## Screenshots
-homepage | control | status page
---- | --- | ---
-![home page](https://github.com/floatplane/MitsuQTT/assets/101196/6f26babe-1078-4f67-a8a4-2d26e6ebaf30) | ![control](https://github.com/floatplane/MitsuQTT/assets/101196/7d6da0a5-cb74-4a5a-9459-7cea74c0fbfb) | ![status](https://github.com/floatplane/MitsuQTT/assets/101196/da2afef2-066d-4d65-9e60-aff2b30618a1)
+homepage | control | status page | light mode
+--- | --- | --- | ---
+![home page](https://github.com/floatplane/MitsuQTT/assets/101196/6f26babe-1078-4f67-a8a4-2d26e6ebaf30) | ![control](https://github.com/floatplane/MitsuQTT/assets/101196/7d6da0a5-cb74-4a5a-9459-7cea74c0fbfb) | ![status](https://github.com/floatplane/MitsuQTT/assets/101196/da2afef2-066d-4d65-9e60-aff2b30618a1) | ![light mode](https://github.com/floatplane/MitsuQTT/assets/101196/21ff5506-c984-44a6-8af1-26bc70a34ccd)
+
 
 ## Setup
 
@@ -26,6 +32,7 @@ You're going to need to get some hardware connected to your heat pump. Here are 
 - https://www.instructables.com/Wemos-ESP8266-Getting-Started-Guide-Wemos-101/
 - https://community.home-assistant.io/t/mitsubishi-ac-mqtt-temperature/269979/5
 - https://chrdavis.github.io/hacking-a-mitsubishi-heat-pump-Part-2/
+    (this page references mitsubishi2MQTT, but MitsuQTT can be used as a drop-in replacement)
 
 
 ### Initial software setup
