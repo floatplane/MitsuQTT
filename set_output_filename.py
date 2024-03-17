@@ -7,4 +7,4 @@ if not env['PIOENV'].startswith("test"):
     build_date = subprocess.check_output(["date", "-u", r"+%Y.%m.%d"]).decode("utf-8").strip()
     git_commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode("utf-8").strip()
 
-    env.Replace(PROGNAME=("mitsubishi2mqtt-%s-%s-%s" % (env['PIOENV'], build_date, git_commit)))
+    env.Replace(PROGNAME=("mitsuqtt-%s-%s-%s" % (env['PIOENV'], build_date, git_commit)))

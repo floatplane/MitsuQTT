@@ -1,17 +1,16 @@
 /*
-  mitsubishi2mqtt - Mitsubishi Heat Pump to MQTT control for Home Assistant.
-  Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour, jascdk, chrdavis,
-  alekslyse.  All right reserved. This library is free software; you can
-  redistribute it and/or modify it under the terms of the GNU Lesser General
-  Public License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  MitsuQTT Copyright (c) 2024 floatplane
+  Based on mitsubishi2mqtt Copyright (c) 2022 gysmo38, dzungpv, shampeon, endeavour,
+  jascdk, chrdavis, alekslyse. All rights reserved.
+
+  This library is free software; you can redistribute it and/or modify it under the terms of the GNU
+  Lesser General Public License as published by the Free Software Foundation; either version 2.1 of
+  the License, or (at your option) any later version. This library is distributed in the hope that
+  it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+  You should have received a copy of the GNU Lesser General Public License along with this library;
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+  02110-1301 USA
 */
 
 #ifdef ESP32
@@ -150,7 +149,8 @@ struct Config {
     String username;
     String password;
     String rootTopic;
-    MQTT() : rootTopic(F("mitsubishi2mqtt")) {
+    MQTT()
+        : rootTopic(F("mitsubishi2mqtt")) {  // TODO(floatplane): change name of default root topic
     }
 
     bool configured() const {
@@ -331,14 +331,10 @@ void setup() {
   Logger::initialize();
 #endif
 
-  // Serial.println(F("Starting Mitsubishi2MQTT"));
   FileSystem::init();
 
   // set led pin as output
   pinMode(blueLedPin, OUTPUT);
-  /*
-    ticker.attach(0.6, tick);
-  */
 
   loadWifiConfig();
   loadOthersConfig();
@@ -351,7 +347,7 @@ void setup() {
 #endif
   if (initWifi()) {
     FileSystem::deleteFile(console_file);
-    LOG(F("Starting Mitsubishi2MQTT"));
+    LOG(F("Starting MitsuQTT"));
     // Web interface
     server.on(F("/"), handleRoot);
     server.on(F("/control"), HTTPMethod::HTTP_GET, handleControlGet);

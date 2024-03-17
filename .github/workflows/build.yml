@@ -41,8 +41,8 @@ jobs:
         id: build
         run: |
           pio run -e ${{ matrix.platform }}
-          echo "FIRMWARE_PATH=$(ls .pio/build/${{ matrix.platform }}/mitsubishi2mqtt-${{ matrix.platform }}-*.bin)" >> $GITHUB_OUTPUT
-          echo "FIRMWARE_NAME=$(basename $(ls .pio/build/${{ matrix.platform }}/mitsubishi2mqtt-${{ matrix.platform }}-*.bin))" >> $GITHUB_OUTPUT
+          echo "FIRMWARE_PATH=$(ls .pio/build/${{ matrix.platform }}/mitsuqtt-${{ matrix.platform }}-*.bin)" >> $GITHUB_OUTPUT
+          echo "FIRMWARE_NAME=$(basename $(ls .pio/build/${{ matrix.platform }}/mitsuqtt-${{ matrix.platform }}-*.bin))" >> $GITHUB_OUTPUT
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3

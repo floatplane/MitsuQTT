@@ -116,7 +116,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "mitsubishi2mqtt_version",
+          "expr": "mitsuqtt_version",
           "format": "time_series",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1004,7 +1004,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Mitsubishi2mqtt",
+  "title": "MitsuQTT",
   "uid": "f69c218b-7b1e-4f70-9833-8759a0b8807a",
   "version": 7,
   "weekStart": ""

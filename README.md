@@ -1,47 +1,53 @@
-# mitsubishi2MQTT
+# MitsuQTT
 
-An evolved fork of [gysmo38/mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT)
+_pronounced Mitsu-cute_
 
-[![.github/workflows/build.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml)
-[![.github/workflows/test.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/test.yml)
-[![.github/workflows/static_analysis.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/static_analysis.yml)
-[![.github/workflows/clangformat.yml](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml/badge.svg)](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/clangformat.yml)
+[![.github/workflows/build.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml)
+[![.github/workflows/test.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/test.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/test.yml)
+[![.github/workflows/static_analysis.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/static_analysis.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/static_analysis.yml)
+[![.github/workflows/clangformat.yml](https://github.com/floatplane/MitsuQTT/actions/workflows/clangformat.yml/badge.svg)](https://github.com/floatplane/MitsuQTT/actions/workflows/clangformat.yml)
+[![BuyMeACoffee](https://raw.githubusercontent.com/pachadotdev/buymeacoffee-badges/main/bmc-donate-yellow.svg)](https://www.buymeacoffee.com/floatplane)
 
-***
-Use MQTT and ESP8266/ESP32 module to control Mitsubishi HVAC unit.
-It use SwiCago libraries: https://github.com/SwiCago/HeatPump
+MitsuQTT is an embedded application that runs on ESP8266/ESP32 hardware and provides the following functionality:
+- Control of an attached Mitsubishi heat pump via the heat pump's CN105 connector
+- An MQTT interface that can both publish the current heat pump state *and* accept commands to change it
+- HomeAssistant autodiscovery - the application can show up in HA as a climate entity
+- An embedded webserver for configuration and communication
+
+## Screenshots
+homepage | control | status page
+--- | --- | ---
+![home page](https://github.com/floatplane/MitsuQTT/assets/101196/6f26babe-1078-4f67-a8a4-2d26e6ebaf30) | ![control](https://github.com/floatplane/MitsuQTT/assets/101196/7d6da0a5-cb74-4a5a-9459-7cea74c0fbfb) | ![status](https://github.com/floatplane/MitsuQTT/assets/101196/da2afef2-066d-4d65-9e60-aff2b30618a1)
+
+## Setup
+
+### Hardware
+You're going to need to get some hardware connected to your heat pump. Here are some links I found helpful:
+- https://www.instructables.com/Wemos-ESP8266-Getting-Started-Guide-Wemos-101/
+- https://community.home-assistant.io/t/mitsubishi-ac-mqtt-temperature/269979/5
+- https://chrdavis.github.io/hacking-a-mitsubishi-heat-pump-Part-2/
 
 
-***
-Features:
- - Initial config:  WIFI AP mode and web portal
- - Web interface for configuration, status and control, firmware upgrade
- - Homeassistant autodiscovery and control with MQTT
- - Control with MQTT
- - Multilanguages
+### Initial software setup
+This project uses [PlatformIO](https://platformio.org/) to build. Recommmended: install the PlatformIO IDE through VS Code. From VS Code, it should be one button press to build and deploy to your selected hardware:
 
-Screenshots:
+https://github.com/floatplane/MitsuQTT/assets/101196/1e14b3e7-e1f5-4804-876f-b56db5232b45
 
-![Main page](doc/images/main_page.png)
+You should only have to build and deploy the code once onto your hardware - subsequent updates can be done over-the-air (OTA).
 
-![](doc/images/control_page.png)
+### Configuration
+If all goes well, the WiFi hardware will create its own ad-hoc network that you can join. Look for an access point of the form `HVAC_XXXX` and connect to it. Then visit http://192.168.1.1 or http://setup to get to the initial configuration screen. Here, you'll enter a name for your hardware (use a hostname - no spaces!) as well as login information for the wireless network you want the hardware to connect to.
 
-![](doc/images/config_page.png)
+After saving and restarting, you'll be ready to configure your hardware through the Setup screen - in particular, you'll want to set up an MQTT connection to use this with Home Assistant, Node-RED, or any other automation technology.
 
-***
-How to use:
- - Step 1: flash the sketch with flash size include SPIFFS option.
- - Step 2: connect to device AP with name HVAC_XXXX (XXXX last 4 character MAC address)
- - Step 3: You should be automatically redirected to the web portal or go to 192.168.1.1
- - Step 4: set Wifi information, save & reboot. Fall back to AP mode if WiFi connection fails (AP password sets to default SSID name from step 2).
- - Step 5: find the device IP with last 4 character MAC address in your router
- - Step 6: (optional): Set MQTT information for use with Home Assistant
- - Step 7: (optional): Set Login password to prevent unwanted access in SETUP->ADVANCE->Login Password
+### OTA updates
+You can download new versions from the **Artifacts** section [here](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml?query=branch%3Amain). Pick the download for your hardware type, unzip it on your desktop, and use the "Firmware Update" page to upload the BIN file to your hardware.
 
-Builds are available for select platforms via GitHub Actions. Go to [the build workflow](https://github.com/floatplane/mitsubishi2MQTT/actions/workflows/build.yml?query=branch%3Amain) and view the **Artifacts** section for the latest run. 
+---
 
-***
-For nodered fans MQTT topic use cases
+## Node-RED control
+You can post messages to MQTT to control the heat pump:
+
 - topic/power/set OFF
 - topic/mode/set AUTO HEAT COOL DRY FAN_ONLY OFF ON
 - topic/temp/set 16-31
@@ -57,18 +63,31 @@ For nodered fans MQTT topic use cases
 - topic/debug/logs/set on off
 - topic/custom/send as example "fc 42 01 30 10 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 7b " see https://github.com/SwiCago/HeatPump/blob/master/src/HeatPump.h
 - topic/system/set reboot 
-***
-# Grafana dashboard
+
+## Grafana dashboard
+
+_note: this was copied from Mitsubishi2MQTT, but is not well tested. file an issue if you have problems!_
+
 To use Grafana you need to have Prometheus and Grafana (v10 or newer) installed.
 Config for Prometheus:
-```  - job_name: Mitsubishi2mqtt
+```  - job_name: MitsuQTT
     static_configs:
         - targets:
-            - IP-TO-Mitsubishi2mqtt
+            - IP-TO-MitsuQTT
 ```
 Then add Prometheus as a datasource in Grafana
 Grafana -> Connections -> Add new connection -> Prometheus -> ```Prometheus server URL: PROMETHEUS-IP:PORT```
 
-Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/floatplane/mitsubishi2MQTT/blob/master/misc/prometheus.json
+Then you can import the dashboard in Grafana -> Dashboards -> New -> Import and upload the file https://github.com/floatplane/MitsuQTT/blob/master/misc/prometheus.json
 
-![](doc/images/Grafana-screenshot.png)
+## Credits
+
+MitsuQTT started as a fork of [gysmo38/mitsubishi2MQTT](https://github.com/gysmo38/mitsubishi2MQTT), though it's evolved quite a bit since then.
+
+Heat pump control is via [SwiCago/HeatPump](https://github.com/SwiCago/HeatPump).
+
+## Support 
+
+I hope this is useful to you! If it is, then maybe you'd like to buy me a coffee? :blush:
+
+<a href="https://www.buymeacoffee.com/floatplane" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
