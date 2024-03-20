@@ -1440,15 +1440,15 @@ HeatpumpSettings change_states(const HeatpumpSettings &settings) {
       update = true;
     }
     if (server.hasArg("FAN")) {
-      newSettings.fan = server.arg("FAN").c_str();
+      newSettings.fan = server.arg("FAN");
       update = true;
     }
     if (server.hasArg("VANE")) {
-      newSettings.vane = server.arg("VANE").c_str();
+      newSettings.vane = server.arg("VANE");
       update = true;
     }
     if (server.hasArg("WIDEVANE")) {
-      newSettings.wideVane = server.arg("WIDEVANE").c_str();
+      newSettings.wideVane = server.arg("WIDEVANE");
       update = true;
     }
     if (update) {
