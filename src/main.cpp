@@ -15,7 +15,7 @@
 
 #ifdef ESP32
 #include <ESPmDNS.h>    // mDNS for ESP32
-#include <SPIFFS.h>     // ESP32 SPIFFS for store config
+#include <LittleFS.h>   // Use LittleFS for filesystem
 #include <WebServer.h>  // webServer for ESP32
 #include <WiFi.h>       // WIFI for ESP32
 #include <WiFiUdp.h>

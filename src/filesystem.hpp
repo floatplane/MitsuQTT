@@ -15,6 +15,7 @@
 
 #include <ArduinoJson.h>
 #include <FS.h>
+#include <LittleFS.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -22,18 +23,18 @@
 class FileSystem {
  public:
   static void init() {
-    // Mount SPIFFS filesystem
-    if (!SPIFFS.begin()) {
-      SPIFFS.format();
+    // Mount LittleFS filesystem
+    if (!LittleFS.begin()) {
+      LittleFS.format();
     }
   }
 
   static JsonDocument loadJSON(const char *filename) {
-    if (!SPIFFS.exists(filename)) {
+    if (!LittleFS.exists(filename)) {
       return JsonDocument();
     }
 
-    File file = SPIFFS.open(filename, "r");
+    File file = LittleFS.open(filename, "r");
     if (!file) {
       return JsonDocument();
     }
@@ -45,7 +46,7 @@ class FileSystem {
   }
 
   static void saveJSON(const char *filename, JsonDocument &doc) {
-    File configFile = SPIFFS.open(filename, "w");
+    File configFile = LittleFS.open(filename, "w");
     if (!configFile) {
       // Serial.println(F("Failed to open config file for writing"));
       return;
@@ -56,13 +57,13 @@ class FileSystem {
   }
 
   static void deleteFile(const char *filename) {
-    if (SPIFFS.exists(filename)) {
-      SPIFFS.remove(filename);
+    if (LittleFS.exists(filename)) {
+      LittleFS.remove(filename);
     }
   }
 
   static void format() {
-    SPIFFS.format();
+    LittleFS.format();
   }
 };
 
