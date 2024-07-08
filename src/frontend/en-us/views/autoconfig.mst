@@ -26,7 +26,7 @@
   "min_temp": <% min_temp %>,
   "max_temp": <% max_temp %>,
   "temp_step": "1",
-  "temperature_unit": "F",
+  "temperature_unit": "<% temperature_unit %>",
   "fan_modes": [
     "AUTO",
     "QUIET",
