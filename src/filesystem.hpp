@@ -26,8 +26,10 @@
 #define FILESYSTEM LittleFS
 #endif
 
+#ifdef USE_SPIFFS
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 class FileSystem {
  public:
@@ -76,4 +78,6 @@ class FileSystem {
   }
 };
 
+#ifdef USE_SPIFFS
 #pragma GCC diagnostic pop
+#endif
