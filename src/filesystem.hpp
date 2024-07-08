@@ -16,24 +16,34 @@
 #include <ArduinoJson.h>
 #include <FS.h>
 
+#ifdef USE_SPIFFS
+#ifdef ESP32
+#include <SPIFFS.h>
+#endif
+#define FILESYSTEM SPIFFS
+#else
+#include <LittleFS.h>
+#define FILESYSTEM LittleFS
+#endif
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 class FileSystem {
  public:
   static void init() {
-    // Mount SPIFFS filesystem
-    if (!SPIFFS.begin()) {
-      SPIFFS.format();
+    // Mount filesystem
+    if (!FILESYSTEM.begin()) {
+      FILESYSTEM.format();
     }
   }
 
   static JsonDocument loadJSON(const char *filename) {
-    if (!SPIFFS.exists(filename)) {
+    if (!FILESYSTEM.exists(filename)) {
       return JsonDocument();
     }
 
-    File file = SPIFFS.open(filename, "r");
+    File file = FILESYSTEM.open(filename, "r");
     if (!file) {
       return JsonDocument();
     }
@@ -45,7 +55,7 @@ class FileSystem {
   }
 
   static void saveJSON(const char *filename, JsonDocument &doc) {
-    File configFile = SPIFFS.open(filename, "w");
+    File configFile = FILESYSTEM.open(filename, "w");
     if (!configFile) {
       // Serial.println(F("Failed to open config file for writing"));
       return;
@@ -56,13 +66,13 @@ class FileSystem {
   }
 
   static void deleteFile(const char *filename) {
-    if (SPIFFS.exists(filename)) {
-      SPIFFS.remove(filename);
+    if (FILESYSTEM.exists(filename)) {
+      FILESYSTEM.remove(filename);
     }
   }
 
   static void format() {
-    SPIFFS.format();
+    FILESYSTEM.format();
   }
 };
 
