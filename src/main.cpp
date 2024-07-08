@@ -308,7 +308,7 @@ void restartAfterDelay(uint32_t delayMs) {
 void logConfig() {
   for (const auto file :
        std::array<const char *const, 4>{wifi_conf, mqtt_conf, unit_conf, others_conf}) {
-    LOG(F("Loading ") + String(file));
+    LOG(F("Loading %s"), file);
     JsonDocument doc = FileSystem::loadJSON(file);
     if (doc.isNull()) {
       LOG(F("File is empty"));
