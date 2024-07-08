@@ -16,7 +16,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [ESP8266-ESP01, WEMOS_D1_Mini, ESP32DEV]
+        platform: [ESP8266-ESP01, WEMOS_D1_Mini, ESP32DEV, ESP8266-ESP01-SPIFFS, WEMOS_D1_Mini-SPIFFS, ESP32DEV-SPIFFS]
 
     runs-on: ubuntu-latest
 
