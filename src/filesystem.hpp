@@ -16,6 +16,10 @@
 #include <ArduinoJson.h>
 #include <FS.h>
 
+#ifdef FILESYSTEM
+#pragma error "FILESYSTEM already defined"
+#endif
+
 #ifdef USE_SPIFFS
 #ifdef ESP32
 #include <SPIFFS.h>
@@ -81,3 +85,5 @@ class FileSystem {
 #ifdef USE_SPIFFS
 #pragma GCC diagnostic pop
 #endif
+
+#undef FILESYSTEM
