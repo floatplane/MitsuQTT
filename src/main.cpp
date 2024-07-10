@@ -592,6 +592,7 @@ void renderView(const String &view, JsonDocument &data,
   auto footer = data[F("footer")].to<JsonObject>();
   footer[F("version")] = F(MITSUQTT_BUILD_DATE);
   footer[F("git_hash")] = F(MITSUQTT_GIT_COMMIT);
+  footer[F("progname")] = F(MITSUQTT_PROGNAME);
 
   server.send(HttpStatusCodes::httpOk, F("text/html"), ministache::render(view, data, partials));
 }

@@ -1,4 +1,4 @@
-        <footer>
+        <footer title="Firmware: {{footer.progname}}">
             MitsuQTT build date <code>{{footer.version}}</code> revision <a href="https://github.com/floatplane/MitsuQTT/commit/{{footer.git_hash}}"><code>{{footer.git_hash}}</code></a>
         </footer>
     </body>
