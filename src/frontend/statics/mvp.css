@@ -612,3 +612,7 @@ td.bold {
 td.left {
     text-align: var(--justify-normal);
 }
+
+.wrap-text {
+    text-wrap: wrap;
+}
