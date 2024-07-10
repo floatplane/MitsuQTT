@@ -12,10 +12,10 @@
   if not, write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
   02110-1301 USA
 */
+#include "filesystem.hpp"
 
 #ifdef ESP32
 #include <ESPmDNS.h>    // mDNS for ESP32
-#include <SPIFFS.h>     // ESP32 SPIFFS for store config
 #include <WebServer.h>  // webServer for ESP32
 #include <WiFi.h>       // WIFI for ESP32
 #include <WiFiUdp.h>
@@ -40,7 +40,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
-#include "filesystem.hpp"
 #include "frontend/templates.hpp"
 #include "logger.hpp"
 #include "main.hpp"
