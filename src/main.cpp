@@ -12,10 +12,10 @@
   if not, write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
   02110-1301 USA
 */
+#include "filesystem.hpp"
 
 #ifdef ESP32
 #include <ESPmDNS.h>    // mDNS for ESP32
-#include <SPIFFS.h>     // ESP32 SPIFFS for store config
 #include <WebServer.h>  // webServer for ESP32
 #include <WiFi.h>       // WIFI for ESP32
 #include <WiFiUdp.h>
@@ -40,7 +40,6 @@ ESP8266WebServer server(80);  // ESP8266 web
 
 #include "HeatpumpSettings.hpp"
 #include "HeatpumpStatus.hpp"
-#include "filesystem.hpp"
 #include "frontend/templates.hpp"
 #include "logger.hpp"
 #include "main.hpp"
@@ -308,7 +307,7 @@ void restartAfterDelay(uint32_t delayMs) {
 void logConfig() {
   for (const auto file :
        std::array<const char *const, 4>{wifi_conf, mqtt_conf, unit_conf, others_conf}) {
-    LOG(F("Loading ") + String(file));
+    LOG(F("Loading %s"), file);
     JsonDocument doc = FileSystem::loadJSON(file);
     if (doc.isNull()) {
       LOG(F("File is empty"));
@@ -588,11 +587,12 @@ void renderView(const String &view, JsonDocument &data,
                 const std::vector<std::pair<String, String>> &partials = {}) {
   auto header = data[F("header")].to<JsonObject>();
   header[F("hostname")] = config.network.hostname;
-  header[F("git_hash")] = COMMIT_HASH;
+  header[F("git_hash")] = F(MITSUQTT_GIT_COMMIT);
 
   auto footer = data[F("footer")].to<JsonObject>();
-  footer[F("version")] = BUILD_DATE;
-  footer[F("git_hash")] = COMMIT_HASH;
+  footer[F("version")] = F(MITSUQTT_BUILD_DATE);
+  footer[F("git_hash")] = F(MITSUQTT_GIT_COMMIT);
+  footer[F("progname")] = F(MITSUQTT_PROGNAME);
 
   server.send(HttpStatusCodes::httpOk, F("text/html"), ministache::render(view, data, partials));
 }
@@ -918,6 +918,14 @@ void handleStatus() {
   data[F("mqtt_error_code")] = mqtt_client.state();
   data[F("wifi_access_point")] = WiFi.SSID();
   data[F("wifi_signal_strength")] = WiFi.RSSI();
+  data[F("progname")] = F(MITSUQTT_PROGNAME);
+  data[F("build_date")] = F(MITSUQTT_BUILD_DATE);
+  data[F("git_commit")] = F(MITSUQTT_GIT_COMMIT);
+#ifdef USE_SPIFFS
+  data[F("filesystem")] = F("SPIFFS");
+#else
+  data[F("filesystem")] = F("LittleFS");
+#endif
 
   if (server.hasArg("mrconn")) {
     mqttConnect();
@@ -992,8 +1000,8 @@ void handleControlGet() {
   // String headerContent = FPSTR(html_common_header);
   // String footerContent = FPSTR(html_common_footer);
   // headerContent.replace("_UNIT_NAME_", config.network.hostname);
-  // footerContent.replace("_VERSION_", BUILD_DATE);
-  // footerContent.replace("_GIT_HASH_", COMMIT_HASH);
+  // footerContent.replace("_VERSION_", F(MITSUQTT_BUILD_DATE));
+  // footerContent.replace("_GIT_HASH_", F(MITSUQTT_GIT_COMMIT));
   // controlPage.replace("_TXT_BACK_", FPSTR(txt_back));
   // controlPage.replace("_UNIT_NAME_", config.network.hostname);
   // controlPage.replace("_RATE_", "60");
@@ -1137,8 +1145,8 @@ void handleMetrics() {
   const HeatpumpStatus currentStatus(hp.getStatus());
   ArduinoJson::JsonDocument data;
   data["unit_name"] = config.network.hostname;
-  data["version"] = BUILD_DATE;
-  data["git_hash"] = COMMIT_HASH;
+  data["version"] = F(MITSUQTT_BUILD_DATE);
+  data["git_hash"] = F(MITSUQTT_GIT_COMMIT);
   data["power"] = currentSettings.power == "ON" ? 1 : 0;
   data["roomtemp"] = currentStatus.roomTemperature.toString(TempUnit::C);
   data["temp"] = currentSettings.temperature.toString(TempUnit::C);
@@ -1199,8 +1207,8 @@ void handleMetrics() {
 void handleMetricsJson() {
   JsonDocument doc;
   doc[F("hostname")] = config.network.hostname;
-  doc[F("version")] = BUILD_DATE;
-  doc[F("git_hash")] = COMMIT_HASH;
+  doc[F("version")] = F(MITSUQTT_BUILD_DATE);
+  doc[F("git_hash")] = F(MITSUQTT_GIT_COMMIT);
 
   auto systemStatus = doc[F("status")].to<JsonObject>();
   systemStatus[F("safeModeLockout")] = safeModeActive();
@@ -1802,8 +1810,8 @@ void sendHomeAssistantConfig() {
   haConfig[F("action_topic")] = config.mqtt.ha_state_topic();
 
   haConfig[F("friendlyName")] = config.mqtt.friendlyName;
-  haConfig[F("buildDate")] = BUILD_DATE;
-  haConfig[F("commitHash")] = COMMIT_HASH;
+  haConfig[F("buildDate")] = F(MITSUQTT_BUILD_DATE);
+  haConfig[F("commitHash")] = F(MITSUQTT_GIT_COMMIT);
   haConfig[F("localIP")] = WiFi.localIP().toString();
 
   // Additional attributes are in the state

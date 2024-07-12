@@ -52,6 +52,9 @@ After saving and restarting, you'll be ready to configure your hardware through 
 ### OTA updates
 You can download new versions from the **Artifacts** section [here](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml?query=branch%3Amain). Pick the download for your hardware type, unzip it on your desktop, and use the "Firmware Update" page to upload the BIN file to your hardware.
 
+#### Should I use a SPIFFS or LittleFS version?
+There are two incompatible filesystems for ESP8266/ESP32 - LittleFS and SPIFFS. LittleFS is the more modern filesystem and should be used by default. SPIFFS is supported for backwards compatibility when upgrading from older versions, but support will be removed at some point. If you know you need SPIFFS, use a firmware version with SPIFFS in the name.
+
 ---
 ## Monitoring
 MitsuQTT exposes a `/metrics.json` endpoint that can be used to directly interrogate the state of the hardware. You can connect this to a tool like [Uptime Kuma](https://github.com/louislam/uptime-kuma) to watch for changes and publish alerts:

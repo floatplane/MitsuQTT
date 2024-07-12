@@ -5,7 +5,7 @@
         {{#uptime}}
         <tr>
             <td class="bold">Uptime</td>
-            <td class="left" style="text-wrap: wrap">{{#years}}{{years}} years, {{/years}}{{days}} days, {{hours}} hours, {{minutes}} minutes, {{seconds}} seconds</td>
+            <td class="left wrap-text">{{#years}}{{years}} years, {{/years}}{{days}} days, {{hours}} hours, {{minutes}} minutes, {{seconds}} seconds</td>
         </tr>
         {{/uptime}}
         <tr>
@@ -27,6 +27,22 @@
         <tr>
             <td class="bold">Wifi signal strength</td>
             <td class="left">{{wifi_signal_strength}} dBm</td>
+        </tr>
+        <tr>
+            <td class="bold">Firmware</td>
+            <td class="left wrap-text"><code>{{progname}}</code></td>
+        </tr>
+        <tr>
+            <td class="bold">Build date</td>
+            <td class="left"><code>{{build_date}}</code></td>
+        </tr>
+        <tr>
+            <td class="bold">Git revision</td>
+            <td class="left"><a href="https://github.com/floatplane/MitsuQTT/commit/{{git_commit}}"><code>{{git_commit}}</code></a></td>
+        </tr>
+        <tr>
+            <td class="bold">Filesystem</td>
+            <td class="left"><code>{{filesystem}}</code></td>
         </tr>
     </table>
     <div class="buttons">
