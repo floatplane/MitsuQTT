@@ -921,6 +921,11 @@ void handleStatus() {
   data[F("progname")] = F(MITSUQTT_PROGNAME);
   data[F("build_date")] = F(MITSUQTT_BUILD_DATE);
   data[F("git_commit")] = F(MITSUQTT_GIT_COMMIT);
+#ifdef USE_SPIFFS
+  data[F("filesystem")] = F("SPIFFS");
+#else
+  data[F("filesystem")] = F("LittleFS");
+#endif
 
   if (server.hasArg("mrconn")) {
     mqttConnect();
