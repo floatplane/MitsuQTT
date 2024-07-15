@@ -3,6 +3,36 @@
     function eb(s) {
         return document.getElementById(s);
     }
+
+    function getFirmwareInfo(name) {
+        // Get firmware info from a name like mitsuqtt-WEMOS_D1_Mini-SPIFFS-2024.07.10-2bc2afc.bin using a regex
+        const regex = /(.+)-(.+)-(.+)-(.+)-(.+)\.bin/;
+        const match = name.match(regex);
+        if (match) {
+            const board = match[2].replace(/_/g, ' ');
+            const date = new Date(match[4].replace(/\./g, '/'));
+            const filesystem = match[3];
+
+            return {
+                board, filesystem, date,
+            };
+        } else {
+            // Get firmware info from a name like mitsuqtt-WEMOS_D1_Mini-2024.03.17-3daa0ce.bin
+            const regex = /(.+)-(.+)-(.+)-(.+)\.bin/;
+            const match = name.match(regex);
+            if (match) {
+                const board = match[2].replace(/_/g, ' ');
+                const date = new Date(match[3].replace(/\./g, '/'));
+                const filesystem = 'SPIFFS';
+
+                return {
+                    board, filesystem, date,
+                };
+            }
+        }
+        throw new Error(`Invalid firmware name ${name}`);
+    }
+
     function ready(fn) {
         if (document.readyState !== 'loading') {
             fn();
@@ -10,6 +40,38 @@
             document.addEventListener('DOMContentLoaded', fn);
         }
     }
+
+    function dialog(title, text, defaultButton) {
+        return new Promise((resolve, reject) => {
+            eb('confirmDialogTitle').innerText = title;
+            eb('confirmDialogText').innerHTML = text;
+            const primaryButton = defaultButton === 'abort' ? 'confirmDialogAbort' : 'confirmDialogContinue';
+            const secondaryButton = defaultButton === 'abort' ? 'confirmDialogContinue' : 'confirmDialogAbort';
+            eb(primaryButton).classList = 'button bgrn';
+            eb(secondaryButton).classList = 'button bred';
+            eb(primaryButton).focus();
+            eb('confirmDialogContinue').addEventListener('click', function() {
+                eb('confirmDialog').close();
+                eb('confirmDialog').style.display = 'none';
+                resolve();
+            });
+            eb('confirmDialogAbort').addEventListener('click', function() {
+                eb('confirmDialog').close();
+                eb('confirmDialog').style.display = 'none';
+                reject();
+            });
+            eb('confirmDialog').style.display = 'block';
+            eb('confirmDialog').showModal();
+        });
+    }
+
+    function resetFileInputElement() {
+        eb('firmware').value = '';
+        eb('selectedFile').style.display = 'none';
+        eb('selectFile').style.display = 'block';
+        eb('upgrade').disabled = true;
+    }
+
     ready(function() {
         eb('firmware').addEventListener('change', function() {
             const fileName = eb('firmware').files[0].name;
@@ -20,13 +82,45 @@
                 eb('upgrade').disabled = false;
             }
         });
+        eb('upgrade').addEventListener('click', function(event) {
+            (async () => {
+                try {
+                    const before = getFirmwareInfo('{{firmware}}');
+                    const after = getFirmwareInfo(eb('firmware').files[0].name);
+                    try {
+                        if (before.board !== after.board) {
+                            await dialog('Board mismatch', `The firmware you are trying to upload is for a different board (${after.board}) than the one you are currently using (${before.board}).<b>This is probably an error.</b><br/><br/>Are you sure you want to continue?`, 'abort');
+                        }
+                        if (before.filesystem !== after.filesystem) {
+                            await dialog('Filesystem mismatch', `The firmware you are trying to upload uses a different filesystem (${after.filesystem}) than the one you are currently using (${before.filesystem}). <b>Continuing will erase any saved configuration settings</b> and the board will enter ad-hoc configuration mode.<br/><br/>Are you sure you want to continue?`, 'abort');
+                        }
+                        if (before.date > after.date) {
+                            await dialog('Firmware downgrade', `The firmware you are trying to upload is older than the one you are currently using.<br/><br/>Are you sure you want to continue?`, 'abort');
+                        }
+                    } catch (e) {
+                        return;
+                    }
+                } catch (e) {
+                    try {
+                        await dialog('Unrecognized firmware name', `We can't be sure that this firmware will work on your board. Are you sure you want to continue?`, 'abort');
+                    } catch (e) {
+                        return;
+                    }
+                }
+                eb('f1').style.display = 'none';
+                eb('f2').style.display = 'block';
+
+                this.form.submit();
+            })();
+            event.preventDefault();
+        });
     });
 </script>
 <main>
 <h2>Upgrade</h2>
     <div id='f1' style='display:block;'>
         <form method='post' action='upload' enctype='multipart/form-data'>
-            <div style="min-height: 120px">
+            <div style="min-height: 130px">
                 <div id="selectFile">
                     <label for='upload'>Select a BIN file containing new firmware</label>
                     <input type='file' accept='.bin' name='upload' id="firmware" >
@@ -36,15 +130,22 @@
                     <div style="margin-bottom: 8px;"><code>{{firmware}}.bin</code></div>
                     <div><b>New firmware:</b></div>
                     <div><code id="selectedFileName">No file selected</code></div>
+                    <a href='#' onclick='resetFileInputElement();'>< back</a>
                 </div>
             </div>
             <br>
             <div class="buttons">
-                <button id="upgrade" disabled type='submit' onclick="eb('f1').style.display='none';eb('f2').style.display='block';this.form.submit();" class='button bgrn'>Start upgrade</button>
+                <button id="upgrade" disabled type='submit' class='button bgrn'>Start upgrade</button>
                 <a class="buttonLink" href='/setup'>&lt; Back</a>
             </div>
         </form>
     </div>
     <div id='f2' style='display:none;'><b>Upload started...</b></div>
+    <dialog id="confirmDialog" style='display:none'>
+        <h2 id="confirmDialogTitle">Dialog title</h2>
+        <p id="confirmDialogText">Dialog content</p>
+        <button id="confirmDialogContinue" class='button'>Yes, continue</button>
+        <button id="confirmDialogAbort" class='button'>No, go back</button>
+    </dialog>
 </main>
 {{> footer}}
