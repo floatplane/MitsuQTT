@@ -30,7 +30,7 @@
         </tr>
         <tr>
             <td class="bold">Firmware</td>
-            <td class="left wrap-text"><code>{{progname}}</code></td>
+            <td class="left wrap-text"><code>{{progname}}.bin</code></td>
         </tr>
         <tr>
             <td class="bold">Build date</td>

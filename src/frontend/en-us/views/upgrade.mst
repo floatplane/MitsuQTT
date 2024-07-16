@@ -33,9 +33,9 @@
                 </div>
                 <div id="selectedFile" style="display:none">
                     <div><b>Current firmware:</b></div>
-                    <div style="margin-bottom: 8px;">{{firmware}}</div>
+                    <div style="margin-bottom: 8px;"><code>{{firmware}}.bin</code></div>
                     <div><b>New firmware:</b></div>
-                    <div id="selectedFileName">No file selected</div>
+                    <div><code id="selectedFileName">No file selected</code></div>
                 </div>
             </div>
             <br>
