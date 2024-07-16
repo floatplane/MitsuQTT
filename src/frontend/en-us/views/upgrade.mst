@@ -6,7 +6,7 @@
 
     function getFirmwareInfo(name) {
         // Get firmware info from a name like mitsuqtt-WEMOS_D1_Mini-SPIFFS-2024.07.10-2bc2afc.bin using a regex
-        const regex = /(.+)-(.+)-(.+)-(.+)-(.+)\.bin/;
+        const regex = /(.+)-(.+)-(.+)-(.+)-(.+)(\.bin)?/;
         const match = name.match(regex);
         if (match) {
             const board = match[2].replace(/_/g, ' ');
@@ -18,7 +18,7 @@
             };
         } else {
             // Get firmware info from a name like mitsuqtt-WEMOS_D1_Mini-2024.03.17-3daa0ce.bin
-            const regex = /(.+)-(.+)-(.+)-(.+)\.bin/;
+            const regex = /(.+)-(.+)-(.+)-(.+)(\.bin)?/;
             const match = name.match(regex);
             if (match) {
                 const board = match[2].replace(/_/g, ' ');
