@@ -50,10 +50,10 @@ If all goes well, the WiFi hardware will create its own ad-hoc network that you 
 After saving and restarting, you'll be ready to configure your hardware through the Setup screen - in particular, you'll want to set up an MQTT connection to use this with Home Assistant, Node-RED, or any other automation technology.
 
 ### OTA updates
-You can download new versions from the **Artifacts** section [here](https://github.com/floatplane/MitsuQTT/actions/workflows/build.yml?query=branch%3Amain). Pick the download for your hardware type, unzip it on your desktop, and use the "Firmware Update" page to upload the BIN file to your hardware.
+You can download the latest versions [here](https://nightly.link/floatplane/MitsuQTT/workflows/build/main?preview). Pick the download for your hardware type, unzip it on your desktop, and use the "Firmware Update" page to upload the BIN file to your hardware.
 
 #### Should I use a SPIFFS or LittleFS version?
-There are two incompatible filesystems for ESP8266/ESP32 - LittleFS and SPIFFS. LittleFS is the more modern filesystem and should be used by default. SPIFFS is supported for backwards compatibility when upgrading from older versions, but support will be removed at some point. If you know you need SPIFFS, use a firmware version with SPIFFS in the name.
+There are two incompatible filesystems for ESP8266/ESP32 - LittleFS and SPIFFS. LittleFS is the more modern filesystem and should be used by default. SPIFFS is supported for backwards compatibility when upgrading from older versions, but support will be removed at some point. If you know you need SPIFFS, use a firmware version with SPIFFS in the name. Don't worry, the upload page will try to warn you if you've picked incorrectly!
 
 ---
 ## Monitoring
