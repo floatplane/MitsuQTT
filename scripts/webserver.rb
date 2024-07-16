@@ -157,7 +157,9 @@ server.mount_proc '/' do |req, res|
         mode_selection_all: false,
         login_password: "abc123",
     })
-    when "/upgrade" then res.body = render("upgrade")
+    when "/upgrade" then res.body = render("upgrade", {
+        firmware: 'mitsuqtt-WEMOS_D1_Mini-SPIFFS-2024.07.10-2bc2afc'
+    })
     when "/upload" then res.body = render("upload")
     when "/wifi" then res.body = render("wifi", {access_point: "the_ssid", hostname: "the_hostname", password: "abc123"})
         

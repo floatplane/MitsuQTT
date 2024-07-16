@@ -3,17 +3,45 @@
     function eb(s) {
         return document.getElementById(s);
     }
+    function ready(fn) {
+        if (document.readyState !== 'loading') {
+            fn();
+        } else {
+            document.addEventListener('DOMContentLoaded', fn);
+        }
+    }
+    ready(function() {
+        eb('firmware').addEventListener('change', function() {
+            const fileName = eb('firmware').files[0].name;
+            if (fileName.length > 0) {
+                eb('selectedFileName').innerText = fileName;
+                eb('selectedFile').style.display = 'block';
+                eb('selectFile').style.display = 'none';
+                eb('upgrade').disabled = false;
+            }
+        });
+    });
 </script>
 <main>
 <h2>Upgrade</h2>
     <div id='f1' style='display:block;'>
         <form method='post' action='upload' enctype='multipart/form-data'>
-            <label for='upload'>Select a BIN file containing new firmware</label>
-            <input type='file' accept='.bin' name='upload'>
+            <div style="min-height: 120px">
+                <div id="selectFile">
+                    <label for='upload'>Select a BIN file containing new firmware</label>
+                    <input type='file' accept='.bin' name='upload' id="firmware" >
+                </div>
+                <div id="selectedFile" style="display:none">
+                    <div><b>Current firmware:</b></div>
+                    <div style="margin-bottom: 8px;"><code>{{firmware}}.bin</code></div>
+                    <div><b>New firmware:</b></div>
+                    <div><code id="selectedFileName">No file selected</code></div>
+                </div>
+            </div>
             <br>
             <div class="buttons">
+                <button id="upgrade" disabled type='submit' onclick="eb('f1').style.display='none';eb('f2').style.display='block';this.form.submit();" class='button bgrn'>Start upgrade</button>
                 <a class="buttonLink" href='/setup'>&lt; Back</a>
-                <button type='submit' onclick="eb('f1').style.display='none';eb('f2').style.display='block';this.form.submit();" class='button bgrn'>Start upgrade</button>
             </div>
         </form>
     </div>

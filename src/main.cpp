@@ -1302,6 +1302,7 @@ void handleUpgrade() {
 
   uploaderror = UploadError::noError;
   JsonDocument data;
+  data[F("firmware")] = F(MITSUQTT_PROGNAME);
   renderView(views::upgrade, data, {{"header", partials::header}, {"footer", partials::footer}});
 }
 
