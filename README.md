@@ -55,6 +55,9 @@ You can download the latest versions [here](https://nightly.link/floatplane/Mits
 #### Should I use a SPIFFS or LittleFS version?
 There are two incompatible filesystems for ESP8266/ESP32 - LittleFS and SPIFFS. LittleFS is the more modern filesystem and should be used by default. SPIFFS is supported for backwards compatibility when upgrading from older versions, but support will be removed at some point. If you know you need SPIFFS, use a firmware version with SPIFFS in the name. Don't worry, the upload page will try to warn you if you've picked incorrectly!
 
+### Testing web changes locally
+There's a simple webserver you can launch by running `scripts/webserver.rb`. It will render page templates with a fixed set of data, so it's not a true simulator - but it's helpful when iterating on frontend changes.
+
 ---
 ## Monitoring
 MitsuQTT exposes a `/metrics.json` endpoint that can be used to directly interrogate the state of the hardware. You can connect this to a tool like [Uptime Kuma](https://github.com/louislam/uptime-kuma) to watch for changes and publish alerts:
