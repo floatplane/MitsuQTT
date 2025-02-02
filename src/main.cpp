@@ -962,7 +962,7 @@ void handleControlGet() {
   data[F("temp_step")] = config.unit.tempStep;
   data[F("temp_unit")] = config.unit.tempUnit == TempUnit::C ? "C" : "F";
   data[F("supportHeatMode")] = config.unit.supportHeatMode;
-  data[F("power")] = settings.power;
+  data[F("power")] = settings.power == "ON";
 
   const auto mode = data[F("mode")].to<JsonObject>();
   mode[F("cool")] = settings.mode == "COOL";
