@@ -97,12 +97,12 @@ class Moment {
   }
 
  private:
-  static void assign(uint32_t value) {
+  void assign(uint32_t value) {
     if (value < _lastValue) {
       _rolloverCount++;
     }
     _lastValue = value;
-    _milliseconds =
+    this->_milliseconds =
         static_cast<int64_t>(value) + static_cast<int64_t>(_rolloverCount) * 0xFFFFFFFFLL;
   }
 
