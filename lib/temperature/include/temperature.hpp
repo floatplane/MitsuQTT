@@ -73,6 +73,7 @@ class Temperature {
     this->celsius = unit == Unit::C ? value : fahrenheitToCelsius(value);
   }
 
+  // NOLINTBEGIN(bugprone-easily-swappable-parameters)
   Temperature clamp(const Temperature &min, const Temperature &max) const {
     return Temperature(std::max(std::min(this->celsius, max.celsius), min.celsius), Unit::C);
   }
@@ -81,6 +82,7 @@ class Temperature {
     celsius = std::max(std::min(this->celsius, max.celsius), min.celsius);
     return *this;
   }
+  // NOLINTEND(bugprone-easily-swappable-parameters)
 
   static float celsiusToFahrenheit(const float celsius) {
     return celsius * 9.0f / 5.0f + 32.0f;

@@ -583,8 +583,10 @@ bool safeModeActive() {
   return config.other.safeMode && remoteTempStale();
 }
 
+// NOLINTBEGIN(readability-named-parameter)
 void renderView(const String &view, JsonDocument &data,
                 const std::vector<std::pair<String, String>> &partials = {}) {
+  // NOLINTEND(readability-named-parameter)
   auto header = data[F("header")].to<JsonObject>();
   header[F("hostname")] = config.network.hostname;
   header[F("git_hash")] = F(MITSUQTT_GIT_COMMIT);

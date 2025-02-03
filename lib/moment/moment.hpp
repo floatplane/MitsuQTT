@@ -97,7 +97,7 @@ class Moment {
   }
 
  private:
-  void assign(uint32_t value) {
+  static void assign(uint32_t value) {
     if (value < _lastValue) {
       _rolloverCount++;
     }
