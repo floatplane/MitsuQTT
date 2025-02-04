@@ -102,7 +102,7 @@ class Moment {
       _rolloverCount++;
     }
     _lastValue = value;
-    _milliseconds =
+    this->_milliseconds =
         static_cast<int64_t>(value) + static_cast<int64_t>(_rolloverCount) * 0xFFFFFFFFLL;
   }
 
