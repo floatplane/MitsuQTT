@@ -217,7 +217,9 @@ struct Config {
 
 // Define global variables for network
 const PROGMEM uint32_t WIFI_RETRY_INTERVAL_MS = 300000;
+const PROGMEM uint32_t WIFI_RECONNECT_INTERVAL_MS = 30000;
 Moment wifi_timeout(Moment::now());
+Moment wifi_reconnect_timeout(Moment::now());
 
 enum HttpStatusCodes {
   httpOk = 200,
@@ -246,7 +248,12 @@ String ha_config_topic;
 // sketch settings
 const PROGMEM uint32_t CHECK_REMOTE_TEMP_INTERVAL_MS = 300000;  // 5 minutes
 const PROGMEM uint32_t MQTT_RETRY_INTERVAL_MS = 1000;           // 1 second
-const PROGMEM int64_t HP_RETRY_INTERVAL_MS = 1000LL;            // 1 second
+const PROGMEM uint32_t MQTT_MAX_RETRIES =
+    8;  // Double the interval between retries up to this many times, then keep
+        // retrying forever at that maximum interval.
+// Default values give a final retry interval of 1000ms * 2^8, which is 256
+// seconds, about 4 minutes.
+const PROGMEM int64_t HP_RETRY_INTERVAL_MS = 1000LL;  // 1 second
 const PROGMEM uint32_t HP_MAX_RETRIES =
     10;  // Double the interval between retries up to this many times, then keep
          // retrying forever at that maximum interval.
@@ -272,6 +279,7 @@ boolean remoteTempActive = false;
 HeatPump hp;  // NOLINT(readability-identifier-length)
 Moment lastMqttStatePacketSend(Moment::never());
 Moment lastMqttRetry(Moment::never());
+unsigned int mqttConnectionRetries;
 Moment lastHpSync(Moment::never());
 unsigned int hpConnectionRetries;
 unsigned int hpConnectionTotalRetries;
@@ -313,8 +321,10 @@ void logConfig() {
       LOG(F("File is empty"));
       continue;
     }
-    if (doc.containsKey("ap_pwd")) {
-      doc["ap_pwd"] = F("********");
+    for (const auto *const key : {"ap_pwd", "ota_pwd", "mqtt_pwd", "login_password"}) {
+      if (doc.containsKey(key)) {
+        doc[key] = F("********");
+      }
     }
     String contents;
     serializeJsonPretty(doc, contents);
@@ -538,6 +548,10 @@ void initCaptivePortal() {
 }
 
 void initMqtt() {
+  // The default PubSubClient buffer of 256 bytes is barely large enough for the state topic
+  // payload, and too small with a long root topic or friendly name — publishes then fail
+  // silently. Discovery messages are streamed with beginPublish() and don't need the buffer.
+  mqtt_client.setBufferSize(1024);
   mqtt_client.setServer(config.mqtt.server.c_str(), config.mqtt.port);
   mqtt_client.setCallback(mqttCallback);
   mqttConnect();
@@ -930,6 +944,7 @@ void handleStatus() {
 #endif
 
   if (server.hasArg("mrconn")) {
+    mqttConnectionRetries = 0;
     mqttConnect();
   }
 
@@ -1829,49 +1844,41 @@ void sendHomeAssistantConfig() {
 }
 
 void mqttConnect() {
-  // Loop until we're reconnected
-  int attempts = 0;
-  const int maxAttempts = 5;
-  while (!mqtt_client.connected()) {
-    // Attempt to connect
-    mqtt_client.connect(config.network.hostname.c_str(), config.mqtt.username.c_str(),
-                        config.mqtt.password.c_str(), config.mqtt.ha_availability_topic().c_str(),
-                        1, true, mqtt_payload_unavailable);
-    // If state < 0 (MQTT_CONNECTED) => network problem we retry 5 times and
-    // then waiting for MQTT_RETRY_INTERVAL_MS and retry reapeatly
-    if (mqtt_client.state() < MQTT_CONNECTED) {
-      if (attempts == maxAttempts) {
-        lastMqttRetry = Moment::now();
-        return;
-      }
-      delay(10);
-      attempts++;
-    }
-    // If state > 0 (MQTT_CONNECTED) => config or server problem we stop retry
-    else if (mqtt_client.state() > MQTT_CONNECTED) {
-      return;
-    }
-    // We are connected
-    else {
-      mqttTopicHandlers = {{config.mqtt.ha_mode_set_topic(), onSetMode},
-                           {config.mqtt.ha_temp_set_topic(), onSetTemp},
-                           {config.mqtt.ha_fan_set_topic(), onSetFan},
-                           {config.mqtt.ha_vane_set_topic(), onSetVane},
-                           {config.mqtt.ha_wideVane_set_topic(), onSetWideVane},
-                           {config.mqtt.ha_remote_temp_set_topic(), onSetRemoteTemp},
-                           {config.mqtt.ha_system_set_topic(), onSetSystem},
-                           {config.mqtt.ha_debug_pckts_set_topic(), onSetDebugPackets},
-                           {config.mqtt.ha_debug_logs_set_topic(), onSetDebugLogs},
-                           {config.mqtt.ha_custom_packet(), onSetCustomPacket}};
-      for (const auto &[topic, _] : mqttTopicHandlers) {
-        mqtt_client.subscribe(topic.c_str());
-      }
-      mqtt_client.publish(config.mqtt.ha_availability_topic().c_str(), mqtt_payload_available,
-                          true);  // publish status as available
-      if (config.other.haAutodiscovery) {
-        sendHomeAssistantConfig();
-      }
-    }
+  // A single connection attempt per call: connect() blocks for several seconds when the broker
+  // is unreachable, so retrying in a loop here would starve the heat pump sync and the web
+  // server. The caller retries with exponential backoff instead.
+  mqtt_client.connect(config.network.hostname.c_str(), config.mqtt.username.c_str(),
+                      config.mqtt.password.c_str(), config.mqtt.ha_availability_topic().c_str(), 1,
+                      true, mqtt_payload_unavailable);
+  lastMqttRetry = Moment::now();
+  // If state < 0 (MQTT_CONNECTED) => network problem, back off before the next attempt
+  if (mqtt_client.state() < MQTT_CONNECTED) {
+    mqttConnectionRetries = min(mqttConnectionRetries + 1U, MQTT_MAX_RETRIES);
+    return;
+  }
+  // If state > 0 (MQTT_CONNECTED) => config or server problem we stop retry
+  if (mqtt_client.state() > MQTT_CONNECTED) {
+    return;
+  }
+  // We are connected
+  mqttConnectionRetries = 0;
+  mqttTopicHandlers = {{config.mqtt.ha_mode_set_topic(), onSetMode},
+                       {config.mqtt.ha_temp_set_topic(), onSetTemp},
+                       {config.mqtt.ha_fan_set_topic(), onSetFan},
+                       {config.mqtt.ha_vane_set_topic(), onSetVane},
+                       {config.mqtt.ha_wideVane_set_topic(), onSetWideVane},
+                       {config.mqtt.ha_remote_temp_set_topic(), onSetRemoteTemp},
+                       {config.mqtt.ha_system_set_topic(), onSetSystem},
+                       {config.mqtt.ha_debug_pckts_set_topic(), onSetDebugPackets},
+                       {config.mqtt.ha_debug_logs_set_topic(), onSetDebugLogs},
+                       {config.mqtt.ha_custom_packet(), onSetCustomPacket}};
+  for (const auto &[topic, _] : mqttTopicHandlers) {
+    mqtt_client.subscribe(topic.c_str());
+  }
+  mqtt_client.publish(config.mqtt.ha_availability_topic().c_str(), mqtt_payload_available,
+                      true);  // publish status as available
+  if (config.other.haAutodiscovery) {
+    sendHomeAssistantConfig();
   }
 }
 
@@ -1886,6 +1893,14 @@ bool connectWifi() {
     WiFi.mode(WIFI_STA);
     delay(10);
   }
+  WiFi.setAutoReconnect(true);
+  // Disable modem power saving: it trades a few tens of mW for latency spikes and dropped
+  // packets with some access points, and this device is always mains-powered.
+#ifdef ESP32
+  WiFi.setSleep(false);
+#else
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#endif
 #ifdef ESP32
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
 #endif
@@ -1978,15 +1993,21 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
 
   server.handleClient();
 
-  // reset board to attempt to connect to wifi again if in ap mode or wifi
-  // dropped out and time limit passed
+  // If wifi dropped out, nudge the stack to reconnect every WIFI_RECONNECT_INTERVAL_MS;
+  // reset the board as a last resort if that hasn't succeeded within WIFI_RETRY_INTERVAL_MS.
+  // Also reset if we've been sitting in AP mode for that long with a valid config.
   if (WiFi.getMode() == WIFI_STA and
       WiFi.status() == WL_CONNECTED) {  // NOLINT(bugprone-branch-clone)
     wifi_timeout = Moment::now().offset(WIFI_RETRY_INTERVAL_MS);
+    wifi_reconnect_timeout = Moment::now().offset(WIFI_RECONNECT_INTERVAL_MS);
   } else if (config.network.configured() and Moment::now() > wifi_timeout) {
-    LOG(F("Lost network connection, restarting..."));
-    // TODO(floatplane) do we really need to reboot here? Can we just try to reconnect?
+    LOG(F("Lost network connection and failed to reconnect, restarting..."));
     restartAfterDelay(0);
+  } else if (config.network.configured() and WiFi.getMode() == WIFI_STA and
+             Moment::now() > wifi_reconnect_timeout) {
+    LOG(F("Lost network connection, trying to reconnect..."));
+    WiFi.reconnect();
+    wifi_reconnect_timeout = Moment::now().offset(WIFI_RECONNECT_INTERVAL_MS);
   }
 
   if (captive) {
@@ -2030,9 +2051,11 @@ void loop() {  // NOLINT(readability-function-cognitive-complexity)
   }
 
   if (config.mqtt.configured()) {
-    // MQTT failed retry to connect
+    // MQTT failed, retry to connect with the same exponential backoff scheme as the
+    // heat pump connection
     if (mqtt_client.state() < MQTT_CONNECTED) {
-      if (Moment::now() - lastMqttRetry > MQTT_RETRY_INTERVAL_MS) {
+      const int64_t durationNextRetry = (1LL << mqttConnectionRetries) * MQTT_RETRY_INTERVAL_MS;
+      if (Moment::now() - lastMqttRetry > durationNextRetry) {
         mqttConnect();
       }
     }
