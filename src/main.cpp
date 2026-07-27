@@ -32,6 +32,7 @@ ESP8266WebServer server(80);  // ESP8266 web
 #include <ArduinoOTA.h>  // for Update
 #include <DNSServer.h>   // DNS for captive portal
 #include <HeatPump.h>    // SwiCago library: https://github.com/SwiCago/HeatPump
+#include <MD5Builder.h>  // for the session cookie hash
 #include <Ministache.h>
 #include <PubSubClient.h>  // MQTT: PubSubClient 2.8.0
 
@@ -1266,6 +1267,18 @@ void handleLogin() {
   renderView(views::login, data, {{"header", partials::header}, {"footer", partials::footer}});
 }
 
+// The session cookie is a hash of the client's IP address and the login password
+// (https://github.com/floatplane/MitsuQTT/issues/59): it can't be forged without knowing the
+// password, and can't be replayed from a different address. Changing the password invalidates
+// all sessions.
+String sessionCookie() {
+  MD5Builder md5;
+  md5.begin();
+  md5.add(server.client().remoteIP().toString() + config.unit.login_password);
+  md5.calculate();
+  return String(F("M2MSESSIONID=")) + md5.toString();
+}
+
 // Handle the auth via POST
 // If the password is correct, set the session cookie and redirect to the home page
 // If the password is incorrect, redirect back to the login page with an error message
@@ -1274,12 +1287,12 @@ void handleAuth() {
 
   if (server.hasArg("PASSWORD") && server.arg("PASSWORD") == config.unit.login_password) {
     server.sendHeader("Cache-Control", "no-cache");
-    server.sendHeader("Set-Cookie", "M2MSESSIONID=1");
+    server.sendHeader("Set-Cookie", sessionCookie() + F("; HttpOnly; SameSite=Strict"));
     server.sendHeader("Location", "/");
     server.send(httpFound, F("text/plain"), "Redirect to home page");
   } else {
     server.sendHeader("Cache-Control", "no-cache");
-    server.sendHeader("Set-Cookie", "M2MSESSIONID=0");
+    server.sendHeader("Set-Cookie", F("M2MSESSIONID=0; HttpOnly; SameSite=Strict"));
     server.sendHeader("Location", "/login?authError");
     server.send(httpFound, F("text/plain"), "Redirect to login");
   }
@@ -1290,7 +1303,7 @@ void handleLogout() {
   LOG(F("handleLogout()"));
 
   server.sendHeader("Cache-Control", "no-cache");
-  server.sendHeader("Set-Cookie", "M2MSESSIONID=0");
+  server.sendHeader("Set-Cookie", F("M2MSESSIONID=0; HttpOnly; SameSite=Strict; Max-Age=0"));
   server.sendHeader("Location", "/login");
   server.send(httpFound, F("text/plain"), "Redirect to login");
 }
@@ -1947,8 +1960,8 @@ String getId() {
 // Check if header is present and correct
 bool is_authenticated() {
   if (server.hasHeader("Cookie")) {
-    // Found cookie;
-    if (server.header("Cookie").indexOf("M2MSESSIONID=1") != -1) {
+    // Found cookie; verify that it contains the session token for this client
+    if (server.header("Cookie").indexOf(sessionCookie()) != -1) {
       // Authentication Successful
       return true;
     }
