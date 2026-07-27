@@ -72,5 +72,6 @@ bool connectWifi();
 bool checkLogin();
 HeatpumpSettings change_states(const HeatpumpSettings &settings);
 String getTemperatureScale();
+String sessionCookie();
 bool is_authenticated();
 void hpCheckRemoteTemp();
