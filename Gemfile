@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
 
 gem 'webrick'
-gem "mustache", "~> 1.0"
+gem "mustache", "~> 1.1"
